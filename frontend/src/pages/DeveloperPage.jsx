@@ -29,7 +29,7 @@ const DeveloperPage = () => {
 
   const projects = [
     {
-      name: 'EduManage - Coaching Center Management',
+      name: 'Science Point - Coaching Center Management',
       description: 'Full-stack web application for managing coaching centers with role-based authentication, scheduling, and student management.',
       tech: ['React.js', 'FastAPI', 'SQLModel', 'JWT Auth']
     },
@@ -288,7 +288,7 @@ const DeveloperPage = () => {
               <span>Built with passion for education technology</span>
             </div>
             <p className="text-sm text-gray-600">
-              Thank you for exploring the EduManage system. This project represents my commitment to 
+              Thank you for exploring the Science Point system. This project represents my commitment to 
               creating innovative solutions for educational institutions.
             </p>
             <div className="mt-4 flex flex-wrap justify-center gap-3">

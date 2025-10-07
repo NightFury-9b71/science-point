@@ -127,7 +127,7 @@ class ErrorBoundary extends React.Component {
             <div className="pt-8 border-t border-gray-200">
               <div className="flex items-center justify-center gap-2 text-gray-600">
                 <AlertTriangle className="h-5 w-5" />
-                <span className="font-medium">EduManage Error Handler</span>
+                <span className="font-medium">Science Point Error Handler</span>
               </div>
               <p className="text-xs text-gray-500 mt-1">
                 Error ID: {Date.now().toString(36)}

@@ -103,7 +103,7 @@ const LoginPage = () => {
           <div className="flex justify-between items-center py-4">
             <Link to="/" className="flex items-center space-x-2">
               <GraduationCap className="h-8 w-8 text-blue-600" />
-              <span className="text-xl font-bold text-gray-900">EduManage</span>
+              <span className="text-xl font-bold text-gray-900">Science Point</span>
             </Link>
             <Link to="/">
               <Button variant="outline">

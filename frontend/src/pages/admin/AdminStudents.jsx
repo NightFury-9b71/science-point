@@ -309,7 +309,7 @@ Please keep these credentials safe and change the password after first login.`
         </head>
         <body>
           <div class="header">
-            <h1>EduManage - Student Login Credentials</h1>
+            <h1>Science Point - Student Login Credentials</h1>
           </div>
           <div class="credentials">
             <div class="field"><span class="label">Student Name:</span> ${newStudentCredentials.fullName}</div>

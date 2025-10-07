@@ -244,11 +244,11 @@ const NotFound = () => {
           </div>
         </div>
 
-        {/* EduManage Branding */}
+        {/* Science Point Branding */}
         <div className="pt-8 border-t border-gray-200">
           <div className="flex items-center justify-center gap-2 text-gray-600">
             <GraduationCap className="h-5 w-5" />
-            <span className="font-medium">EduManage</span>
+            <span className="font-medium">Science Point</span>
           </div>
           <p className="text-xs text-gray-500 mt-1">
             Coaching Center Management System

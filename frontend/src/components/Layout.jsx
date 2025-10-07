@@ -155,7 +155,7 @@ const Layout = ({ children }) => {
             <div className="flex items-center space-x-2">
               <GraduationCap className="h-8 w-8 text-blue-600" />
               <h1 className="text-xl font-bold text-gray-900">
-                EduManage
+                Science Point
               </h1>
             </div>
 
@@ -327,7 +327,7 @@ const Layout = ({ children }) => {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex flex-col sm:flex-row justify-between items-center gap-4">
             <div className="text-sm text-gray-600">
-              © 2024 EduManage. All rights reserved.
+              © 2024 Science Point. All rights reserved.
             </div>
             <div className="flex items-center gap-4 text-sm">
               <button
