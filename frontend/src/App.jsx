@@ -5,11 +5,14 @@ import { Toaster } from 'sonner'
 import { AuthProvider } from './contexts/AuthContext'
 import ProtectedRoute from './components/ProtectedRoute'
 import Layout from './components/Layout'
+import ErrorBoundary from './components/ErrorBoundary'
 import LandingPage from './pages/LandingPage'
 import LoginPage from './pages/LoginPage'
 import AdminDashboard from './pages/AdminDashboard'
 import TeacherDashboard from './pages/TeacherDashboard'
 import StudentDashboard from './pages/StudentDashboard'
+import NotFound from './pages/NotFound'
+import DeveloperPage from './pages/DeveloperPage'
 // import StudentProfile from './pages/StudentProfile'
 // import StudentAttendance from './pages/StudentAttendance'
 // import StudentResults from './pages/StudentResults'
@@ -29,14 +32,16 @@ const queryClient = new QueryClient({
 
 function App() {
   return (
-    <QueryClientProvider client={queryClient}>
-      <AuthProvider>
-        <Router>
-          <div className="min-h-screen bg-gray-50">
-            <Routes>
+    <ErrorBoundary>
+      <QueryClientProvider client={queryClient}>
+        <AuthProvider>
+          <Router>
+            <div className="min-h-screen bg-gray-50">
+              <Routes>
               {/* Public Routes */}
               <Route path="/" element={<LandingPage />} />
               <Route path="/login" element={<LoginPage />} />
+              <Route path="/developer" element={<DeveloperPage />} />
               
               {/* Protected Routes */}
               <Route path="/admin-dashboard/*" element={
@@ -63,8 +68,11 @@ function App() {
                 </ProtectedRoute>
               } />
               
+              {/* 404 Not Found route */}
+              <Route path="/404" element={<NotFound />} />
+              
               {/* Fallback route */}
-              <Route path="*" element={<Navigate to="/" replace />} />
+              <Route path="*" element={<NotFound />} />
             </Routes>
             <Toaster 
               position="top-right" 
@@ -76,6 +84,7 @@ function App() {
         </Router>
       </AuthProvider>
     </QueryClientProvider>
+    </ErrorBoundary>
   )
 }
 

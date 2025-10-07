@@ -400,9 +400,20 @@ const LandingPage = () => {
           </div>
           
           <div className="border-t border-gray-700 pt-6 text-center">
-            <p className="text-gray-500 text-sm">
-              © ২০২৪ সায়েন্স পয়েন্ট কোচিং সেন্টার। সকল অধিকার সংরক্ষিত।
-            </p>
+            <div className="flex flex-col sm:flex-row justify-between items-center gap-4">
+              <p className="text-gray-500 text-sm">
+                © ২০২৪ সায়েন্স পয়েন্ট কোচিং সেন্টার। সকল অধিকার সংরক্ষিত।
+              </p>
+              <div className="flex items-center gap-4">
+                <button
+                  onClick={() => navigate('/developer')}
+                  className="text-blue-400 hover:text-blue-300 transition-colors text-sm font-medium flex items-center gap-1"
+                >
+                  👨‍💻 Meet the Developer
+                </button>
+                <span className="text-gray-600 text-sm">Built with ❤️ by Abdullah Al Noman</span>
+              </div>
+            </div>
           </div>
         </div>
       </footer>

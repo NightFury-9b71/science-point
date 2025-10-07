@@ -321,6 +321,27 @@ const Layout = ({ children }) => {
           {children}
         </div>
       </main>
+
+      {/* Footer */}
+      <footer className="bg-white border-t border-gray-200 py-4">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex flex-col sm:flex-row justify-between items-center gap-4">
+            <div className="text-sm text-gray-600">
+              © 2024 EduManage. All rights reserved.
+            </div>
+            <div className="flex items-center gap-4 text-sm">
+              <button
+                onClick={() => navigate('/developer')}
+                className="text-blue-600 hover:text-blue-800 transition-colors font-medium"
+              >
+                👨‍💻 About Developer
+              </button>
+              <span className="text-gray-400">|</span>
+              <span className="text-gray-600">Made with ❤️ by Abdullah Al Noman</span>
+            </div>
+          </div>
+        </div>
+      </footer>
     </div>
   )
 }
