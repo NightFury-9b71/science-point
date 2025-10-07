@@ -63,6 +63,16 @@ export const useNotices = (params = {}) => {
   })
 }
 
+// Public notices hook (no authentication required)
+export const usePublicNotices = () => {
+  return useQuery({
+    queryKey: ['notices', 'public'],
+    queryFn: () => api.get('/public/notices').then(res => res.data),
+    staleTime: 1000 * 60 * 5, // 5 minutes
+    cacheTime: 1000 * 60 * 10, // 10 minutes
+  })
+}
+
 export const useAttendance = (params = {}) => {
   return useQuery({
     queryKey: [...queryKeys.attendance, params],

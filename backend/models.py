@@ -89,7 +89,6 @@ class Teacher(TeacherBase, table=True):
     # Relationships
     user: Optional[User] = Relationship(back_populates="teacher")
     subjects: List["Subject"] = Relationship(back_populates="teacher")
-    classes: List["Class"] = Relationship(back_populates="class_teacher")
     reviews: List["TeacherReview"] = Relationship(back_populates="teacher")
 
 class TeacherCreate(TeacherBase):
@@ -112,21 +111,18 @@ class Class(ClassBase, table=True):
     __tablename__ = "classes"
     
     id: Optional[int] = Field(default=None, primary_key=True)
-    class_teacher_id: Optional[int] = Field(default=None, foreign_key="teachers.id")
     
     # Relationships
-    class_teacher: Optional[Teacher] = Relationship(back_populates="classes")
     students: List[Student] = Relationship(back_populates="class_assigned")
     subjects: List["Subject"] = Relationship(back_populates="class_assigned")
     attendances: List["Attendance"] = Relationship(back_populates="class_session")
     exams: List["Exam"] = Relationship(back_populates="class_assigned")
 
 class ClassCreate(ClassBase):
-    class_teacher_id: Optional[int] = None
+    pass
 
 class ClassRead(ClassBase):
     id: int
-    class_teacher_id: Optional[int] = None
 
 class SubjectBase(SQLModel):
     name: str = Field(max_length=100)
@@ -368,3 +364,22 @@ class DashboardStats(SQLModel):
     total_classes: int
     total_subjects: int
     recent_notices: List[NoticeRead]
+
+class AdminCreationCodeBase(SQLModel):
+    code: str = Field(max_length=100, unique=True)
+    is_active: bool = Field(default=True)
+
+class AdminCreationCode(AdminCreationCodeBase, table=True):
+    __tablename__ = "admin_creation_codes"
+    
+    id: Optional[int] = Field(default=None, primary_key=True)
+    created_at: Optional[datetime] = Field(default_factory=datetime.utcnow)
+    updated_at: Optional[datetime] = Field(default_factory=datetime.utcnow)
+
+class AdminCreationCodeCreate(AdminCreationCodeBase):
+    pass
+
+class AdminCreationCodeRead(AdminCreationCodeBase):
+    id: int
+    created_at: datetime
+    updated_at: datetime

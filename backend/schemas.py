@@ -4,7 +4,7 @@
 from pydantic import BaseModel
 from typing import List, Optional
 from datetime import datetime
-from models import UserRole
+from models import UserRole, UserCreate
 
 # Login schema
 class LoginRequest(BaseModel):
@@ -110,3 +110,11 @@ class TeacherReviewUpdate(BaseModel):
     punctuality: Optional[int] = None
     student_engagement: Optional[int] = None
     comments: Optional[str] = None
+
+# Admin creation schemas
+class AdminCreationRequest(BaseModel):
+    code: str
+    user: UserCreate
+
+class AdminCreationCodeUpdate(BaseModel):
+    code: str

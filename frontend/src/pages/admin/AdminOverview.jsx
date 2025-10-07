@@ -1,13 +1,26 @@
 import React from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Users, GraduationCap, BookOpen, Calendar } from 'lucide-react'
+import { toast } from 'sonner'
+import Logger from '../../utils/logger.js'
 import Card from '../../components/Card'
 import Button from '../../components/Button'
-import { useAdminDashboard } from '../../services/queries'
+import { useAdminDashboard, useSeedDatabase } from '../../services/queries'
 
 const AdminOverview = () => {
   const navigate = useNavigate()
   const { data: stats, isLoading } = useAdminDashboard()
+  const seedDatabase = useSeedDatabase()
+
+  const handleSeedDatabase = async () => {
+    try {
+      await seedDatabase.mutateAsync()
+      toast.success('Database seeded successfully!')
+    } catch (error) {
+      Logger.error('Error seeding database:', error)
+      toast.error('Failed to seed database. Please try again.')
+    }
+  }
   
   if (isLoading) {
     return (
@@ -69,102 +82,83 @@ const AdminOverview = () => {
           </div>
         </Card>
       </div>
-
-      {/* Today's Schedule */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
-        <Card>
-          <Card.Header className="p-4 sm:p-6">
-            <Card.Title className="text-lg sm:text-xl">Today's Schedule</Card.Title>
-            <p className="text-sm text-gray-500 mt-1">{new Date().toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}</p>
-          </Card.Header>
-          <Card.Content className="p-4 sm:p-6">
-            <div className="space-y-3">
-              {/* Mock schedule data - replace with actual data */}
-              <div className="flex items-center space-x-4 p-3 bg-blue-50 rounded-lg border-l-4 border-blue-500">
-                <div className="text-sm font-medium text-blue-900 w-20">09:00 AM</div>
-                <div className="flex-1">
-                  <h4 className="font-medium text-gray-900">Staff Meeting</h4>
-                  <p className="text-sm text-gray-600">Conference Room • Weekly Review</p>
-                </div>
-                <div className="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded">
-                  Active
-                </div>
-              </div>
-              
-              <div className="flex items-center space-x-4 p-3 bg-gray-50 rounded-lg border-l-4 border-gray-300">
-                <div className="text-sm font-medium text-gray-600 w-20">11:00 AM</div>
-                <div className="flex-1">
-                  <h4 className="font-medium text-gray-900">Class Inspection</h4>
-                  <p className="text-sm text-gray-600">Grade 10A • Quality Assessment</p>
-                </div>
-                <div className="text-xs bg-gray-200 text-gray-700 px-2 py-1 rounded">
-                  Upcoming
-                </div>
-              </div>
-
-              <div className="flex items-center space-x-4 p-3 bg-purple-50 rounded-lg border-l-4 border-purple-500">
-                <div className="text-sm font-medium text-purple-700 w-20">02:00 PM</div>
-                <div className="flex-1">
-                  <h4 className="font-medium text-gray-900">Parent Meeting</h4>
-                  <p className="text-sm text-gray-600">Office • Student Progress Discussion</p>
-                </div>
-                <div className="text-xs bg-purple-100 text-purple-800 px-2 py-1 rounded">
-                  Meeting
-                </div>
-              </div>
-
-              <div className="flex items-center space-x-4 p-3 bg-green-50 rounded-lg border-l-4 border-green-500">
-                <div className="text-sm font-medium text-green-700 w-20">04:00 PM</div>
-                <div className="flex-1">
-                  <h4 className="font-medium text-gray-900">Budget Review</h4>
-                  <p className="text-sm text-gray-600">Admin Office • Monthly Financials</p>
-                </div>
-                <div className="text-xs bg-green-100 text-green-800 px-2 py-1 rounded">
-                  Admin
-                </div>
-              </div>
-            </div>
-            
-            <div className="mt-4 pt-4 border-t">
-              <Button 
-                size="sm" 
-                variant="outline" 
-                className="w-full sm:w-auto"
-                onClick={() => navigate('/admin/schedule')}
-              >
-                <Calendar className="h-4 w-4 mr-2" />
-                View Full Schedule
-              </Button>
-            </div>
-          </Card.Content>
-        </Card>
-
-        {/* Recent Notices */}
-        <Card>
-          <Card.Header className="p-4 sm:p-6">
-            <Card.Title className="text-lg sm:text-xl">Recent Notices</Card.Title>
-          </Card.Header>
-        <Card.Content className="p-4 sm:p-6">
+      
+      {/* Seed Database Button */}
+      <div className="flex justify-center">
+        <Button 
+          onClick={handleSeedDatabase} 
+          variant="secondary"
+          loading={seedDatabase.isPending}
+          size="sm"
+        >
+          Seed Database
+        </Button>
+      </div>
+      
+      {/* Recent Notices */}
+      <Card>
+        <Card.Header className="p-4 sm:p-6 pb-2 sm:pb-4">
+          <Card.Title className="text-lg sm:text-xl font-semibold">Recent Notices</Card.Title>
+        </Card.Header>
+        <Card.Content className="p-0">
           {stats?.recent_notices && stats.recent_notices.length > 0 ? (
-            <div className="space-y-3">
-              {stats.recent_notices.map((notice) => (
-                <div key={notice.id} className="border-l-4 border-blue-500 pl-3 sm:pl-4 py-2">
-                  <h4 className="font-medium text-gray-900 text-sm sm:text-base">{notice.title}</h4>
-                  <p className="text-xs sm:text-sm text-gray-600 mt-1">
-                    {notice.content.substring(0, 80)}...
-                  </p>
-                  <p className="text-xs text-gray-400 mt-2">
-                    {new Date(notice.created_at).toLocaleDateString()}
-                  </p>
+            <div className="divide-y divide-gray-100">
+              {stats.recent_notices.map((notice, index) => (
+                <div 
+                  key={notice.id} 
+                  className="p-4 sm:p-6 border-l-4 border-blue-500 hover:bg-gray-50 transition-colors duration-150"
+                >
+                  <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-2 sm:gap-4">
+                    <div className="flex-1 min-w-0">
+                      <h4 className="font-semibold text-gray-900 text-sm sm:text-base leading-tight mb-1 sm:mb-2">
+                        {notice.title}
+                      </h4>
+                      <p className="text-xs sm:text-sm text-gray-600 leading-relaxed mb-2 sm:mb-3">
+                        {window.innerWidth < 640 
+                          ? notice.content.substring(0, 60) + (notice.content.length > 60 ? '...' : '')
+                          : notice.content.substring(0, 120) + (notice.content.length > 120 ? '...' : '')
+                        }
+                      </p>
+                    </div>
+                    <div className="flex-shrink-0">
+                      <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                        {new Date(notice.created_at).toLocaleDateString('en-US', {
+                          month: 'short',
+                          day: 'numeric',
+                          year: window.innerWidth >= 640 ? 'numeric' : '2-digit'
+                        })}
+                      </span>
+                    </div>
+                  </div>
+                  {notice.priority && (
+                    <div className="mt-2">
+                      <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
+                        notice.priority === 'high' ? 'bg-red-100 text-red-800' :
+                        notice.priority === 'medium' ? 'bg-yellow-100 text-yellow-800' :
+                        'bg-green-100 text-green-800'
+                      }`}>
+                        {notice.priority.charAt(0).toUpperCase() + notice.priority.slice(1)} Priority
+                      </span>
+                    </div>
+                  )}
                 </div>
               ))}
             </div>
           ) : (
-            <p className="text-gray-500 text-sm">No recent notices</p>
+            <div className="p-4 sm:p-6 text-center">
+              <div className="flex flex-col items-center justify-center py-6 sm:py-8">
+                <div className="w-12 h-12 bg-gray-100 rounded-full flex items-center justify-center mb-3">
+                  <Calendar className="h-6 w-6 text-gray-400" />
+                </div>
+                <p className="text-gray-500 text-sm sm:text-base font-medium">No recent notices</p>
+                <p className="text-gray-400 text-xs sm:text-sm mt-1">
+                  New notices will appear here when created
+                </p>
+              </div>
+            </div>
           )}
         </Card.Content>
-        </Card>
-      </div>
+      </Card>
     </div>
   )
 }

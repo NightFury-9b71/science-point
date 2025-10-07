@@ -45,12 +45,7 @@ const StudentDashboard = () => {
   
   const { data: todaySchedule = [] } = useStudentSchedule(studentId, getCurrentDayOfWeek())
 
-  // Debug: Log profile data to console
-  React.useEffect(() => {
-    if (profile) {
-      console.log('Student profile data:', profile)
-    }
-  }, [profile])
+  // Profile data is loaded via React Query
 
   const navigate = useNavigate()
 

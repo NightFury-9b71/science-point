@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { GraduationCap, Users, BookOpen, Calendar, Award, BarChart3, Shield, CheckCircle } from 'lucide-react'
 import Button from '../components/Button'
 import Card from '../components/Card'
-import { useNotices } from '../services/queries'
+import { usePublicNotices } from '../services/queries'
 
 // Add marquee animation styles
 const marqueeStyle = `
@@ -15,7 +15,7 @@ const marqueeStyle = `
 
 const LandingPage = () => {
   const navigate = useNavigate()
-  const { data: notices } = useNotices()
+  const { data: notices } = usePublicNotices()
 
   // Filter notices that should show on landing page
   const landingNotices = notices?.filter(notice => 
@@ -92,30 +92,24 @@ const LandingPage = () => {
       <style>{marqueeStyle}</style>
       <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-gray-50">
       {/* Latest Notices Marquee */}
-      {(
-        <div className="bg-slate-600 text-white py-2 overflow-hidden">
-          <div className="flex items-center">
-            <span className="bg-red-600 px-3 py-1 text-xs font-bold rounded-r-full flex-shrink-0">
-              📢 সর্বশেষ ঘোষণা
-            </span>
-            <div className="ml-4 flex-1 overflow-hidden">
-              <div className="whitespace-nowrap" style={{
-                animation: 'marquee 30s linear infinite'
-              }}>
-                {landingNotices.map((notice, index) => (
-                  <span key={notice.id} className="mx-8">
-                    � {notice.content}
-                  </span>
-                ))}
-                {/* If no notices, show default message */}
-                {landingNotices.length === 0 && (
-                  <span className="mx-8">🎉 স্বাগতম সায়েন্স পয়েন্ট কোচিং সেন্টারে!</span>
-                )}
-              </div>
+      <div className="bg-slate-600 text-white py-2 overflow-hidden">
+        <div className="flex items-center">
+          <span className="bg-red-600 px-3 py-1 text-xs font-bold rounded-r-full flex-shrink-0">
+            📢 সর্বশেষ ঘোষণা
+          </span>
+          <div className="ml-4 flex-1 overflow-hidden">
+            <div className="whitespace-nowrap" style={{
+              animation: 'marquee 30s linear infinite'
+            }}>
+              {displayNotices.map((notice, index) => (
+                <span key={notice.id || index} className="mx-8">
+                  ✨ {typeof notice === 'string' ? notice : notice.content}
+                </span>
+              ))}
             </div>
           </div>
         </div>
-      )}
+      </div>
 
       {/* Header */}
       <header className="bg-white/80 backdrop-blur-md border-b border-gray-200 sticky top-0 z-50">

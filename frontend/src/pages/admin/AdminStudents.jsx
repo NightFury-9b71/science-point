@@ -2,6 +2,7 @@ import React, { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { CheckCircle, Plus, Eye, ArrowLeft, Search, Download, FileText, XCircle, AlertCircle, Users, Phone, Edit, KeyRound } from 'lucide-react'
 import { toast } from 'sonner'
+import Logger from '../../utils/logger.js'
 import Card from '../../components/Card'
 import Button from '../../components/Button'
 import Table from '../../components/Table'
@@ -138,7 +139,7 @@ const AdminStudents = () => {
       
       return uniqueUsername
     } catch (error) {
-      console.error('Error generating username:', error)
+      Logger.error('Error generating username:', error)
       return `user${Math.floor(Math.random() * 10000)}`
     }
   }
@@ -228,11 +229,7 @@ const AdminStudents = () => {
         date_of_birth: form.date_of_birth ? new Date(form.date_of_birth).toISOString() : null
       }
 
-      console.log('Submitting form data:', formData)
-
       const result = await createStudent.mutateAsync(formData)
-      
-      console.log('Student created successfully:', result)
       
       // Store credentials for display
       setNewStudentCredentials({
@@ -254,11 +251,11 @@ const AdminStudents = () => {
       toast.success('Student created successfully!')
       
     } catch (error) {
-      console.error('Error creating student:', error)
+      Logger.error('Error creating student:', error)
       
       // More detailed error handling
       if (error.response) {
-        console.error('Server response:', error.response.data)
+        Logger.error('Server response:', error.response.data)
         const errorMessage = error.response.data?.detail || error.response.data?.message || 'Server error occurred'
         toast.error(`Failed to create student: ${errorMessage}`)
       } else if (error.message) {
@@ -395,8 +392,6 @@ Please keep these credentials safe and change the password after first login.`
         date_of_birth: editForm.date_of_birth ? new Date(editForm.date_of_birth).toISOString() : null
       }
 
-      console.log('Updating student:', updateData)
-
       // Call the actual update mutation
       await updateStudent.mutateAsync({ 
         id: editForm.id, 
@@ -408,7 +403,7 @@ Please keep these credentials safe and change the password after first login.`
       toast.success('Student updated successfully!')
       
     } catch (error) {
-      console.error('Error updating student:', error)
+      Logger.error('Error updating student:', error)
       
       if (error.response) {
         const errorMessage = error.response.data?.detail || error.response.data?.message || 'Server error occurred'
@@ -435,7 +430,7 @@ Please keep these credentials safe and change the password after first login.`
       setSelectedStudent(null)
       toast.success('Student deleted successfully!')
     } catch (error) {
-      console.error('Error deleting student:', error)
+      Logger.error('Error deleting student:', error)
       
       if (error.response) {
         const errorMessage = error.response.data?.detail || error.response.data?.message || 'Server error occurred'
@@ -480,7 +475,7 @@ Please keep these credentials safe and change the password after first login.`
       
       toast.success('Password reset successfully!')
     } catch (error) {
-      console.error('Error resetting password:', error)
+      Logger.error('Error resetting password:', error)
       toast.error('Failed to reset password. Please try again.')
     }
   }
@@ -715,12 +710,8 @@ Please keep these credentials safe and change the password after first login.`
             spellCheck="true"
             placeholder="Enter student's full name (e.g., John Doe)"
             value={form.user.full_name || ''}
-            onInput={(e) => {
-              console.log('onInput event:', e.target.value)
-            }}
             onChange={(e) => {
               const fullName = e.target.value
-              console.log('onChange event - Full name:', fullName, 'Character codes:', [...fullName].map(c => c.charCodeAt(0)))
               
               // Immediate state update for responsive UI
               setForm(prev => ({
@@ -746,7 +737,7 @@ Please keep these credentials safe and change the password after first login.`
                       }))
                     }
                   } catch (err) {
-                    console.error('Username generation error:', err)
+                    Logger.error('Username generation error:', err)
                   }
                 }, 300)
               }

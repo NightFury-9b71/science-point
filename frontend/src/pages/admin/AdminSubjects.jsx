@@ -2,6 +2,7 @@ import React, { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Plus, ArrowLeft, Search, Edit, BookOpen } from 'lucide-react'
 import { toast } from 'sonner'
+import Logger from '../../utils/logger.js'
 import Card from '../../components/Card'
 import Button from '../../components/Button'
 import Table from '../../components/Table'
@@ -61,7 +62,7 @@ const AdminSubjects = () => {
       setForm({ name: '', code: '', credits: 3, class_id: '', teacher_id: '' })
     } catch (error) {
       toast.error('Failed to create subject. Please try again.')
-      console.error('Create subject error:', error)
+      Logger.error('Create subject error:', error)
     }
   }
 
@@ -82,7 +83,7 @@ const AdminSubjects = () => {
       setSelectedSubject(null)
     } catch (error) {
       toast.error('Failed to update subject. Please try again.')
-      console.error('Update subject error:', error)
+      Logger.error('Update subject error:', error)
     }
   }
 

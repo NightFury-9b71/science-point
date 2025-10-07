@@ -59,6 +59,23 @@ app.add_middleware(
 @app.on_event("startup")
 def startup_event():
     create_db_and_tables()
+    
+    # Initialize default admin creation code if it doesn't exist
+    session = Session(engine)
+    try:
+        existing_code = session.exec(
+            select(AdminCreationCode).where(AdminCreationCode.code == "illusion")
+        ).first()
+        
+        if not existing_code:
+            default_code = AdminCreationCode(code="illusion", is_active=True)
+            session.add(default_code)
+            session.commit()
+            print("Default admin creation code 'illusion' initialized")
+    except Exception as e:
+        print(f"Error initializing default admin creation code: {e}")
+    finally:
+        session.close()
 
 # Utility functions
 def get_password_hash(password: str) -> str:
@@ -593,6 +610,46 @@ def update_class(
     session.refresh(db_class)
     return db_class
 
+@app.delete("/admin/classes/{class_id}")
+def delete_class(
+    class_id: int, 
+    session: Session = Depends(get_session),
+    current_user: User = Depends(require_admin)
+):
+    # Get the existing class
+    statement = select(Class).where(Class.id == class_id)
+    db_class = session.exec(statement).first()
+    
+    if not db_class:
+        raise HTTPException(status_code=404, detail="Class not found")
+    
+    # Check if class has students assigned
+    students_count = session.exec(
+        select(func.count(Student.id)).where(Student.class_id == class_id)
+    ).first()
+    
+    if students_count > 0:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Cannot delete class. {students_count} student(s) are currently assigned to this class."
+        )
+    
+    # Check if class has subjects assigned
+    subjects_count = session.exec(
+        select(func.count(Subject.id)).where(Subject.class_id == class_id)
+    ).first()
+    
+    if subjects_count > 0:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Cannot delete class. {subjects_count} subject(s) are currently assigned to this class."
+        )
+    
+    # Delete the class
+    session.delete(db_class)
+    session.commit()
+    return {"message": "Class deleted successfully"}
+
 # Subject management
 @app.post("/admin/subjects", response_model=SubjectRead)
 def create_subject(
@@ -849,6 +906,24 @@ def get_notices(
         statement = statement.where(Notice.is_active == True)
     
     statement = statement.order_by(Notice.created_at.desc())
+    notices = session.exec(statement).all()
+    return notices
+
+# Public notices endpoint (no authentication required)
+@app.get("/public/notices", response_model=List[NoticeRead])
+def get_public_notices(
+    session: Session = Depends(get_session)
+):
+    """Get public notices for display on landing page and public areas"""
+    statement = select(Notice).where(
+        Notice.is_active == True,
+        Notice.show_on_landing == True,
+        # Check if notice hasn't expired
+        or_(
+            Notice.expires_at.is_(None),
+            Notice.expires_at > datetime.utcnow()
+        )
+    ).order_by(Notice.created_at.desc())
     notices = session.exec(statement).all()
     return notices
 
@@ -1110,20 +1185,8 @@ def seed_mock_data(session: Session = Depends(get_session)):
         
         # Create classes with proper teacher assignments
         classes = []
-        class_teacher_assignments = [
-            (0, 0),  # Class 10A -> Math teacher (Prof. John Smith)
-            (1, 1),  # Class 10B -> Physics teacher (Dr. Emily Chen)  
-            (2, 2),  # Class 11 Science -> Chemistry teacher (Mr. Robert Davis)
-            (3, 3)   # Class 12 Science -> Biology teacher (Ms. Lisa Brown)
-        ]
-        
-        for i, class_data in enumerate(MOCK_CLASSES):
-            class_copy = class_data.copy()
-            # Assign class teacher ID from the created teachers
-            class_idx, teacher_idx = class_teacher_assignments[i]
-            class_copy["class_teacher_id"] = teachers[teacher_idx].id
-            
-            class_obj = Class(**class_copy)
+        for class_data in MOCK_CLASSES:
+            class_obj = Class(**class_data)
             session.add(class_obj)
             classes.append(class_obj)
         session.flush()
@@ -1279,6 +1342,10 @@ def reset_all_data(confirm: bool = False, session: Session = Depends(get_session
         for item in attendances:
             session.delete(item)
             
+        class_schedules = session.exec(select(ClassSchedule)).all()
+        for item in class_schedules:
+            session.delete(item)
+            
         subjects = session.exec(select(Subject)).all()
         for item in subjects:
             session.delete(item)
@@ -1343,6 +1410,134 @@ def get_data_statistics(session: Session = Depends(get_session)):
         
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error getting statistics: {str(e)}")
+
+# Admin creation code management
+@app.post("/admin/create-admin", response_model=UserRead)
+def create_admin_with_code(
+    admin_request: AdminCreationRequest,
+    session: Session = Depends(get_session)
+):
+    """Create an admin user using a valid creation code"""
+    # Check if the code exists and is active
+    code_record = session.exec(
+        select(AdminCreationCode).where(
+            AdminCreationCode.code == admin_request.code,
+            AdminCreationCode.is_active == True
+        )
+    ).first()
+    
+    if not code_record:
+        raise HTTPException(
+            status_code=400,
+            detail="Invalid or inactive admin creation code"
+        )
+    
+    # Check if username or email already exists
+    existing_user = session.exec(select(User).where(
+        (User.username == admin_request.user.username) | 
+        (User.email == admin_request.user.email)
+    )).first()
+    
+    if existing_user:
+        raise HTTPException(
+            status_code=400,
+            detail="Username or email already registered"
+        )
+    
+    # Create the admin user
+    hashed_password = get_password_hash(admin_request.user.password)
+    user_data = admin_request.user.dict(exclude={'password'})
+    user_data['role'] = UserRole.ADMIN  # Force admin role
+    
+    db_user = User(**user_data, password_hash=hashed_password)
+    session.add(db_user)
+    session.commit()
+    session.refresh(db_user)
+    
+    # Deactivate the code after successful use (one-time use)
+    code_record.is_active = False
+    session.add(code_record)
+    session.commit()
+    
+    return db_user
+
+@app.get("/admin/creation-codes", response_model=List[AdminCreationCodeRead])
+def get_admin_creation_codes(
+    session: Session = Depends(get_session),
+    current_user: User = Depends(require_admin)
+):
+    """Get all admin creation codes (admin only)"""
+    codes = session.exec(select(AdminCreationCode)).all()
+    return codes
+
+@app.post("/admin/creation-codes", response_model=AdminCreationCodeRead)
+def create_admin_creation_code(
+    code_data: AdminCreationCodeCreate,
+    session: Session = Depends(get_session),
+    current_user: User = Depends(require_admin)
+):
+    """Create a new admin creation code (admin only)"""
+    # Check if code already exists
+    existing_code = session.exec(
+        select(AdminCreationCode).where(AdminCreationCode.code == code_data.code)
+    ).first()
+    
+    if existing_code:
+        raise HTTPException(
+            status_code=400,
+            detail="Admin creation code already exists"
+        )
+    
+    db_code = AdminCreationCode(**code_data.dict())
+    session.add(db_code)
+    session.commit()
+    session.refresh(db_code)
+    return db_code
+
+@app.put("/admin/creation-codes/{code_id}", response_model=AdminCreationCodeRead)
+def update_admin_creation_code(
+    code_id: int,
+    code_update: AdminCreationCodeUpdate,
+    session: Session = Depends(get_session),
+    current_user: User = Depends(require_admin)
+):
+    """Update an admin creation code (admin only)"""
+    code_record = session.get(AdminCreationCode, code_id)
+    if not code_record:
+        raise HTTPException(status_code=404, detail="Admin creation code not found")
+    
+    # Check if the new code already exists (if different)
+    if code_update.code != code_record.code:
+        existing_code = session.exec(
+            select(AdminCreationCode).where(AdminCreationCode.code == code_update.code)
+        ).first()
+        if existing_code:
+            raise HTTPException(
+                status_code=400,
+                detail="Admin creation code already exists"
+            )
+    
+    code_record.code = code_update.code
+    code_record.updated_at = datetime.utcnow()
+    session.add(code_record)
+    session.commit()
+    session.refresh(code_record)
+    return code_record
+
+@app.delete("/admin/creation-codes/{code_id}")
+def delete_admin_creation_code(
+    code_id: int,
+    session: Session = Depends(get_session),
+    current_user: User = Depends(require_admin)
+):
+    """Delete an admin creation code (admin only)"""
+    code_record = session.get(AdminCreationCode, code_id)
+    if not code_record:
+        raise HTTPException(status_code=404, detail="Admin creation code not found")
+    
+    session.delete(code_record)
+    session.commit()
+    return {"message": "Admin creation code deleted successfully"}
 
 # Student-specific endpoints
 @app.get("/student/{student_id}/profile", response_model=StudentRead)
@@ -1493,25 +1688,19 @@ def get_teacher_subjects(teacher_id: int, session: Session = Depends(get_session
 
 @app.get("/teacher/{teacher_id}/classes", response_model=List[ClassRead])
 def get_teacher_classes(teacher_id: int, session: Session = Depends(get_session)):
-    """Get all classes where the teacher is class teacher or teaches subjects"""
-    # Get classes where teacher is class teacher
-    class_teacher_classes = session.exec(
-        select(Class).where(Class.class_teacher_id == teacher_id)
-    ).all()
-    
+    """Get all classes where the teacher teaches subjects"""
     # Get classes where teacher teaches subjects
     teacher_subjects = session.exec(
         select(Subject).where(Subject.teacher_id == teacher_id)
     ).all()
     
     subject_class_ids = [subject.class_id for subject in teacher_subjects]
-    subject_classes = session.exec(
+    classes = session.exec(
         select(Class).where(Class.id.in_(subject_class_ids))
     ).all() if subject_class_ids else []
     
-    # Combine and remove duplicates
-    all_classes = class_teacher_classes + subject_classes
-    unique_classes = {cls.id: cls for cls in all_classes}.values()
+    # Remove duplicates
+    unique_classes = {cls.id: cls for cls in classes}.values()
     
     return list(unique_classes)
 

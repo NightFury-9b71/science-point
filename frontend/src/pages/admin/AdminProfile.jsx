@@ -70,7 +70,6 @@ const AdminProfile = () => {
       return
     }
     try {
-      // Mock API call - replace with actual API
       // await changePassword(adminId, passwordForm)
       setShowChangePasswordModal(false)
       setPasswordForm({

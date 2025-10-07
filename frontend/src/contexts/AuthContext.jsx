@@ -1,5 +1,7 @@
 import React, { createContext, useContext, useState, useEffect } from 'react'
 import { toast } from 'sonner'
+import Logger from '../utils/logger.js'
+import config from '../config/index.js'
 
 const AuthContext = createContext({})
 
@@ -20,8 +22,8 @@ export const AuthProvider = ({ children }) => {
   useEffect(() => {
     const checkAuth = () => {
       try {
-        const token = localStorage.getItem('token')
-        const userData = localStorage.getItem('user')
+        const token = localStorage.getItem(config.auth.tokenKey)
+        const userData = localStorage.getItem(config.auth.userKey)
         
         if (token && userData) {
           const parsedUser = JSON.parse(userData)
@@ -29,9 +31,9 @@ export const AuthProvider = ({ children }) => {
           setIsAuthenticated(true)
         }
       } catch (error) {
-        console.error('Error checking auth:', error)
-        localStorage.removeItem('token')
-        localStorage.removeItem('user')
+        Logger.error('Error checking auth:', error)
+        localStorage.removeItem(config.auth.tokenKey)
+        localStorage.removeItem(config.auth.userKey)
       } finally {
         setIsLoading(false)
       }
@@ -51,8 +53,8 @@ export const AuthProvider = ({ children }) => {
         const { user: userData, token } = response.data
         
         // Store in localStorage
-        localStorage.setItem('token', token)
-        localStorage.setItem('user', JSON.stringify(userData))
+        localStorage.setItem(config.auth.tokenKey, token)
+        localStorage.setItem(config.auth.userKey, JSON.stringify(userData))
         
         // Update state
         setUser(userData)
@@ -64,7 +66,7 @@ export const AuthProvider = ({ children }) => {
         throw new Error(response.message || 'Login failed')
       }
     } catch (error) {
-      console.error('Login error:', error)
+      Logger.error('Login error:', error)
       toast.error(error.message || 'Login failed. Please try again.')
       return { success: false, error: error.message }
     } finally {
@@ -75,8 +77,8 @@ export const AuthProvider = ({ children }) => {
   const logout = () => {
     try {
       // Clear storage
-      localStorage.removeItem('token')
-      localStorage.removeItem('user')
+      localStorage.removeItem(config.auth.tokenKey)
+      localStorage.removeItem(config.auth.userKey)
       
       // Clear state
       setUser(null)
@@ -84,7 +86,7 @@ export const AuthProvider = ({ children }) => {
       
       toast.success('Logged out successfully')
     } catch (error) {
-      console.error('Logout error:', error)
+      Logger.error('Logout error:', error)
     }
   }
 
@@ -123,7 +125,7 @@ export const AuthProvider = ({ children }) => {
 const apiLogin = async (credentials) => {
   const { email, password } = credentials
   
-  const response = await fetch('http://localhost:8000/auth/login', {
+  const response = await fetch(`${config.api.baseURL}/auth/login`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',

@@ -1,9 +1,12 @@
 import axios from 'axios'
+import Logger from '../utils/logger.js'
+import config from '../config/index.js'
+import monitoringService from '../utils/monitoringService.js'
 
 // Create axios instance with base configuration
 const api = axios.create({
-  baseURL: 'http://localhost:8000',
-  timeout: 10000,
+  baseURL: config.api.baseURL,
+  timeout: config.api.timeout,
   headers: {
     'Content-Type': 'application/json',
   }
@@ -11,13 +14,17 @@ const api = axios.create({
 
 // Request interceptor
 api.interceptors.request.use(
-  (config) => {
+  (requestConfig) => {
     // Add auth token to all requests
-    const token = localStorage.getItem('token')
+    const token = localStorage.getItem(config.auth.tokenKey)
     if (token) {
-      config.headers.Authorization = `Bearer ${token}`
+      requestConfig.headers.Authorization = `Bearer ${token}`
     }
-    return config
+
+    // Add request start time for monitoring
+    requestConfig.metadata = { startTime: Date.now() }
+    
+    return requestConfig
   },
   (error) => {
     return Promise.reject(error)
@@ -26,18 +33,42 @@ api.interceptors.request.use(
 
 // Response interceptor
 api.interceptors.response.use(
-  (response) => response,
+  (response) => {
+    // Track successful API calls
+    if (response.config.metadata) {
+      const duration = Date.now() - response.config.metadata.startTime
+      monitoringService.trackAPICall(
+        response.config.method.toUpperCase(),
+        response.config.url,
+        duration,
+        response.status
+      )
+    }
+    return response
+  },
   (error) => {
-    console.error('API Error:', error)
+    // Track failed API calls
+    if (error.config?.metadata) {
+      const duration = Date.now() - error.config.metadata.startTime
+      monitoringService.trackAPICall(
+        error.config.method?.toUpperCase() || 'UNKNOWN',
+        error.config.url || 'unknown',
+        duration,
+        error.response?.status || 0,
+        error
+      )
+    }
+
+    Logger.error('API Error:', error)
     
     // Handle authentication errors (but don't auto-redirect to avoid loops)
     if (error.response?.status === 401) {
       // Token is invalid or expired
-      localStorage.removeItem('token')
-      localStorage.removeItem('user')
+      localStorage.removeItem(config.auth.tokenKey)
+      localStorage.removeItem(config.auth.userKey)
       
       // Let the UI handle the redirect through context
-      console.warn('Authentication failed - token removed')
+      Logger.warn('Authentication failed - token removed')
     }
     
     return Promise.reject(error)
