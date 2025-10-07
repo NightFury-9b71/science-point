@@ -449,48 +449,93 @@ MOCK_STUDY_MATERIALS = [
 
 MOCK_NOTICES = [
     {
-        "title": "Welcome to New Academic Year",
-        "content": "Welcome students and parents to the academic year 2024-25. We look forward to an exciting year of learning and growth.",
+        "title": "নতুন শিক্ষাবর্ষে স্বাগতম",
+        "content": "🎉 নতুন ব্যাচ শুরু হবে ১৫ অক্টোবর থেকে - সীমিত আসন! এখনই ভর্তি হন এবং বিশেষ ছাড় পান।",
         "created_by_id": 1,
         "target_role": None,  # For all users
         "is_urgent": False,
-        "expires_at": datetime(2024, 12, 31),
+        "show_on_landing": True,
+        "expires_at": datetime(2025, 12, 31),
         "is_active": True
     },
     {
-        "title": "Mid-Term Exam Schedule",
-        "content": "Mid-term examinations will be conducted from October 15-25, 2024. Please check your individual timetables for specific dates and times.",
+        "title": "HSC ২০২৬ ব্যাচের ভর্তি",
+        "content": "📚 HSC ২০২৬ ব্যাচের ভর্তি চলছে - বিশেষ ছাড়ে! গণিত, পদার্থ, রসায়ন ও জীববিজ্ঞানে বিশেষজ্ঞ শিক্ষকমণ্ডলী।",
         "created_by_id": 1,
         "target_role": UserRole.STUDENT,
         "is_urgent": True,
-        "expires_at": datetime(2024, 10, 26),
+        "show_on_landing": True,
+        "expires_at": datetime(2025, 11, 30),
         "is_active": True
     },
     {
-        "title": "Faculty Meeting",
-        "content": "Monthly faculty meeting scheduled for October 30, 2024 at 4:00 PM in the conference room.",
+        "title": "পরীক্ষার ফলাফল ঘোষণা",
+        "content": "🏆 আমাদের ৫০+ শিক্ষার্থী এবছর A+ পেয়েছে! সায়েন্স পয়েন্টের সফলতার গল্প অব্যাহত।",
         "created_by_id": 1,
-        "target_role": UserRole.TEACHER,
+        "target_role": None,
         "is_urgent": False,
-        "expires_at": datetime(2024, 10, 30),
+        "show_on_landing": True,
+        "expires_at": datetime(2025, 10, 31),
         "is_active": True
     },
     {
-        "title": "Parent-Teacher Conference",
-        "content": "Parent-teacher conferences will be held on November 5-6, 2024. Please schedule appointments with respective class teachers.",
+        "title": "বিনামূল্যে মডেল টেস্ট",
+        "content": "📝 বিনামূল্যে মডেল টেস্ট প্রতি শনিবার। SSC ও HSC পরীক্ষার্থীদের জন্য বিশেষ প্রস্তুতি।",
+        "created_by_id": 2,
+        "target_role": UserRole.STUDENT,
+        "is_urgent": False,
+        "show_on_landing": True,
+        "expires_at": datetime(2025, 12, 31),
+        "is_active": True
+    },
+    {
+        "title": "বিশেষ ক্লাস শুরু",
+        "content": "🎯 গণিত ও পদার্থবিজ্ঞানে বিশেষ ক্লাস শুরু। দুর্বল শিক্ষার্থীদের জন্য অতিরিক্ত যত্ন ও মনোযোগ।",
+        "created_by_id": 1,
+        "target_role": None,
+        "is_urgent": False,
+        "show_on_landing": True,
+        "expires_at": datetime(2025, 11, 15),
+        "is_active": True
+    },
+    {
+        "title": "অভিভাবক সভা",
+        "content": "শিক্ষক-অভিভাবক সভা অনুষ্ঠিত হবে নভেম্বর ৫-৬, ২০২৪ তারিখে। দয়া করে নিজ নিজ ক্লাস শিক্ষকের সাথে সময় নির্ধারণ করুন।",
         "created_by_id": 2,
         "target_role": None,
         "is_urgent": False,
+        "show_on_landing": False,
         "expires_at": datetime(2024, 11, 7),
         "is_active": True
     },
     {
-        "title": "Holiday Notice",
-        "content": "The coaching center will remain closed on November 15, 2024 for Diwali celebrations. Regular classes will resume on November 16.",
+        "title": "ছুটির নোটিশ",
+        "content": "দীপাবলি উৎসব উপলক্ষে নভেম্বর ১৫, ২০২৪ তারিখে কোচিং সেন্টার বন্ধ থাকবে। নিয়মিত ক্লাস ১৬ নভেম্বর থেকে শুরু হবে।",
         "created_by_id": 1,
         "target_role": None,
         "is_urgent": False,
+        "show_on_landing": False,
         "expires_at": datetime(2024, 11, 16),
+        "is_active": True
+    },
+    {
+        "title": "নতুন শিক্ষক নিয়োগ",
+        "content": "🎓 আমাদের টিমে যুক্ত হয়েছেন নতুন অভিজ্ঞ শিক্ষকমণ্ডলী। গণিত ও বিজ্ঞানে আরও উন্নত শিক্ষার ব্যবস্থা।",
+        "created_by_id": 2,
+        "target_role": None,
+        "is_urgent": False,
+        "show_on_landing": False,
+        "expires_at": datetime(2025, 12, 31),
+        "is_active": True
+    },
+    {
+        "title": "অনলাইন ক্লাস সুবিধা",
+        "content": "💻 এখন অনলাইন ক্লাসের সুবিধা! যেকোনো জরুরি অবস্থায় বাড়িতে বসেই ক্লাস করার সুযোগ।",
+        "created_by_id": 1,
+        "target_role": UserRole.STUDENT,
+        "is_urgent": False,
+        "show_on_landing": False,
+        "expires_at": datetime(2025, 12, 31),
         "is_active": True
     }
 ]
@@ -545,5 +590,154 @@ MOCK_TEACHER_REVIEWS = [
         "overall_rating": 4.7,
         "comments": "Excellent communication skills and creative teaching methods. Students show great improvement in language skills.",
         "review_date": datetime(2024, 10, 5)
+    }
+]
+
+MOCK_CLASS_SCHEDULES = [
+    # Monday schedules
+    {
+        "day_of_week": DayOfWeek.MONDAY,
+        "start_time": "08:00",
+        "end_time": "09:30",
+        "subject_id": 1,  # Mathematics for Grade 10A
+        "class_id": 1,
+        "teacher_id": 1,
+        "room_number": "Room 101"
+    },
+    {
+        "day_of_week": DayOfWeek.MONDAY,
+        "start_time": "09:45",
+        "end_time": "11:15",
+        "subject_id": 2,  # Physics for Grade 10A
+        "class_id": 1,
+        "teacher_id": 2,
+        "room_number": "Room 102"
+    },
+    {
+        "day_of_week": DayOfWeek.MONDAY,
+        "start_time": "11:30",
+        "end_time": "13:00",
+        "subject_id": 3,  # Chemistry for Grade 10A
+        "class_id": 1,
+        "teacher_id": 3,
+        "room_number": "Lab 1"
+    },
+    
+    # Tuesday schedules
+    {
+        "day_of_week": DayOfWeek.TUESDAY,
+        "start_time": "08:00",
+        "end_time": "09:30",
+        "subject_id": 4,  # Biology for Grade 10A
+        "class_id": 1,
+        "teacher_id": 4,
+        "room_number": "Lab 2"
+    },
+    {
+        "day_of_week": DayOfWeek.TUESDAY,
+        "start_time": "09:45",
+        "end_time": "11:15",
+        "subject_id": 5,  # English for Grade 10A
+        "class_id": 1,
+        "teacher_id": 5,
+        "room_number": "Room 103"
+    },
+    {
+        "day_of_week": DayOfWeek.TUESDAY,
+        "start_time": "11:30",
+        "end_time": "13:00",
+        "subject_id": 1,  # Mathematics for Grade 10A
+        "class_id": 1,
+        "teacher_id": 1,
+        "room_number": "Room 101"
+    },
+    
+    # Wednesday schedules
+    {
+        "day_of_week": DayOfWeek.WEDNESDAY,
+        "start_time": "08:00",
+        "end_time": "09:30",
+        "subject_id": 2,  # Physics for Grade 10A
+        "class_id": 1,
+        "teacher_id": 2,
+        "room_number": "Room 102"
+    },
+    {
+        "day_of_week": DayOfWeek.WEDNESDAY,
+        "start_time": "09:45",
+        "end_time": "11:15",
+        "subject_id": 3,  # Chemistry for Grade 10A
+        "class_id": 1,
+        "teacher_id": 3,
+        "room_number": "Lab 1"
+    },
+    
+    # Thursday schedules
+    {
+        "day_of_week": DayOfWeek.THURSDAY,
+        "start_time": "08:00",
+        "end_time": "09:30",
+        "subject_id": 5,  # English for Grade 10A
+        "class_id": 1,
+        "teacher_id": 5,
+        "room_number": "Room 103"
+    },
+    {
+        "day_of_week": DayOfWeek.THURSDAY,
+        "start_time": "09:45",
+        "end_time": "11:15",
+        "subject_id": 4,  # Biology for Grade 10A
+        "class_id": 1,
+        "teacher_id": 4,
+        "room_number": "Lab 2"
+    },
+    {
+        "day_of_week": DayOfWeek.THURSDAY,
+        "start_time": "11:30",
+        "end_time": "13:00",
+        "subject_id": 1,  # Mathematics for Grade 10A
+        "class_id": 1,
+        "teacher_id": 1,
+        "room_number": "Room 101"
+    },
+    
+    # Friday schedules
+    {
+        "day_of_week": DayOfWeek.FRIDAY,
+        "start_time": "08:00",
+        "end_time": "09:30",
+        "subject_id": 2,  # Physics for Grade 10A
+        "class_id": 1,
+        "teacher_id": 2,
+        "room_number": "Room 102"
+    },
+    {
+        "day_of_week": DayOfWeek.FRIDAY,
+        "start_time": "09:45",
+        "end_time": "11:15",
+        "subject_id": 3,  # Chemistry for Grade 10A
+        "class_id": 1,
+        "teacher_id": 3,
+        "room_number": "Lab 1"
+    },
+    
+    # Saturday schedules (lighter day)
+    {
+        "day_of_week": DayOfWeek.SATURDAY,
+        "start_time": "09:00",
+        "end_time": "10:30",
+        "subject_id": 5,  # English for Grade 10A
+        "class_id": 1,
+        "teacher_id": 5,
+        "room_number": "Room 103"
+    },
+    {
+        "day_of_week": DayOfWeek.SATURDAY,
+        "start_time": "10:45",
+        "end_time": "12:15",
+        "subject_id": 1,  # Mathematics for Grade 10A
+        "class_id": 1,
+        "teacher_id": 1,
+        "room_number": "Room 101"
     }
 ]

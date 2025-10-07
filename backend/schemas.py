@@ -3,6 +3,8 @@
 
 from pydantic import BaseModel
 from typing import List, Optional
+from datetime import datetime
+from models import UserRole
 
 # Login schema
 class LoginRequest(BaseModel):
@@ -97,7 +99,10 @@ class StudyMaterialUpdate(BaseModel):
 class NoticeUpdate(BaseModel):
     title: Optional[str] = None
     content: Optional[str] = None
+    target_role: Optional[UserRole] = None
     is_urgent: Optional[bool] = None
+    show_on_landing: Optional[bool] = None
+    expires_at: Optional[datetime] = None
     is_active: Optional[bool] = None
 
 class TeacherReviewUpdate(BaseModel):

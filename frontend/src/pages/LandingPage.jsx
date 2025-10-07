@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { GraduationCap, Users, BookOpen, Calendar, Award, BarChart3, Shield, CheckCircle } from 'lucide-react'
 import Button from '../components/Button'
 import Card from '../components/Card'
+import { useNotices } from '../services/queries'
 
 // Add marquee animation styles
 const marqueeStyle = `
@@ -14,6 +15,26 @@ const marqueeStyle = `
 
 const LandingPage = () => {
   const navigate = useNavigate()
+  const { data: notices } = useNotices()
+
+  // Filter notices that should show on landing page
+  const landingNotices = notices?.filter(notice => 
+    notice.show_on_landing && 
+    notice.is_active &&
+    (!notice.expires_at || new Date(notice.expires_at) > new Date())
+  ) || []
+
+  // Fallback Bengali notices if no landing notices are available
+  const fallbackNotices = [
+    "🎉 নতুন ব্যাচ শুরু হবে ১৫ অক্টোবর থেকে - সীমিত আসন!",
+    "📚 HSC ২০২৬ ব্যাচের ভর্তি চলছে - বিশেষ ছাড়ে!",
+    "🏆 আমাদের ৫০+ শিক্ষার্থী এবছর A+ পেয়েছে!",
+    "📝 বিনামূল্যে মডেল টেস্ট প্রতি শনিবার",
+    "🎯 গণিত ও পদার্থবিজ্ঞানে বিশেষ ক্লাস শুরু"
+  ]
+
+  // Use landing notices if available, otherwise use fallback
+  const displayNotices = landingNotices.length > 0 ? landingNotices : fallbackNotices
 
   const features = [
     {
@@ -69,33 +90,39 @@ const LandingPage = () => {
   return (
     <>
       <style>{marqueeStyle}</style>
-      <div className="min-h-screen bg-gradient-to-br from-green-50 via-white to-emerald-50">
+      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-gray-50">
       {/* Latest Notices Marquee */}
-      <div className="bg-green-600 text-white py-2 overflow-hidden">
-        <div className="flex items-center">
-          <span className="bg-red-600 px-3 py-1 text-xs font-bold rounded-r-full flex-shrink-0">
-            📢 সর্বশেষ ঘোষণা
-          </span>
-          <div className="ml-4 flex-1 overflow-hidden">
-            <div className="whitespace-nowrap" style={{
-              animation: 'marquee 30s linear infinite'
-            }}>
-              <span className="mx-8">🎉 নতুন ব্যাচ শুরু হবে ১৫ অক্টোবর থেকে - সীমিত আসন!</span>
-              <span className="mx-8">📚 HSC ২০২৬ ব্যাচের ভর্তি চলছে - বিশেষ ছাড়ে!</span>
-              <span className="mx-8">🏆 আমাদের ৫০+ শিক্ষার্থী এবছর A+ পেয়েছে!</span>
-              <span className="mx-8">📝 বিনামূল্যে মডেল টেস্ট প্রতি শনিবার</span>
-              <span className="mx-8">🎯 গণিত ও পদার্থবিজ্ঞানে বিশেষ ক্লাস শুরু</span>
+      {(
+        <div className="bg-slate-600 text-white py-2 overflow-hidden">
+          <div className="flex items-center">
+            <span className="bg-red-600 px-3 py-1 text-xs font-bold rounded-r-full flex-shrink-0">
+              📢 সর্বশেষ ঘোষণা
+            </span>
+            <div className="ml-4 flex-1 overflow-hidden">
+              <div className="whitespace-nowrap" style={{
+                animation: 'marquee 30s linear infinite'
+              }}>
+                {landingNotices.map((notice, index) => (
+                  <span key={notice.id} className="mx-8">
+                    � {notice.content}
+                  </span>
+                ))}
+                {/* If no notices, show default message */}
+                {landingNotices.length === 0 && (
+                  <span className="mx-8">🎉 স্বাগতম সায়েন্স পয়েন্ট কোচিং সেন্টারে!</span>
+                )}
+              </div>
             </div>
           </div>
         </div>
-      </div>
+      )}
 
       {/* Header */}
       <header className="bg-white/80 backdrop-blur-md border-b border-gray-200 sticky top-0 z-50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center py-4">
             <div className="flex items-center space-x-2">
-              <GraduationCap className="h-8 w-8 text-green-600" />
+              <GraduationCap className="h-8 w-8 text-slate-600" />
               <span className="text-xl font-bold text-gray-900">Science Point</span>
             </div>
             <div className="flex items-center space-x-4">
@@ -114,29 +141,29 @@ const LandingPage = () => {
       <section className="py-20 px-4 sm:px-6 lg:px-8">
         <div className="max-w-7xl mx-auto text-center">
           <div className="mb-6">
-            <p className="text-lg text-green-600 font-semibold mb-2">মীরসরাই, চট্টগ্রাম</p>
+            <p className="text-lg text-slate-600 font-semibold mb-2">মীরসরাই, চট্টগ্রাম</p>
             <h1 className="text-4xl sm:text-5xl lg:text-6xl font-bold text-gray-900 mb-6">
-              <span className="text-green-600">সায়েন্স পয়েন্ট</span>
+              <span className="text-slate-700">সায়েন্স পয়েন্ট</span>
               <span className="block text-3xl sm:text-4xl lg:text-5xl mt-2">কোচিং সেন্টার</span>
             </h1>
           </div>
           <div className="bg-white/80 backdrop-blur-sm rounded-2xl p-8 shadow-lg max-w-4xl mx-auto mb-8">
             <p className="text-xl text-gray-700 mb-6">
-              <span className="font-semibold text-green-600">৬ম থেকে ১০ম শ্রেণী</span> (মাধ্যমিক) এবং 
-              <span className="font-semibold text-green-600"> ১১শ থেকে ১২শ শ্রেণী</span> (উচ্চ মাধ্যমিক) শিক্ষার্থীদের জন্য
+              <span className="font-semibold text-slate-600">৬ম থেকে ১০ম শ্রেণী</span> (মাধ্যমিক) এবং 
+              <span className="font-semibold text-slate-600"> ১১শ থেকে ১২শ শ্রেণী</span> (উচ্চ মাধ্যমিক) শিক্ষার্থীদের জন্য
             </p>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6 text-center mb-8">
-              <div className="bg-green-50 p-4 rounded-lg">
-                <h3 className="font-bold text-green-800">গণিত ও বিজ্ঞান</h3>
-                <p className="text-sm text-green-600">বিশেষজ্ঞ শিক্ষক</p>
+              <div className="bg-slate-50 p-4 rounded-lg">
+                <h3 className="font-bold text-slate-700">গণিত ও বিজ্ঞান</h3>
+                <p className="text-sm text-slate-500">বিশেষজ্ঞ শিক্ষক</p>
               </div>
-              <div className="bg-green-50 p-4 rounded-lg">
-                <h3 className="font-bold text-green-800">বোর্ড পরীক্ষার প্রস্তুতি</h3>
-                <p className="text-sm text-green-600">JSC, SSC, HSC</p>
+              <div className="bg-slate-50 p-4 rounded-lg">
+                <h3 className="font-bold text-slate-700">বোর্ড পরীক্ষার প্রস্তুতি</h3>
+                <p className="text-sm text-slate-500">JSC, SSC, HSC</p>
               </div>
-              <div className="bg-green-50 p-4 rounded-lg">
-                <h3 className="font-bold text-green-800">ছোট ব্যাচ সাইজ</h3>
-                <p className="text-sm text-green-600">ব্যক্তিগত মনোযোগ</p>
+              <div className="bg-slate-50 p-4 rounded-lg">
+                <h3 className="font-bold text-slate-700">ছোট ব্যাচ সাইজ</h3>
+                <p className="text-sm text-slate-500">ব্যক্তিগত মনোযোগ</p>
               </div>
             </div>
           </div>
@@ -174,7 +201,7 @@ const LandingPage = () => {
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
             {features.map((feature, index) => (
               <Card key={index} className="p-6 hover:shadow-lg transition-shadow">
-                <div className="text-green-600 mb-4">
+                <div className="text-slate-600 mb-4">
                   {feature.icon}
                 </div>
                 <h3 className="text-xl font-semibold text-gray-900 mb-2">
@@ -203,7 +230,7 @@ const LandingPage = () => {
 
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 mb-16">
             {/* High School Section */}
-            <div className="bg-white p-8 rounded-2xl shadow-lg border-l-4 border-green-500">
+            <div className="bg-white p-8 rounded-2xl shadow-lg border-l-4 border-green-400">
               <h3 className="text-2xl font-bold text-gray-900 mb-4 flex items-center">
                 <BookOpen className="h-6 w-6 text-green-600 mr-2" />
                 মাধ্যমিক (৬ম - ১০ম শ্রেণী)
@@ -227,7 +254,7 @@ const LandingPage = () => {
                 </div>
               </div>
               <div className="bg-green-50 p-4 rounded-lg">
-                <p className="text-sm text-green-700">
+                <p className="text-sm text-green-600">
                   <strong>ক্লাসের সময়:</strong> সকাল ৮টা - বিকাল ৪টা<br/>
                   <strong>ব্যাচ সাইজ:</strong> সর্বোচ্চ ১৫ জন
                 </p>
@@ -268,18 +295,19 @@ const LandingPage = () => {
           </div>
 
           {/* Contact Section */}
-          <div className="bg-gradient-to-r from-green-600 to-green-700 p-8 rounded-2xl text-white text-center">
+          {/* <div className="bg-gradient-to-r from-slate-600 to-slate-700 p-8 rounded-2xl text-white text-center">
             <h3 className="text-2xl font-bold mb-4">ভর্তির জন্য আজই যোগাযোগ করুন!</h3>
-            <p className="text-green-100 mb-6">
+            <p className="text-slate-100 mb-6">
               সীমিত আসন। প্রতি ব্যাচে মাত্র ১৫ জন শিক্ষার্থী নেওয়া হয়।
             </p>
             <Button 
-              className="bg-white text-green-600 hover:bg-gray-100 text-lg py-3 px-8"
+              className="bg-white text-slate-600 hover:bg-gray-100 text-lg py-3 px-8"
               onClick={() => navigate('/login')}
             >
               এখনই ভর্তি হন
             </Button>
-          </div>
+          </div> */}
+
         </div>
       </section>      {/* Testimonials */}
       <section className="py-20 px-4 sm:px-6 lg:px-8 bg-white">
@@ -310,24 +338,24 @@ const LandingPage = () => {
       </section>
 
       {/* CTA Section */}
-      <section className="py-20 px-4 sm:px-6 lg:px-8 bg-green-600">
+      <section className="py-20 px-4 sm:px-6 lg:px-8 bg-slate-600">
         <div className="max-w-4xl mx-auto text-center">
           <h2 className="text-3xl sm:text-4xl font-bold text-white mb-4">
             আপনার সন্তানের উজ্জ্বল ভবিষ্যৎ গড়ুন
           </h2>
-          <p className="text-xl text-green-100 mb-8">
+          <p className="text-xl text-slate-200 mb-8">
             মীরসরাইয়ের সেরা কোচিং সেন্টারে আজই ভর্তি করান
           </p>
           <div className="bg-white/10 backdrop-blur-sm rounded-lg p-6 mb-8 max-w-2xl mx-auto">
             <p className="text-white font-semibold mb-2">যোগাযোগ:</p>
-            <p className="text-green-100">📍 মীরসরাই বাজার, চট্টগ্রাম</p>
-            <p className="text-green-100">📞 ০১৭xxxxxxxx</p>
-            <p className="text-green-100">🕒 রোজ সকাল ৮টা - রাত ৮টা</p>
+            <p className="text-slate-200">📍 মীরসরাই বাজার, চট্টগ্রাম</p>
+            <p className="text-slate-200">📞 ০১৭xxxxxxxx</p>
+            <p className="text-slate-200">🕒 রোজ সকাল ৮টা - রাত ৮টা</p>
           </div>
           <Button 
             size="lg" 
             variant="outline"
-            className="text-lg px-8 py-4 bg-white text-green-600 hover:bg-gray-100"
+            className="text-lg px-8 py-4 bg-white text-slate-600 hover:bg-gray-100"
             onClick={() => navigate('/login')}
           >
             ভর্তির ফর্ম পূরণ করুন
@@ -341,7 +369,7 @@ const LandingPage = () => {
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mb-8">
             <div className="text-center md:text-left">
               <div className="flex items-center justify-center md:justify-start space-x-2 mb-4">
-                <GraduationCap className="h-8 w-8 text-green-400" />
+                <GraduationCap className="h-8 w-8 text-slate-400" />
                 <span className="text-xl font-bold">Science Point</span>
               </div>
               <p className="text-gray-400">
@@ -351,7 +379,7 @@ const LandingPage = () => {
             </div>
             
             <div className="text-center">
-              <h3 className="text-lg font-semibold mb-4 text-green-400">যোগাযোগ</h3>
+              <h3 className="text-lg font-semibold mb-4 text-slate-400">যোগাযোগ</h3>
               <p className="text-gray-400 text-sm">
                 📍 মীরসরাই বাজার, চট্টগ্রাম<br/>
                 📞 ০১৭xxxxxxxx<br/>
@@ -361,7 +389,7 @@ const LandingPage = () => {
             </div>
 
             <div className="text-center md:text-right">
-              <h3 className="text-lg font-semibold mb-4 text-green-400">কোর্স সমূহ</h3>
+              <h3 className="text-lg font-semibold mb-4 text-slate-400">কোর্স সমূহ</h3>
               <p className="text-gray-400 text-sm">
                 ৬ম - ১০ম শ্রেণী (মাধ্যমিক)<br/>
                 ১১শ - ১২শ শ্রেণী (উচ্চ মাধ্যমিক)<br/>

@@ -155,6 +155,51 @@ class SubjectRead(SubjectBase):
     class_id: int
     teacher_id: int
 
+# Class Schedule Model
+class DayOfWeek(str, Enum):
+    SATURDAY = "saturday"
+    SUNDAY = "sunday"
+    MONDAY = "monday"
+    TUESDAY = "tuesday"
+    WEDNESDAY = "wednesday"
+    THURSDAY = "thursday"
+    FRIDAY = "friday"
+
+class ClassScheduleBase(SQLModel):
+    day_of_week: DayOfWeek
+    start_time: str = Field(max_length=8)  # Format: "HH:MM:SS" or "HH:MM"
+    end_time: str = Field(max_length=8)    # Format: "HH:MM:SS" or "HH:MM"
+    room_number: Optional[str] = Field(default=None, max_length=20)
+
+class ClassSchedule(ClassScheduleBase, table=True):
+    __tablename__ = "class_schedules"
+    
+    id: Optional[int] = Field(default=None, primary_key=True)
+    subject_id: int = Field(foreign_key="subjects.id")
+    class_id: int = Field(foreign_key="classes.id")
+    teacher_id: int = Field(foreign_key="teachers.id")
+    created_at: Optional[datetime] = Field(default_factory=datetime.utcnow)
+    
+    # Relationships
+    subject: Optional[Subject] = Relationship()
+    class_assigned: Optional[Class] = Relationship()
+    teacher: Optional[Teacher] = Relationship()
+
+class ClassScheduleCreate(ClassScheduleBase):
+    subject_id: int
+    class_id: int
+    teacher_id: int
+
+class ClassScheduleRead(ClassScheduleBase):
+    id: int
+    subject_id: int
+    class_id: int
+    teacher_id: int
+    created_at: datetime
+    subject: Optional[SubjectRead] = None
+    class_assigned: Optional[ClassRead] = None
+    teacher: Optional[TeacherRead] = None
+
 class AttendanceBase(SQLModel):
     date: datetime
     status: AttendanceStatus
@@ -265,6 +310,7 @@ class NoticeBase(SQLModel):
     content: str = Field(min_length=10)
     target_role: Optional[UserRole] = Field(default=None)
     is_urgent: bool = Field(default=False)
+    show_on_landing: bool = Field(default=False)
     expires_at: Optional[datetime] = Field(default=None)
     is_active: bool = Field(default=True)
 

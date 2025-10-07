@@ -2,7 +2,8 @@ from fastapi import FastAPI, HTTPException, Depends, status
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from sqlmodel import Session, select
-from sqlalchemy import func
+from sqlalchemy import func, or_, and_
+from sqlalchemy.orm import selectinload
 from database import get_session, create_db_and_tables, engine
 from models import *
 from schemas import *
@@ -685,6 +686,160 @@ def get_notices(
     notices = session.exec(statement).all()
     return notices
 
+@app.put("/admin/notices/{notice_id}", response_model=NoticeRead)
+def update_notice(
+    notice_id: int,
+    notice_update: NoticeUpdate,
+    current_user_id: int = 1,  # Placeholder for authentication
+    session: Session = Depends(get_session)
+):
+    notice = session.get(Notice, notice_id)
+    if not notice:
+        raise HTTPException(status_code=404, detail="Notice not found")
+    
+    notice_data = notice_update.model_dump(exclude_unset=True)
+    for field, value in notice_data.items():
+        setattr(notice, field, value)
+    
+    session.add(notice)
+    session.commit()
+    session.refresh(notice)
+    return notice
+
+@app.delete("/admin/notices/{notice_id}")
+def delete_notice(
+    notice_id: int,
+    current_user_id: int = 1,  # Placeholder for authentication
+    session: Session = Depends(get_session)
+):
+    notice = session.get(Notice, notice_id)
+    if not notice:
+        raise HTTPException(status_code=404, detail="Notice not found")
+    
+    session.delete(notice)
+    session.commit()
+    return {"message": "Notice deleted successfully"}
+
+# Class Schedules
+@app.post("/admin/class-schedules", response_model=ClassScheduleRead)
+def create_class_schedule(
+    schedule: ClassScheduleCreate,
+    current_user_id: int = 1,  # Placeholder for authentication
+    session: Session = Depends(get_session)
+):
+    # Check for time conflicts
+    statement = select(ClassSchedule).where(
+        ClassSchedule.day_of_week == schedule.day_of_week,
+        ClassSchedule.teacher_id == schedule.teacher_id,
+        # Simple time overlap check
+        or_(
+            and_(
+                ClassSchedule.start_time <= schedule.start_time,
+                ClassSchedule.end_time > schedule.start_time
+            ),
+            and_(
+                ClassSchedule.start_time < schedule.end_time,
+                ClassSchedule.end_time >= schedule.end_time
+            )
+        )
+    )
+    existing_schedule = session.exec(statement).first()
+    
+    if existing_schedule:
+        raise HTTPException(
+            status_code=400, 
+            detail="Teacher already has a class scheduled at this time"
+        )
+    
+    db_schedule = ClassSchedule(**schedule.dict())
+    session.add(db_schedule)
+    session.commit()
+    session.refresh(db_schedule)
+    return db_schedule
+
+@app.get("/admin/class-schedules", response_model=List[ClassScheduleRead])
+def get_class_schedules(
+    day_of_week: DayOfWeek = None,
+    class_id: int = None,
+    teacher_id: int = None,
+    session: Session = Depends(get_session)
+):
+    statement = select(ClassSchedule).options(
+        selectinload(ClassSchedule.subject),
+        selectinload(ClassSchedule.class_assigned),
+        selectinload(ClassSchedule.teacher)
+    )
+    
+    if day_of_week:
+        statement = statement.where(ClassSchedule.day_of_week == day_of_week)
+    if class_id:
+        statement = statement.where(ClassSchedule.class_id == class_id)
+    if teacher_id:
+        statement = statement.where(ClassSchedule.teacher_id == teacher_id)
+    
+    statement = statement.order_by(ClassSchedule.day_of_week, ClassSchedule.start_time)
+    schedules = session.exec(statement).all()
+    return schedules
+
+@app.get("/teacher/{teacher_id}/schedule", response_model=List[ClassScheduleRead])
+def get_teacher_schedule(
+    teacher_id: int,
+    day_of_week: DayOfWeek = None,
+    session: Session = Depends(get_session)
+):
+    statement = select(ClassSchedule).options(
+        selectinload(ClassSchedule.subject),
+        selectinload(ClassSchedule.class_assigned)
+    ).where(ClassSchedule.teacher_id == teacher_id)
+    
+    if day_of_week:
+        statement = statement.where(ClassSchedule.day_of_week == day_of_week)
+    
+    statement = statement.order_by(ClassSchedule.start_time)
+    schedules = session.exec(statement).all()
+    return schedules
+
+@app.get("/student/{student_id}/schedule", response_model=List[ClassScheduleRead])
+def get_student_schedule(
+    student_id: int,
+    day_of_week: DayOfWeek = None,
+    session: Session = Depends(get_session)
+):
+    # First get the student's class
+    student_statement = select(Student).where(Student.id == student_id)
+    student = session.exec(student_statement).first()
+    
+    if not student:
+        raise HTTPException(status_code=404, detail="Student not found")
+    
+    # Get schedules for the student's class
+    statement = select(ClassSchedule).options(
+        selectinload(ClassSchedule.subject),
+        selectinload(ClassSchedule.teacher)
+    ).where(ClassSchedule.class_id == student.class_id)
+    
+    if day_of_week:
+        statement = statement.where(ClassSchedule.day_of_week == day_of_week)
+    
+    statement = statement.order_by(ClassSchedule.start_time)
+    schedules = session.exec(statement).all()
+    return schedules
+
+@app.delete("/admin/class-schedules/{schedule_id}")
+def delete_class_schedule(
+    schedule_id: int,
+    session: Session = Depends(get_session)
+):
+    statement = select(ClassSchedule).where(ClassSchedule.id == schedule_id)
+    schedule = session.exec(statement).first()
+    
+    if not schedule:
+        raise HTTPException(status_code=404, detail="Schedule not found")
+    
+    session.delete(schedule)
+    session.commit()
+    return {"message": "Schedule deleted successfully"}
+
 # Teacher reviews
 @app.post("/admin/teacher-reviews", response_model=TeacherReviewRead)
 def create_teacher_review(
@@ -880,6 +1035,11 @@ def seed_mock_data(session: Session = Depends(get_session)):
             review = TeacherReview(**review_data)
             session.add(review)
         
+        # Create class schedules
+        for schedule_data in MOCK_CLASS_SCHEDULES:
+            schedule = ClassSchedule(**schedule_data)
+            session.add(schedule)
+        
         session.commit()
         
         return {
@@ -895,7 +1055,8 @@ def seed_mock_data(session: Session = Depends(get_session)):
                 "exam_results": len(MOCK_EXAM_RESULTS),
                 "study_materials": len(MOCK_STUDY_MATERIALS),
                 "notices": len(MOCK_NOTICES),
-                "teacher_reviews": len(MOCK_TEACHER_REVIEWS)
+                "teacher_reviews": len(MOCK_TEACHER_REVIEWS),
+                "class_schedules": len(MOCK_CLASS_SCHEDULES)
             }
         }
         

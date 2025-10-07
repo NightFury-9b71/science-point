@@ -10,6 +10,7 @@ import TeacherStudents from './teacher/TeacherStudents'
 import TeacherAttendance from './teacher/TeacherAttendance'
 import TeacherExams from './teacher/TeacherExams'
 import TeacherResults from './teacher/TeacherResults'
+import TeacherSchedule from './teacher/TeacherSchedule'
 
 const TeacherDashboard = () => {
   const { user } = useAuth()
@@ -41,6 +42,7 @@ const TeacherDashboard = () => {
       <Route path="/attendance" element={<TeacherAttendance />} />
       <Route path="/exams" element={<TeacherExams />} />
       <Route path="/results" element={<TeacherResults />} />
+      <Route path="/schedule" element={<TeacherSchedule />} />
     </Routes>
   )
 }

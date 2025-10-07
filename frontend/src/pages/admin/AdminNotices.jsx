@@ -6,12 +6,14 @@ import Card from '../../components/Card'
 import Button from '../../components/Button'
 import Modal from '../../components/Modal'
 import { Input, Select } from '../../components/Form'
-import { useNotices, useCreateNotice } from '../../services/queries'
+import { useNotices, useCreateNotice, useUpdateNotice, useDeleteNotice } from '../../services/queries'
 
 const AdminNotices = () => {
   const navigate = useNavigate()
   const { data: notices, isLoading } = useNotices()
   const createNotice = useCreateNotice()
+  const updateNotice = useUpdateNotice()
+  const deleteNotice = useDeleteNotice()
   
   const [showModal, setShowModal] = useState(false)
   const [showViewModal, setShowViewModal] = useState(false)
@@ -19,7 +21,7 @@ const AdminNotices = () => {
   const [showDeleteModal, setShowDeleteModal] = useState(false)
   const [selectedNotice, setSelectedNotice] = useState(null)
   const [form, setForm] = useState({
-    title: '', content: '', target_role: '', is_urgent: false, expires_at: ''
+    title: '', content: '', target_role: '', is_urgent: false, show_on_landing: false, expires_at: ''
   })
   const [editForm, setEditForm] = useState(null)
 
@@ -27,6 +29,7 @@ const AdminNotices = () => {
   const [searchQuery, setSearchQuery] = useState('')
   const [selectedRole, setSelectedRole] = useState('')
   const [urgencyFilter, setUrgencyFilter] = useState('')
+  const [landingPageFilter, setLandingPageFilter] = useState('')
   const [sortBy, setSortBy] = useState('created_at')
 
   // Filter notices
@@ -39,7 +42,10 @@ const AdminNotices = () => {
       const matchesUrgency = urgencyFilter === '' || 
         (urgencyFilter === 'urgent' && notice.is_urgent) ||
         (urgencyFilter === 'normal' && !notice.is_urgent)
-      return matchesSearch && matchesRole && matchesUrgency
+      const matchesLandingPage = landingPageFilter === '' ||
+        (landingPageFilter === 'landing' && notice.show_on_landing) ||
+        (landingPageFilter === 'non-landing' && !notice.show_on_landing)
+      return matchesSearch && matchesRole && matchesUrgency && matchesLandingPage
     })
     ?.sort((a, b) => {
       switch (sortBy) {
@@ -78,6 +84,7 @@ const AdminNotices = () => {
         title: form.title.trim(),
         content: form.content.trim(),
         is_urgent: form.is_urgent,
+        show_on_landing: form.show_on_landing,
         expires_at: form.expires_at || null
       }
       
@@ -90,7 +97,7 @@ const AdminNotices = () => {
       await createNotice.mutateAsync(noticeData)
       setShowModal(false)
       setForm({
-        title: '', content: '', target_role: '', is_urgent: false, expires_at: ''
+        title: '', content: '', target_role: '', is_urgent: false, show_on_landing: false, expires_at: ''
       })
       toast.success('Notice created successfully!')
     } catch (error) {
@@ -133,13 +140,17 @@ const AdminNotices = () => {
 
   const confirmDeleteNotice = async () => {
     try {
-      // TODO: Replace with actual delete mutation
-      // await deleteNotice.mutateAsync(selectedNotice.id)
+      await deleteNotice.mutateAsync(selectedNotice.id)
       setShowDeleteModal(false)
       setSelectedNotice(null)
       toast.success('Notice deleted successfully!')
     } catch (error) {
-      toast.error('Failed to delete notice')
+      console.error('Error deleting notice:', error)
+      let errorMessage = 'Failed to delete notice. Please try again.'
+      if (error.response?.data?.detail) {
+        errorMessage = error.response.data.detail
+      }
+      toast.error(errorMessage)
     }
   }
 
@@ -150,23 +161,34 @@ const AdminNotices = () => {
         ...editForm,
         expires_at: editForm.expires_at || null
       }
-      // TODO: Replace with actual update mutation
-      // await updateNotice.mutateAsync({ id: selectedNotice.id, ...noticeData })
+      await updateNotice.mutateAsync({ id: selectedNotice.id, ...noticeData })
       setShowEditModal(false)
       setEditForm(null)
       setSelectedNotice(null)
       toast.success('Notice updated successfully!')
     } catch (error) {
-      toast.error('Failed to update notice')
+      console.error('Error updating notice:', error)
+      let errorMessage = 'Failed to update notice. Please try again.'
+      if (error.response?.data?.detail) {
+        if (Array.isArray(error.response.data.detail)) {
+          errorMessage = error.response.data.detail.map(e => e.msg || e.message).join(', ')
+        } else {
+          errorMessage = error.response.data.detail
+        }
+      }
+      toast.error(errorMessage)
     }
   }
 
   const handleToggleUrgent = async (notice) => {
     try {
-      // TODO: Replace with actual toggle mutation
-      // await toggleNoticeUrgent.mutateAsync({ id: notice.id, is_urgent: !notice.is_urgent })
+      await updateNotice.mutateAsync({ 
+        id: notice.id, 
+        is_urgent: !notice.is_urgent 
+      })
       toast.success(`Notice marked as ${!notice.is_urgent ? 'urgent' : 'normal'}`)
     } catch (error) {
+      console.error('Error updating notice urgency:', error)
       toast.error('Failed to update notice status')
     }
   }
@@ -204,7 +226,7 @@ const AdminNotices = () => {
       {/* Filters */}
       <Card className="mb-6">
         <Card.Content className="p-4">
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4 mb-4">
             {/* Search */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">Search</label>
@@ -250,6 +272,20 @@ const AdminNotices = () => {
               </select>
             </div>
 
+            {/* Landing Page Filter */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Landing Page</label>
+              <select
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                value={landingPageFilter}
+                onChange={(e) => setLandingPageFilter(e.target.value)}
+              >
+                <option value="">All Notices</option>
+                <option value="landing">Landing Page Only</option>
+                <option value="non-landing">Non-Landing Only</option>
+              </select>
+            </div>
+
             {/* Sort By */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">Sort By</label>
@@ -271,7 +307,7 @@ const AdminNotices = () => {
             <div className="text-sm text-gray-600">
               Showing {filteredNotices.length} of {notices?.length || 0} notices
             </div>
-            {(searchQuery || selectedRole || urgencyFilter || sortBy !== 'created_at') && (
+            {(searchQuery || selectedRole || urgencyFilter || landingPageFilter || sortBy !== 'created_at') && (
               <Button
                 variant="outline"
                 size="sm"
@@ -279,6 +315,7 @@ const AdminNotices = () => {
                   setSearchQuery('')
                   setSelectedRole('')
                   setUrgencyFilter('')
+                  setLandingPageFilter('')
                   setSortBy('created_at')
                 }}
               >
@@ -302,6 +339,11 @@ const AdminNotices = () => {
                       {notice.is_urgent && (
                         <span className="bg-red-100 text-red-800 px-2 py-1 rounded text-xs font-medium">
                           Urgent
+                        </span>
+                      )}
+                      {notice.show_on_landing && (
+                        <span className="bg-blue-100 text-blue-800 px-2 py-1 rounded text-xs font-medium">
+                          Landing Page
                         </span>
                       )}
                     </div>
@@ -392,17 +434,31 @@ const AdminNotices = () => {
             value={form.expires_at}
             onChange={(e) => setForm({ ...form, expires_at: e.target.value })}
           />
-          <div className="flex items-center space-x-2">
-            <input
-              type="checkbox"
-              id="urgent"
-              checked={form.is_urgent}
-              onChange={(e) => setForm({ ...form, is_urgent: e.target.checked })}
-              className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
-            />
-            <label htmlFor="urgent" className="text-sm font-medium text-gray-700">
-              Mark as urgent
-            </label>
+          <div className="space-y-2">
+            <div className="flex items-center space-x-2">
+              <input
+                type="checkbox"
+                id="urgent"
+                checked={form.is_urgent}
+                onChange={(e) => setForm({ ...form, is_urgent: e.target.checked })}
+                className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+              />
+              <label htmlFor="urgent" className="text-sm font-medium text-gray-700">
+                Mark as urgent
+              </label>
+            </div>
+            <div className="flex items-center space-x-2">
+              <input
+                type="checkbox"
+                id="show-on-landing"
+                checked={form.show_on_landing}
+                onChange={(e) => setForm({ ...form, show_on_landing: e.target.checked })}
+                className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+              />
+              <label htmlFor="show-on-landing" className="text-sm font-medium text-gray-700">
+                Show on landing page
+              </label>
+            </div>
           </div>
           <div className="flex flex-col-reverse sm:flex-row justify-end space-y-2 space-y-reverse sm:space-y-0 sm:space-x-3">
             <Button type="button" variant="outline" onClick={() => setShowModal(false)}>
@@ -502,23 +558,37 @@ const AdminNotices = () => {
               value={editForm.expires_at}
               onChange={(e) => setEditForm({ ...editForm, expires_at: e.target.value })}
             />
-            <div className="flex items-center space-x-2">
-              <input
-                type="checkbox"
-                id="edit-urgent"
-                checked={editForm.is_urgent}
-                onChange={(e) => setEditForm({ ...editForm, is_urgent: e.target.checked })}
-                className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
-              />
-              <label htmlFor="edit-urgent" className="text-sm font-medium text-gray-700">
-                Mark as urgent
-              </label>
+            <div className="space-y-2">
+              <div className="flex items-center space-x-2">
+                <input
+                  type="checkbox"
+                  id="edit-urgent"
+                  checked={editForm.is_urgent}
+                  onChange={(e) => setEditForm({ ...editForm, is_urgent: e.target.checked })}
+                  className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                />
+                <label htmlFor="edit-urgent" className="text-sm font-medium text-gray-700">
+                  Mark as urgent
+                </label>
+              </div>
+              <div className="flex items-center space-x-2">
+                <input
+                  type="checkbox"
+                  id="edit-show-on-landing"
+                  checked={editForm.show_on_landing || false}
+                  onChange={(e) => setEditForm({ ...editForm, show_on_landing: e.target.checked })}
+                  className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                />
+                <label htmlFor="edit-show-on-landing" className="text-sm font-medium text-gray-700">
+                  Show on landing page
+                </label>
+              </div>
             </div>
             <div className="flex flex-col-reverse sm:flex-row justify-end space-y-2 space-y-reverse sm:space-y-0 sm:space-x-3">
               <Button type="button" variant="outline" onClick={() => setShowEditModal(false)}>
                 Cancel
               </Button>
-              <Button type="submit">
+              <Button type="submit" loading={updateNotice.isPending}>
                 Update Notice
               </Button>
             </div>
@@ -547,6 +617,7 @@ const AdminNotices = () => {
               </Button>
               <Button 
                 onClick={confirmDeleteNotice}
+                loading={deleteNotice.isPending}
                 className="bg-red-600 hover:bg-red-700 text-white"
               >
                 Delete Notice

@@ -19,3 +19,9 @@ def get_session():
 # Function to create all tables
 def create_db_and_tables():
     SQLModel.metadata.create_all(engine)
+
+if __name__ == "__main__":
+    # Import models to ensure they're registered with SQLModel
+    from models import *
+    create_db_and_tables()
+    print("Database and tables created successfully!")

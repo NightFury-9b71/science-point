@@ -14,7 +14,10 @@ export const queryKeys = {
   studyMaterials: ['studyMaterials'],
   attendance: ['attendance'],
   teacherReviews: ['teacherReviews'],
-  teacherClasses: ['teacherClasses']
+  teacherClasses: ['teacherClasses'],
+  classSchedules: ['classSchedules'],
+  teacherSchedule: ['teacherSchedule'],
+  studentSchedule: ['studentSchedule']
 }
 
 // Admin Hooks
@@ -349,6 +352,30 @@ export const useCreateNotice = () => {
   })
 }
 
+export const useUpdateNotice = () => {
+  const queryClient = useQueryClient()
+  
+  return useMutation({
+    mutationFn: ({ id, ...noticeData }) => adminAPI.updateNotice(id, noticeData),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.notices })
+      queryClient.invalidateQueries({ queryKey: queryKeys.dashboard })
+    },
+  })
+}
+
+export const useDeleteNotice = () => {
+  const queryClient = useQueryClient()
+  
+  return useMutation({
+    mutationFn: (noticeId) => adminAPI.deleteNotice(noticeId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.notices })
+      queryClient.invalidateQueries({ queryKey: queryKeys.dashboard })
+    },
+  })
+}
+
 export const useMarkAttendance = () => {
   const queryClient = useQueryClient()
   
@@ -566,5 +593,55 @@ export const useUpdateAttendance = () => {
       queryClient.invalidateQueries({ queryKey: queryKeys.attendance })
       queryClient.invalidateQueries({ queryKey: ['classAttendance'] })
     },
+  })
+}
+
+// Class Schedule Hooks
+export const useClassSchedules = (params = {}) => {
+  return useQuery({
+    queryKey: [...queryKeys.classSchedules, params],
+    queryFn: () => adminAPI.getClassSchedules(params).then(res => res.data),
+  })
+}
+
+export const useCreateClassSchedule = () => {
+  const queryClient = useQueryClient()
+  
+  return useMutation({
+    mutationFn: (scheduleData) => adminAPI.createClassSchedule(scheduleData),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.classSchedules })
+      queryClient.invalidateQueries({ queryKey: queryKeys.teacherSchedule })
+      queryClient.invalidateQueries({ queryKey: queryKeys.studentSchedule })
+    },
+  })
+}
+
+export const useDeleteClassSchedule = () => {
+  const queryClient = useQueryClient()
+  
+  return useMutation({
+    mutationFn: (scheduleId) => adminAPI.deleteClassSchedule(scheduleId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.classSchedules })
+      queryClient.invalidateQueries({ queryKey: queryKeys.teacherSchedule })
+      queryClient.invalidateQueries({ queryKey: queryKeys.studentSchedule })
+    },
+  })
+}
+
+export const useTeacherSchedule = (teacherId, dayOfWeek) => {
+  return useQuery({
+    queryKey: [...queryKeys.teacherSchedule, teacherId, dayOfWeek],
+    queryFn: () => teacherAPI.getMySchedule(teacherId, dayOfWeek).then(res => res.data),
+    enabled: !!teacherId,
+  })
+}
+
+export const useStudentSchedule = (studentId, dayOfWeek) => {
+  return useQuery({
+    queryKey: [...queryKeys.studentSchedule, studentId, dayOfWeek],
+    queryFn: () => studentAPI.getMySchedule(studentId, dayOfWeek).then(res => res.data),
+    enabled: !!studentId,
   })
 }

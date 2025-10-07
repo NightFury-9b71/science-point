@@ -122,6 +122,8 @@ export const adminAPI = {
     return api.get(`/admin/notices?${queryParams}`)
   },
   createNotice: (noticeData) => api.post('/admin/notices', noticeData),
+  updateNotice: (noticeId, noticeData) => api.put(`/admin/notices/${noticeId}`, noticeData),
+  deleteNotice: (noticeId) => api.delete(`/admin/notices/${noticeId}`),
   
   // Teacher Reviews
   getTeacherReviews: (teacherId) => {
@@ -130,6 +132,17 @@ export const adminAPI = {
   },
   createTeacherReview: (reviewData) => api.post('/admin/teacher-reviews', reviewData),
   
+  // Class Schedules
+  getClassSchedules: (params = {}) => {
+    const queryParams = new URLSearchParams()
+    if (params.day_of_week) queryParams.append('day_of_week', params.day_of_week)
+    if (params.class_id) queryParams.append('class_id', params.class_id)
+    if (params.teacher_id) queryParams.append('teacher_id', params.teacher_id)
+    return api.get(`/admin/class-schedules?${queryParams}`)
+  },
+  createClassSchedule: (scheduleData) => api.post('/admin/class-schedules', scheduleData),
+  deleteClassSchedule: (scheduleId) => api.delete(`/admin/class-schedules/${scheduleId}`),
+
   // Data Management
   seedData: () => api.post('/admin/seed-data'),
   resetData: (confirm = false) => api.post(`/admin/reset-data?confirm=${confirm}`),
@@ -149,7 +162,11 @@ export const teacherAPI = {
   recordExamResult: (resultData) => adminAPI.createExamResult(resultData),
   uploadStudyMaterial: (materialData) => adminAPI.createStudyMaterial(materialData),
   getMyStudyMaterials: (subjectId) => adminAPI.getStudyMaterials(subjectId),
-  getNotices: () => adminAPI.getNotices({ target_role: 'teacher' })
+  getNotices: () => adminAPI.getNotices({ target_role: 'teacher' }),
+  getMySchedule: (teacherId, dayOfWeek) => {
+    const params = dayOfWeek ? `?day_of_week=${dayOfWeek}` : ''
+    return api.get(`/teacher/${teacherId}/schedule${params}`)
+  }
 }
 
 // Student-specific API functions
@@ -159,7 +176,11 @@ export const studentAPI = {
   getMyExamResults: (studentId) => api.get(`/student/${studentId}/exam-results`),
   getMySubjects: (studentId) => api.get(`/student/${studentId}/subjects`),
   getStudyMaterials: (studentId) => api.get(`/student/${studentId}/study-materials`),
-  getNotices: (studentId) => api.get(`/student/${studentId}/notices`)
+  getNotices: (studentId) => api.get(`/student/${studentId}/notices`),
+  getMySchedule: (studentId, dayOfWeek) => {
+    const params = dayOfWeek ? `?day_of_week=${dayOfWeek}` : ''
+    return api.get(`/student/${studentId}/schedule${params}`)
+  }
 }
 
 export default api

@@ -22,7 +22,8 @@ import {
   useStudentExamResults,
   useStudentSubjects,
   useStudentMaterials,
-  useStudentNotices
+  useStudentNotices,
+  useStudentSchedule
 } from '../services/queries'
 
 const StudentDashboard = () => {
@@ -35,6 +36,14 @@ const StudentDashboard = () => {
   const { data: subjects = [] } = useStudentSubjects(studentId)
   const { data: studyMaterials = [] } = useStudentMaterials(studentId)
   const { data: notices = [] } = useStudentNotices(studentId)
+  
+  // Get current day schedule
+  const getCurrentDayOfWeek = () => {
+    const days = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday']
+    return days[new Date().getDay()]
+  }
+  
+  const { data: todaySchedule = [] } = useStudentSchedule(studentId, getCurrentDayOfWeek())
 
   // Debug: Log profile data to console
   React.useEffect(() => {
@@ -90,6 +99,7 @@ const StudentDashboard = () => {
 
   const tabs = [
     { id: 'profile', name: 'Profile', icon: User },
+    { id: 'schedule', name: 'Schedule', icon: Calendar },
     { id: 'notices', name: 'Notices', icon: Bell },
     { id: 'materials', name: 'Study Materials', icon: FileText },
     { id: 'results', name: 'Results', icon: Award }
@@ -158,6 +168,97 @@ const StudentDashboard = () => {
                 <div className="text-center py-8">
                   <User className="h-12 w-12 text-gray-300 mx-auto mb-4" />
                   <p className="text-gray-500">Profile information not available</p>
+                </div>
+              )}
+            </Card.Content>
+          </Card>
+        )
+
+      case 'schedule':
+        return (
+          <Card className="bg-white shadow border border-gray-200">
+            <Card.Header>
+              <Card.Title className="flex items-center gap-2 text-lg">
+                <Calendar className="h-5 w-5" />
+                Today's Schedule
+              </Card.Title>
+            </Card.Header>
+            <Card.Content className="p-6">
+              {todaySchedule.length > 0 ? (
+                <div className="space-y-4">
+                  <div className="mb-4 p-3 bg-blue-50 rounded border border-blue-200">
+                    <p className="text-sm text-blue-800">
+                      📅 {new Date().toLocaleDateString('en-US', { 
+                        weekday: 'long', 
+                        year: 'numeric', 
+                        month: 'long', 
+                        day: 'numeric' 
+                      })}
+                    </p>
+                  </div>
+                  
+                  {todaySchedule.map((classItem) => (
+                    <div key={classItem.id} className="bg-gray-50 p-4 rounded-lg border-l-4 border-blue-500">
+                      <div className="flex items-start justify-between">
+                        <div className="flex-1">
+                          <div className="flex items-center gap-2 mb-2">
+                            <FileText className="h-4 w-4 text-gray-600" />
+                            <span className="font-medium text-gray-900">
+                              {classItem.start_time} - {classItem.end_time}
+                            </span>
+                          </div>
+                          
+                          <div className="flex items-center gap-2 mb-2">
+                            <BookOpen className="h-4 w-4 text-blue-600" />
+                            <h3 className="font-semibold text-blue-900">
+                              {classItem.subject?.name || 'Subject'}
+                            </h3>
+                          </div>
+                          
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm text-gray-700">
+                            <div>
+                              <span className="font-medium">Teacher:</span> {classItem.teacher?.user?.full_name || 'N/A'}
+                            </div>
+                            <div>
+                              <span className="font-medium">Subject Code:</span> {classItem.subject?.code || 'N/A'}
+                            </div>
+                            {classItem.room_number && (
+                              <div>
+                                <span className="font-medium">Room:</span> {classItem.room_number}
+                              </div>
+                            )}
+                            <div>
+                              <span className="font-medium">Duration:</span> {
+                                (() => {
+                                  const start = new Date(`1970-01-01T${classItem.start_time}:00`)
+                                  const end = new Date(`1970-01-01T${classItem.end_time}:00`)
+                                  const duration = (end - start) / (1000 * 60) // minutes
+                                  return `${duration} minutes`
+                                })()
+                              }
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                  
+                  <div className="mt-6 p-4 bg-green-50 rounded border border-green-200">
+                    <div className="flex items-center gap-2 text-green-800">
+                      <TrendingUp className="h-4 w-4" />
+                      <span className="font-medium">
+                        You have {todaySchedule.length} classes today
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                <div className="text-center py-12">
+                  <Calendar className="h-16 w-16 text-gray-300 mx-auto mb-4" />
+                  <h3 className="text-lg font-medium text-gray-900 mb-2">No Classes Today</h3>
+                  <p className="text-gray-500">
+                    No classes are scheduled for today. Enjoy your free day!
+                  </p>
                 </div>
               )}
             </Card.Content>
