@@ -1,0 +1,165 @@
+import axios from 'axios'
+
+// Create axios instance with base configuration
+const api = axios.create({
+  baseURL: 'http://localhost:8000',
+  timeout: 10000,
+  headers: {
+    'Content-Type': 'application/json',
+  }
+})
+
+// Request interceptor
+api.interceptors.request.use(
+  (config) => {
+    // Add auth token to all requests
+    const token = localStorage.getItem('token')
+    if (token) {
+      config.headers.Authorization = `Bearer ${token}`
+    }
+    return config
+  },
+  (error) => {
+    return Promise.reject(error)
+  }
+)
+
+// Response interceptor
+api.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    console.error('API Error:', error)
+    
+    // Handle authentication errors (but don't auto-redirect to avoid loops)
+    if (error.response?.status === 401) {
+      // Token is invalid or expired
+      localStorage.removeItem('token')
+      localStorage.removeItem('user')
+      
+      // Let the UI handle the redirect through context
+      console.warn('Authentication failed - token removed')
+    }
+    
+    return Promise.reject(error)
+  }
+)
+
+// Admin API functions
+export const adminAPI = {
+  // Dashboard
+  getDashboardStats: () => api.get('/admin/dashboard'),
+  
+  // Users
+  getUsers: (skip = 0, limit = 100) => api.get(`/admin/users?skip=${skip}&limit=${limit}`),
+  getUser: (userId) => api.get(`/admin/users/${userId}`),
+  createUser: (userData) => api.post('/admin/users', userData),
+  
+  // Students
+  getStudents: (skip = 0, limit = 100) => api.get(`/admin/students?skip=${skip}&limit=${limit}`),
+  getStudent: (studentId) => api.get(`/admin/students/${studentId}`),
+  createStudent: (studentData) => api.post('/admin/students', studentData),
+  updateStudent: (studentId, studentData) => api.put(`/admin/students/${studentId}`, studentData),
+  deleteStudent: (studentId) => api.delete(`/admin/students/${studentId}`),
+  updateStudentPassword: (studentId, password) => api.patch(`/admin/students/${studentId}/password`, { password }),
+  
+  // Teachers
+  getTeachers: (skip = 0, limit = 100) => api.get(`/admin/teachers?skip=${skip}&limit=${limit}`),
+  createTeacher: (teacherData) => api.post('/admin/teachers', teacherData),
+  updateTeacher: (teacherId, teacherData) => api.put(`/admin/teachers/${teacherId}`, teacherData),
+  deleteTeacher: (teacherId) => api.delete(`/admin/teachers/${teacherId}`),
+  updateTeacherPassword: (teacherId, password) => api.patch(`/admin/teachers/${teacherId}/password`, { password }),
+  
+  // Classes
+  getClasses: () => api.get('/admin/classes'),
+  createClass: (classData) => api.post('/admin/classes', classData),
+  updateClass: (classId, classData) => api.put(`/admin/classes/${classId}`, classData),
+  deleteClass: (classId) => api.delete(`/admin/classes/${classId}`),
+  
+  // Subjects
+  getSubjects: () => api.get('/admin/subjects'),
+  createSubject: (subjectData) => api.post('/admin/subjects', subjectData),
+  updateSubject: (subjectId, subjectData) => api.put(`/admin/subjects/${subjectId}`, subjectData),
+  
+  // Attendance
+  getAttendance: (params = {}) => {
+    const queryParams = new URLSearchParams()
+    if (params.class_id) queryParams.append('class_id', params.class_id)
+    if (params.student_id) queryParams.append('student_id', params.student_id)
+    if (params.date) queryParams.append('date', params.date)
+    if (params.skip) queryParams.append('skip', params.skip)
+    if (params.limit) queryParams.append('limit', params.limit)
+    return api.get(`/admin/attendance?${queryParams}`)
+  },
+  markAttendance: (attendanceData) => api.post('/admin/attendance', attendanceData),
+  updateAttendance: (attendanceId, attendanceData) => api.put(`/admin/attendance/${attendanceId}`, attendanceData),
+  
+  // Exams
+  getExams: () => api.get('/admin/exams'),
+  createExam: (examData) => api.post('/admin/exams', examData),
+  
+  // Exam Results
+  getExamResults: (params = {}) => {
+    const queryParams = new URLSearchParams()
+    if (params.exam_id) queryParams.append('exam_id', params.exam_id)
+    if (params.student_id) queryParams.append('student_id', params.student_id)
+    return api.get(`/admin/exam-results?${queryParams}`)
+  },
+  createExamResult: (resultData) => api.post('/admin/exam-results', resultData),
+  updateExamResult: (resultId, resultData) => api.put(`/admin/exam-results/${resultId}`, resultData),
+  
+  // Study Materials
+  getStudyMaterials: (subjectId) => {
+    const url = subjectId ? `/admin/study-materials?subject_id=${subjectId}` : '/admin/study-materials'
+    return api.get(url)
+  },
+  createStudyMaterial: (materialData) => api.post('/admin/study-materials', materialData),
+  
+  // Notices
+  getNotices: (params = {}) => {
+    const queryParams = new URLSearchParams()
+    if (params.target_role) queryParams.append('target_role', params.target_role)
+    if (params.active_only !== undefined) queryParams.append('active_only', params.active_only)
+    return api.get(`/admin/notices?${queryParams}`)
+  },
+  createNotice: (noticeData) => api.post('/admin/notices', noticeData),
+  
+  // Teacher Reviews
+  getTeacherReviews: (teacherId) => {
+    const url = teacherId ? `/admin/teacher-reviews?teacher_id=${teacherId}` : '/admin/teacher-reviews'
+    return api.get(url)
+  },
+  createTeacherReview: (reviewData) => api.post('/admin/teacher-reviews', reviewData),
+  
+  // Data Management
+  seedData: () => api.post('/admin/seed-data'),
+  resetData: (confirm = false) => api.post(`/admin/reset-data?confirm=${confirm}`),
+  recreateTables: () => api.post('/admin/recreate-tables'),
+  getDataStats: () => api.get('/admin/data-stats')
+}
+
+// Teacher-specific API functions
+export const teacherAPI = {
+  getMyClasses: (teacherId) => api.get(`/teacher/${teacherId}/classes`),
+  getMyStudents: (teacherId) => api.get(`/teacher/${teacherId}/students`),
+  getMySubjects: (teacherId) => api.get(`/teacher/${teacherId}/subjects`),
+  markAttendance: (attendanceData) => adminAPI.markAttendance(attendanceData),
+  getClassAttendance: (classId) => adminAPI.getAttendance({ class_id: classId }),
+  createExam: (examData) => adminAPI.createExam(examData),
+  getMyExams: (teacherId) => api.get(`/teacher/${teacherId}/exams`),
+  recordExamResult: (resultData) => adminAPI.createExamResult(resultData),
+  uploadStudyMaterial: (materialData) => adminAPI.createStudyMaterial(materialData),
+  getMyStudyMaterials: (subjectId) => adminAPI.getStudyMaterials(subjectId),
+  getNotices: () => adminAPI.getNotices({ target_role: 'teacher' })
+}
+
+// Student-specific API functions
+export const studentAPI = {
+  getMyProfile: (studentId) => api.get(`/student/${studentId}/profile`),
+  getMyAttendance: (studentId) => api.get(`/student/${studentId}/attendance`),
+  getMyExamResults: (studentId) => api.get(`/student/${studentId}/exam-results`),
+  getMySubjects: (studentId) => api.get(`/student/${studentId}/subjects`),
+  getStudyMaterials: (studentId) => api.get(`/student/${studentId}/study-materials`),
+  getNotices: (studentId) => api.get(`/student/${studentId}/notices`)
+}
+
+export default api
