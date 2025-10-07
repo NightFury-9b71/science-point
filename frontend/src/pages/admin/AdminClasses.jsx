@@ -7,11 +7,12 @@ import Button from '../../components/Button'
 import Table from '../../components/Table'
 import Modal from '../../components/Modal'
 import { Input, Select } from '../../components/Form'
-import { useClasses, useCreateClass, useUpdateClass, useDeleteClass } from '../../services/queries'
+import { useClasses, useCreateClass, useUpdateClass, useDeleteClass, useSubjects } from '../../services/queries'
 
 const AdminClasses = () => {
   const navigate = useNavigate()
   const { data: classes, isLoading } = useClasses()
+  const { data: subjects } = useSubjects()
   const createClass = useCreateClass()
   const updateClass = useUpdateClass()
   const deleteClass = useDeleteClass()
@@ -92,6 +93,11 @@ const AdminClasses = () => {
   // Get unique grades and years for filters
   const availableGrades = [...new Set(classes?.map(cls => cls.grade?.toString()).filter(Boolean))] || []
   const availableYears = [...new Set(classes?.map(cls => cls.academic_year).filter(Boolean))] || []
+
+  // Helper function to get subjects for a class
+  const getClassSubjects = (classId) => {
+    return subjects?.filter(subject => subject.class_id === classId) || []
+  }
 
   const handleSubmit = async (e) => {
     e.preventDefault()
@@ -294,33 +300,45 @@ const AdminClasses = () => {
       {/* Mobile Cards / Desktop Table */}
       <div className="block sm:hidden space-y-3">
         {filteredClasses && filteredClasses.length > 0 ? (
-          filteredClasses.map((cls) => (
-          <Card key={cls.id} className="p-4">
-            <div className="space-y-2">
-              <div className="flex justify-between items-start">
-                <div>
-                  <h3 className="font-medium text-gray-900">{cls.name}</h3>
-                  <p className="text-sm text-gray-600">Grade {cls.grade} - {cls.section}</p>
+          filteredClasses.map((cls) => {
+            const classSubjects = getClassSubjects(cls.id)
+            return (
+            <Card key={cls.id} className="p-4">
+              <div className="space-y-2">
+                <div className="flex justify-between items-start">
+                  <div>
+                    <h3 className="font-medium text-gray-900">{cls.name}</h3>
+                    <p className="text-sm text-gray-600">Grade {cls.grade} - {cls.section}</p>
+                  </div>
+                  <div className="flex gap-1">
+                    <Button size="sm" variant="outline" onClick={() => handleViewClass(cls)}>
+                      <Eye className="h-4 w-4" />
+                    </Button>
+                    <Button size="sm" variant="outline" onClick={() => handleEditClass(cls)}>
+                      Edit
+                    </Button>
+                    <Button size="sm" variant="outline" onClick={() => handleDeleteClass(cls)}>
+                      Delete
+                    </Button>
+                  </div>
                 </div>
-                <div className="flex gap-1">
-                  <Button size="sm" variant="outline" onClick={() => handleViewClass(cls)}>
-                    <Eye className="h-4 w-4" />
-                  </Button>
-                  <Button size="sm" variant="outline" onClick={() => handleEditClass(cls)}>
-                    Edit
-                  </Button>
-                  <Button size="sm" variant="outline" onClick={() => handleDeleteClass(cls)}>
-                    Delete
-                  </Button>
+                <div className="text-xs text-gray-500 space-y-1">
+                  <p>Academic Year: {cls.academic_year || 'N/A'}</p>
+                  <p>Capacity: {cls.capacity} students</p>
+                  <div>
+                    <p className="font-medium">Subjects:</p>
+                    <p className="text-xs">
+                      {classSubjects.length > 0 
+                        ? classSubjects.map(s => s.name).join(', ')
+                        : 'No subjects assigned'
+                      }
+                    </p>
+                  </div>
                 </div>
               </div>
-              <div className="text-xs text-gray-500 space-y-1">
-                <p>Academic Year: {cls.academic_year || 'N/A'}</p>
-                <p>Capacity: {cls.capacity} students</p>
-              </div>
-            </div>
-          </Card>
-        ))) : (
+            </Card>
+            )
+          })) : (
           <Card className="p-8 text-center">
             <p className="text-gray-500">No classes found matching your filters.</p>
           </Card>
@@ -339,18 +357,29 @@ const AdminClasses = () => {
                   <Table.Head className="hidden md:table-cell">Section</Table.Head>
                   <Table.Head className="hidden lg:table-cell">Academic Year</Table.Head>
                   <Table.Head>Capacity</Table.Head>
+                  <Table.Head className="hidden xl:table-cell">Subjects</Table.Head>
                   <Table.Head>Actions</Table.Head>
                 </Table.Row>
               </Table.Header>
               <Table.Body>
                 {filteredClasses && filteredClasses.length > 0 ? (
-                  filteredClasses.map((cls) => (
+                  filteredClasses.map((cls) => {
+                    const classSubjects = getClassSubjects(cls.id)
+                    return (
                   <Table.Row key={cls.id}>
                     <Table.Cell>{cls.name}</Table.Cell>
                     <Table.Cell>{cls.grade}</Table.Cell>
                     <Table.Cell className="hidden md:table-cell">{cls.section || 'N/A'}</Table.Cell>
                     <Table.Cell className="hidden lg:table-cell">{cls.academic_year || 'N/A'}</Table.Cell>
                     <Table.Cell>{cls.capacity}</Table.Cell>
+                    <Table.Cell className="hidden xl:table-cell">
+                      <div className="max-w-xs truncate" title={classSubjects.map(s => s.name).join(', ')}>
+                        {classSubjects.length > 0 
+                          ? classSubjects.map(s => s.name).join(', ')
+                          : 'No subjects'
+                        }
+                      </div>
+                    </Table.Cell>
                     <Table.Cell>
                       <div className="flex gap-1">
                         <Button size="sm" variant="outline" onClick={() => handleViewClass(cls)}>
@@ -365,9 +394,10 @@ const AdminClasses = () => {
                       </div>
                     </Table.Cell>
                   </Table.Row>
-                ))) : (
+                    )
+                  })) : (
                   <Table.Row>
-                    <Table.Cell colSpan={6} className="text-center py-8">
+                    <Table.Cell colSpan={7} className="text-center py-8">
                       <p className="text-gray-500">No classes found matching your filters.</p>
                     </Table.Cell>
                   </Table.Row>
@@ -474,6 +504,15 @@ const AdminClasses = () => {
               <div>
                 <span className="font-medium text-gray-700">Capacity: </span>
                 <span className="text-gray-900">{selectedClass.capacity} students</span>
+              </div>
+              <div>
+                <span className="font-medium text-gray-700">Subjects: </span>
+                <span className="text-gray-900">
+                  {getClassSubjects(selectedClass.id).length > 0 
+                    ? getClassSubjects(selectedClass.id).map(s => s.name).join(', ')
+                    : 'No subjects assigned'
+                  }
+                </span>
               </div>
             </div>
             <div className="flex justify-end pt-4">

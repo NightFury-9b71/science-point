@@ -70,10 +70,10 @@ const Layout = ({ children }) => {
           current: currentPath === '/admin-dashboard/classes'
         },
         {
-          name: 'Schedule',
-          href: '/admin-dashboard/schedule',
-          icon: Clock,
-          current: currentPath === '/admin-dashboard/schedule'
+          name: 'Performance',
+          href: '/admin-dashboard/performance',
+          icon: BarChart3,
+          current: currentPath === '/admin-dashboard/performance'
         },
         {
           name: 'Subjects',
@@ -131,8 +131,20 @@ const Layout = ({ children }) => {
         {
           name: 'Results',
           href: '/teacher/results',
-          icon: BarChart3,
+          icon: FileText,
           current: currentPath === '/teacher/results'
+        },
+        {
+          name: 'Performance',
+          href: '/teacher/performance',
+          icon: BarChart3,
+          current: currentPath === '/teacher/performance'
+        },
+        {
+          name: 'Notices',
+          href: '/teacher/notices',
+          icon: Bell,
+          current: currentPath === '/teacher/notices'
         }
       ]
     }

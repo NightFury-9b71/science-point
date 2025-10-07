@@ -1,26 +1,13 @@
 import React from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Users, GraduationCap, BookOpen, Calendar } from 'lucide-react'
-import { toast } from 'sonner'
-import Logger from '../../utils/logger.js'
 import Card from '../../components/Card'
 import Button from '../../components/Button'
-import { useAdminDashboard, useSeedDatabase } from '../../services/queries'
+import { useAdminDashboard } from '../../services/queries'
 
 const AdminOverview = () => {
   const navigate = useNavigate()
   const { data: stats, isLoading } = useAdminDashboard()
-  const seedDatabase = useSeedDatabase()
-
-  const handleSeedDatabase = async () => {
-    try {
-      await seedDatabase.mutateAsync()
-      toast.success('Database seeded successfully!')
-    } catch (error) {
-      Logger.error('Error seeding database:', error)
-      toast.error('Failed to seed database. Please try again.')
-    }
-  }
   
   if (isLoading) {
     return (
@@ -81,18 +68,6 @@ const AdminOverview = () => {
             </div>
           </div>
         </Card>
-      </div>
-      
-      {/* Seed Database Button */}
-      <div className="flex justify-center">
-        <Button 
-          onClick={handleSeedDatabase} 
-          variant="secondary"
-          loading={seedDatabase.isPending}
-          size="sm"
-        >
-          Seed Database
-        </Button>
       </div>
       
       {/* Recent Notices */}

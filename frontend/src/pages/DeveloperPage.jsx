@@ -79,7 +79,8 @@ const DeveloperPage = () => {
                 <div className="w-32 h-32 bg-white rounded-full flex items-center justify-center shadow-lg">
                   {/* Placeholder avatar - you can replace this with actual image */}
                   <div className="w-28 h-28 bg-gradient-to-br from-blue-400 to-indigo-500 rounded-full flex items-center justify-center text-white text-3xl font-bold">
-                    AN
+                    <img src="noman.png" alt="Profile" className="rounded-full" />
+                    {/* <img src="nomanstine.jpg" alt="Profile" className="rounded-full" /> */}
                   </div>
                 </div>
                 <div className="absolute -bottom-2 -right-2 bg-green-500 w-8 h-8 rounded-full flex items-center justify-center">
@@ -166,7 +167,7 @@ const DeveloperPage = () => {
                     href="tel:+8801234567890"
                     className="text-sm hover:text-green-600 transition-colors"
                   >
-                    +880 123-456-7890
+                    +880 1839743638
                   </a>
                 </div>
                 <div className="flex items-center gap-3 text-gray-700">
@@ -187,7 +188,7 @@ const DeveloperPage = () => {
                     <ExternalLink className="h-3 w-3" />
                   </a>
                   <a 
-                    href="https://linkedin.com/in/abdullah-al-noman-dev" 
+                    href="https://linkedin.com/in/nomanstine" 
                     target="_blank" 
                     rel="noopener noreferrer"
                     className="flex items-center gap-3 text-gray-700 hover:text-gray-900 transition-colors"

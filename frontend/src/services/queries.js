@@ -1,5 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { adminAPI, teacherAPI, studentAPI } from './api'
+import { adminAPI, teacherAPI, studentAPI, publicAPI } from './api'
 
 // Query Keys
 export const queryKeys = {
@@ -67,7 +67,7 @@ export const useNotices = (params = {}) => {
 export const usePublicNotices = () => {
   return useQuery({
     queryKey: ['notices', 'public'],
-    queryFn: () => api.get('/public/notices').then(res => res.data),
+    queryFn: () => publicAPI.getNotices().then(res => res.data),
     staleTime: 1000 * 60 * 5, // 5 minutes
     cacheTime: 1000 * 60 * 10, // 10 minutes
   })
@@ -77,7 +77,7 @@ export const useAttendance = (params = {}) => {
   return useQuery({
     queryKey: [...queryKeys.attendance, params],
     queryFn: () => adminAPI.getAttendance(params).then(res => res.data),
-    enabled: Object.keys(params).length > 0,
+    // Always enabled - performance components need all attendance records
   })
 }
 
@@ -92,33 +92,18 @@ export const useExamResults = (params = {}) => {
   return useQuery({
     queryKey: [...queryKeys.examResults, params],
     queryFn: async () => {
-      if (Object.keys(params).length === 0) {
-        return []
-      }
-      
-      // Get results and students data to enrich the results
-      const [resultsRes, studentsRes] = await Promise.all([
-        adminAPI.getExamResults(params),
-        adminAPI.getStudents() // Get all students to match
-      ])
-      
+      // Get results - allow fetching all results when no specific filters are provided
+      const resultsRes = await adminAPI.getExamResults(params)
       const results = resultsRes.data
-      const students = studentsRes.data
       
-      // Transform and enrich results data
-      return results.map(result => {
-        const student = students.find(s => s.id === result.student_id) || null
-        return {
-          ...result,
-          obtained_marks: result.marks_obtained, // Backend uses 'marks_obtained', frontend expects 'obtained_marks'
-          student: student ? {
-            ...student,
-            name: student.user?.full_name || 'Unknown Student' // Flatten the nested name for easier access
-          } : null
-        }
-      })
+      // Transform results data (keep student_id for later enrichment)
+      return results.map(result => ({
+        ...result,
+        obtained_marks: result.marks_obtained, // Backend uses 'marks_obtained', frontend expects 'obtained_marks'
+        student_id: result.student_id // Keep student_id for component-level enrichment
+      }))
     },
-    enabled: Object.keys(params).length > 0,
+    // Always enabled - performance components need all exam results
   })
 }
 
@@ -189,6 +174,7 @@ export const useTeacherExams = (teacherId) => {
         }
       })
     },
+    enabled: !!teacherId,
   })
 }
 
@@ -421,6 +407,30 @@ export const useCreateExam = () => {
   })
 }
 
+export const useUpdateExam = () => {
+  const queryClient = useQueryClient()
+  
+  return useMutation({
+    mutationFn: ({ id, ...examData }) => adminAPI.updateExam(id, examData),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.exams })
+      queryClient.invalidateQueries({ queryKey: ['teacherExams'] })
+    },
+  })
+}
+
+export const useDeleteExam = () => {
+  const queryClient = useQueryClient()
+  
+  return useMutation({
+    mutationFn: (examId) => adminAPI.deleteExam(examId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.exams })
+      queryClient.invalidateQueries({ queryKey: ['teacherExams'] })
+    },
+  })
+}
+
 export const useRecordExamResult = () => {
   const queryClient = useQueryClient()
   
@@ -586,6 +596,19 @@ export const useUpdateSubject = () => {
   })
 }
 
+export const useDeleteSubject = () => {
+  const queryClient = useQueryClient()
+  
+  return useMutation({
+    mutationFn: (subjectId) => adminAPI.deleteSubject(subjectId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.subjects })
+      queryClient.invalidateQueries({ queryKey: queryKeys.teacherClasses })
+      queryClient.invalidateQueries({ queryKey: queryKeys.dashboard })
+    },
+  })
+}
+
 export const useClassAttendance = (classId, date) => {
   return useQuery({
     queryKey: ['classAttendance', classId, date],
@@ -653,5 +676,12 @@ export const useStudentSchedule = (studentId, dayOfWeek) => {
     queryKey: [...queryKeys.studentSchedule, studentId, dayOfWeek],
     queryFn: () => studentAPI.getMySchedule(studentId, dayOfWeek).then(res => res.data),
     enabled: !!studentId,
+  })
+}
+
+// Public Admission Hook
+export const useSubmitAdmission = () => {
+  return useMutation({
+    mutationFn: (admissionData) => publicAPI.submitAdmission(admissionData),
   })
 }

@@ -132,6 +132,17 @@ const TeacherResults = () => {
 
   // Filter and sort results
   const filteredResults = examResults
+    .map(result => {
+      // Enrich result with student data from selected exam
+      const student = selectedExam?.students?.find(s => s.id === result.student_id) || null
+      return {
+        ...result,
+        student: student ? {
+          ...student,
+          name: student.name || 'Unknown Student'
+        } : null
+      }
+    })
     .filter(result => {
       const matchesSearch = !searchQuery || 
         result.student?.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||

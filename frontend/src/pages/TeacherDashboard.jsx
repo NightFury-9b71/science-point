@@ -11,6 +11,8 @@ import TeacherAttendance from './teacher/TeacherAttendance'
 import TeacherExams from './teacher/TeacherExams'
 import TeacherResults from './teacher/TeacherResults'
 import TeacherSchedule from './teacher/TeacherSchedule'
+import TeacherNotices from './teacher/TeacherNotices'
+import TeacherPerformance from './teacher/TeacherPerformance'
 import NotFound from './NotFound'
 
 const TeacherDashboard = () => {
@@ -44,6 +46,8 @@ const TeacherDashboard = () => {
       <Route path="/exams" element={<TeacherExams />} />
       <Route path="/results" element={<TeacherResults />} />
       <Route path="/schedule" element={<TeacherSchedule />} />
+      <Route path="/performance" element={<TeacherPerformance />} />
+      <Route path="/notices" element={<TeacherNotices />} />
       <Route path="*" element={<NotFound />} />
     </Routes>
   )

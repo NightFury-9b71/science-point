@@ -16,6 +16,7 @@ import { PageLoadingSpinner } from './components/LoadingSpinner'
 // Lazy load components for better performance
 const LandingPage = React.lazy(() => import('./pages/LandingPage'))
 const LoginPage = React.lazy(() => import('./pages/LoginPage'))
+const AdmissionForm = React.lazy(() => import('./pages/AdmissionForm'))
 const AdminDashboard = React.lazy(() => import('./pages/AdminDashboard'))
 const TeacherDashboard = React.lazy(() => import('./pages/TeacherDashboard'))
 const StudentDashboard = React.lazy(() => import('./pages/StudentDashboard'))
@@ -81,6 +82,7 @@ function App() {
               {/* Public Routes */}
               <Route path="/" element={<LandingPage />} />
               <Route path="/login" element={<LoginPage />} />
+              <Route path="/admission" element={<AdmissionForm />} />
               <Route path="/developer" element={<DeveloperPage />} />
               
               {/* Protected Routes */}

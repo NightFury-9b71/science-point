@@ -49,7 +49,7 @@ const AdminStudents = () => {
       const matchesSearch = !searchQuery || 
         student.user?.full_name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
         student.roll_number?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        student.user?.email?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        student.user?.username?.toLowerCase().includes(searchQuery.toLowerCase()) ||
         student.parent_name?.toLowerCase().includes(searchQuery.toLowerCase())
       
       const matchesClass = !selectedClass || student.class_id === parseInt(selectedClass)
@@ -194,12 +194,12 @@ const AdminStudents = () => {
         toast.error('Username is required')
         return
       }
-      if (!form.user.email?.trim()) {
-        toast.error('Email is required')
-        return
-      }
       if (!form.user.password?.trim()) {
         toast.error('Password is required')
+        return
+      }
+      if (!form.user.phone?.trim()) {
+        toast.error('Phone number is required')
         return
       }
       if (!form.roll_number?.trim()) {
@@ -208,6 +208,10 @@ const AdminStudents = () => {
       }
       if (!form.class_id) {
         toast.error('Class selection is required')
+        return
+      }
+      if (!form.parent_phone?.trim()) {
+        toast.error('Parent phone number is required')
         return
       }
 
@@ -275,7 +279,6 @@ Name: ${newStudentCredentials.fullName}
 Username: ${newStudentCredentials.username}
 Password: ${newStudentCredentials.password}
 Roll Number: ${newStudentCredentials.rollNumber}
-Email: ${newStudentCredentials.email}
 
 Please keep these credentials safe and change the password after first login.`
 
@@ -311,7 +314,6 @@ Please keep these credentials safe and change the password after first login.`
           <div class="credentials">
             <div class="field"><span class="label">Student Name:</span> ${newStudentCredentials.fullName}</div>
             <div class="field"><span class="label">Roll Number:</span> ${newStudentCredentials.rollNumber}</div>
-            <div class="field"><span class="label">Email:</span> ${newStudentCredentials.email}</div>
             <div class="field"><span class="label">Username:</span> ${newStudentCredentials.username}</div>
             <div class="field"><span class="label">Password:</span> ${newStudentCredentials.password}</div>
           </div>
@@ -363,16 +365,20 @@ Please keep these credentials safe and change the password after first login.`
         toast.error('Full name is required')
         return
       }
-      if (!editForm.user.email?.trim()) {
-        toast.error('Email is required')
-        return
-      }
       if (!editForm.roll_number?.trim()) {
         toast.error('Roll number is required')
         return
       }
       if (!editForm.class_id) {
         toast.error('Class selection is required')
+        return
+      }
+      if (!editForm.user.phone?.trim()) {
+        toast.error('Phone number is required')
+        return
+      }
+      if (!editForm.parent_phone?.trim()) {
+        toast.error('Parent phone number is required')
         return
       }
 
@@ -520,7 +526,7 @@ Please keep these credentials safe and change the password after first login.`
                 <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
                 <input
                   type="text"
-                  placeholder="Search by name, roll number, email, or parent name..."
+                  placeholder="Search by name, roll number, username, or parent name..."
                   className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
@@ -612,6 +618,7 @@ Please keep these credentials safe and change the password after first login.`
                 </div>
                 <div className="text-xs text-gray-500 space-y-1">
                   <p>Email: {student.user?.email || 'N/A'}</p>
+                  <p>Username: {student.user?.username || 'N/A'}</p>
                   <p>Phone: {student.user?.phone || 'N/A'}</p>
                   <p>Parent Name: {student.parent_name || 'N/A'}</p>
                   <p>Parent Phone: {student.parent_phone || 'N/A'}</p>
@@ -637,7 +644,7 @@ Please keep these credentials safe and change the password after first login.`
                   <Table.Row>
                     <Table.Head>Roll Number</Table.Head>
                     <Table.Head>Full Name</Table.Head>
-                    <Table.Head className="hidden md:table-cell">Email</Table.Head>
+                    <Table.Head className="hidden md:table-cell">Username</Table.Head>
                     <Table.Head className="hidden lg:table-cell">Phone</Table.Head>
                     <Table.Head>Parent Name</Table.Head>
                     <Table.Head>Parent Phone</Table.Head>
@@ -651,7 +658,7 @@ Please keep these credentials safe and change the password after first login.`
                   <Table.Row key={student.id}>
                     <Table.Cell>{student.roll_number}</Table.Cell>
                     <Table.Cell>{student.user?.full_name || 'N/A'}</Table.Cell>
-                    <Table.Cell className="hidden md:table-cell">{student.user?.email || 'N/A'}</Table.Cell>
+                    <Table.Cell className="hidden md:table-cell">{student.user?.username || 'N/A'}</Table.Cell>
                     <Table.Cell className="hidden lg:table-cell">{student.user?.phone || 'N/A'}</Table.Cell>
                     <Table.Cell>{student.parent_name || 'N/A'}</Table.Cell>
                     <Table.Cell>{student.parent_phone || 'N/A'}</Table.Cell>
@@ -780,7 +787,6 @@ Please keep these credentials safe and change the password after first login.`
               ...form,
               user: { ...form.user, email: e.target.value }
             })}
-            required
           />
           
           <div className="space-y-2">
@@ -829,6 +835,22 @@ Please keep these credentials safe and change the password after first login.`
               </div>
             )}
           </div>
+
+                    <Select
+            label="Class"
+            value={form.class_id}
+            onChange={(e) => {
+              const classId = parseInt(e.target.value)
+              setForm({
+                ...form,
+                class_id: classId,
+                // Auto-generate roll number if it's empty
+                roll_number: !form.roll_number ? generateRollNumber(classId) : form.roll_number
+              })
+            }}
+            options={classes?.map(cls => ({ value: cls.id, label: cls.name })) || []}
+            required
+          />
           
           <div className="space-y-2">
             <Input
@@ -859,22 +881,6 @@ Please keep these credentials safe and change the password after first login.`
             </Button>
           </div>
           
-          <Select
-            label="Class"
-            value={form.class_id}
-            onChange={(e) => {
-              const classId = parseInt(e.target.value)
-              setForm({
-                ...form,
-                class_id: classId,
-                // Auto-generate roll number if it's empty
-                roll_number: !form.roll_number ? generateRollNumber(classId) : form.roll_number
-              })
-            }}
-            options={classes?.map(cls => ({ value: cls.id, label: cls.name })) || []}
-            required
-          />
-          
           <Input
             label="Parent Name"
             type="text"
@@ -889,6 +895,7 @@ Please keep these credentials safe and change the password after first login.`
             placeholder="Enter parent's phone number"
             value={form.parent_phone}
             onChange={(e) => setForm({ ...form, parent_phone: e.target.value })}
+            required
           />
           
           <Input
@@ -993,6 +1000,12 @@ Please keep these credentials safe and change the password after first login.`
                   <div className="space-y-1">
                     <label className="text-sm font-medium text-gray-500">Email Address</label>
                     <p className="text-gray-900 break-all">{selectedStudent.user?.email || 'N/A'}</p>
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-sm font-medium text-gray-500">Username</label>
+                    <p className="text-gray-900 font-mono bg-gray-100 px-2 py-1 rounded text-sm">
+                      {selectedStudent.user?.username || 'N/A'}
+                    </p>
                   </div>
                   <div className="space-y-1">
                     <label className="text-sm font-medium text-gray-500">Phone Number</label>
@@ -1125,7 +1138,6 @@ Please keep these credentials safe and change the password after first login.`
                 ...editForm,
                 user: { ...editForm.user, email: e.target.value }
               })}
-              required
             />
             
             <Input
@@ -1136,6 +1148,7 @@ Please keep these credentials safe and change the password after first login.`
                 ...editForm,
                 user: { ...editForm.user, phone: e.target.value }
               })}
+              required
             />
             
             <Input
@@ -1166,6 +1179,7 @@ Please keep these credentials safe and change the password after first login.`
               type="tel"
               value={editForm.parent_phone || ''}
               onChange={(e) => setEditForm({ ...editForm, parent_phone: e.target.value })}
+              required
             />
             
             <Input
@@ -1239,10 +1253,6 @@ Please keep these credentials safe and change the password after first login.`
                   <span className="text-gray-900">{newStudentCredentials.rollNumber}</span>
                 </div>
                 <div className="flex justify-between items-center">
-                  <span className="font-medium text-gray-700">Email:</span>
-                  <span className="text-gray-900">{newStudentCredentials.email}</span>
-                </div>
-                <div className="flex justify-between items-center bg-yellow-50 p-2 rounded border">
                   <span className="font-medium text-gray-700">Username:</span>
                   <span className="text-gray-900 font-mono">{newStudentCredentials.username}</span>
                 </div>
@@ -1253,7 +1263,7 @@ Please keep these credentials safe and change the password after first login.`
               </div>
             </div>
 
-            <div className="bg-amber-50 border border-amber-200 rounded-lg p-4">
+            {/* <div className="bg-amber-50 border border-amber-200 rounded-lg p-4">
               <h4 className="font-medium text-amber-900 mb-2">Important Instructions</h4>
               <ul className="text-amber-800 text-sm space-y-1">
                 <li>• Share these credentials securely with the student</li>
@@ -1261,7 +1271,7 @@ Please keep these credentials safe and change the password after first login.`
                 <li>• Keep a secure copy for your records</li>
                 <li>• Student can login at: <span className="font-mono">your-school-portal.com</span></li>
               </ul>
-            </div>
+            </div> */}
 
             <div className="flex gap-3 justify-end pt-4">
               <Button
@@ -1332,7 +1342,6 @@ Please keep these credentials safe and change the password after first login.`
               <div className="text-sm text-gray-600 space-y-1">
                 <p><strong>Name:</strong> {selectedStudent.user?.full_name}</p>
                 <p><strong>Roll Number:</strong> {selectedStudent.roll_number}</p>
-                <p><strong>Email:</strong> {selectedStudent.user?.email}</p>
                 <p><strong>Class:</strong> {selectedStudent.class_id}</p>
               </div>
             </div>
@@ -1402,7 +1411,6 @@ Please keep these credentials safe and change the password after first login.`
                 <p><strong>Name:</strong> {selectedStudent.user?.full_name}</p>
                 <p><strong>Username:</strong> {selectedStudent.user?.username}</p>
                 <p><strong>Roll Number:</strong> {selectedStudent.roll_number}</p>
-                <p><strong>Email:</strong> {selectedStudent.user?.email}</p>
               </div>
             </div>
 

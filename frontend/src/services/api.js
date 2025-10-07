@@ -110,6 +110,7 @@ export const adminAPI = {
   getSubjects: () => api.get('/admin/subjects'),
   createSubject: (subjectData) => api.post('/admin/subjects', subjectData),
   updateSubject: (subjectId, subjectData) => api.put(`/admin/subjects/${subjectId}`, subjectData),
+  deleteSubject: (subjectId) => api.delete(`/admin/subjects/${subjectId}`),
   
   // Attendance
   getAttendance: (params = {}) => {
@@ -127,6 +128,8 @@ export const adminAPI = {
   // Exams
   getExams: () => api.get('/admin/exams'),
   createExam: (examData) => api.post('/admin/exams', examData),
+  updateExam: (examId, examData) => api.put(`/admin/exams/${examId}`, examData),
+  deleteExam: (examId) => api.delete(`/admin/exams/${examId}`),
   
   // Exam Results
   getExamResults: (params = {}) => {
@@ -179,6 +182,12 @@ export const adminAPI = {
   resetData: (confirm = false) => api.post(`/admin/reset-data?confirm=${confirm}`),
   recreateTables: () => api.post('/admin/recreate-tables'),
   getDataStats: () => api.get('/admin/data-stats')
+}
+
+// Public API functions (no authentication required)
+export const publicAPI = {
+  submitAdmission: (admissionData) => api.post('/public/admission', admissionData),
+  getNotices: () => api.get('/public/notices')
 }
 
 // Teacher-specific API functions

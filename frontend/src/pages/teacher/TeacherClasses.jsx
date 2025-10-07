@@ -4,7 +4,7 @@ import { ArrowLeft, Calendar, Plus, XCircle } from 'lucide-react'
 import Card from '../../components/Card'
 import Button from '../../components/Button'
 import { useAuth } from '../../contexts/AuthContext'
-import { useTeacherClasses, useTeacherStudents } from '../../services/queries'
+import { useTeacherClasses, useTeacherStudents, useTeacherSchedule } from '../../services/queries'
 
 const TeacherClasses = () => {
   const navigate = useNavigate()
@@ -40,6 +40,7 @@ const TeacherClasses = () => {
   // Only call queries after we confirm teacherId exists
   const { data: myClasses = [], isLoading } = useTeacherClasses(teacherId)
   const { data: myStudents = [] } = useTeacherStudents(teacherId)
+  const { data: mySchedules = [] } = useTeacherSchedule(teacherId)
 
   // Debug logging
   console.log('TeacherClasses Debug:', {
@@ -48,6 +49,17 @@ const TeacherClasses = () => {
     myClassesCount: myClasses.length,
     myClasses
   })
+
+  // Helper function to get subjects for a class from schedules
+  const getClassSubjects = (classId) => {
+    const classSchedules = mySchedules?.filter(schedule => schedule.class_id === classId) || []
+    const subjects = classSchedules.map(schedule => schedule.subject).filter(Boolean)
+    // Remove duplicates based on subject id
+    const uniqueSubjects = subjects.filter((subject, index, self) => 
+      index === self.findIndex(s => s.id === subject.id)
+    )
+    return uniqueSubjects
+  }
 
   if (isLoading) {
     return (
@@ -74,7 +86,9 @@ const TeacherClasses = () => {
       
       {/* Classes Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
-        {myClasses.map((cls) => (
+        {myClasses.map((cls) => {
+          const classSubjects = getClassSubjects(cls.id)
+          return (
           <Card key={cls.id}>
             <Card.Header className="p-4 sm:p-6">
               <Card.Title className="text-base sm:text-lg">{cls.name}</Card.Title>
@@ -85,6 +99,15 @@ const TeacherClasses = () => {
                 <p><span className="font-medium">Section:</span> {cls.section || 'N/A'}</p>
                 <p><span className="font-medium">Capacity:</span> {cls.capacity}</p>
                 <p><span className="font-medium">Students:</span> {myStudents.filter(s => s.class_id === cls.id).length}</p>
+                <div>
+                  <p className="font-medium">Subjects:</p>
+                  <p className="text-xs text-gray-600">
+                    {classSubjects.length > 0 
+                      ? classSubjects.map(s => s.name).join(', ')
+                      : 'No subjects assigned'
+                    }
+                  </p>
+                </div>
               </div>
               <div className="mt-4 space-y-2">
                 <Button
@@ -107,7 +130,8 @@ const TeacherClasses = () => {
               </div>
             </Card.Content>
           </Card>
-        ))}
+          )
+        })}
       </div>
     </div>
   )

@@ -1,6 +1,6 @@
 import React, { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Plus, ArrowLeft, Search, Edit, BookOpen } from 'lucide-react'
+import { Plus, ArrowLeft, Search, Edit, BookOpen, Trash2 } from 'lucide-react'
 import { toast } from 'sonner'
 import Logger from '../../utils/logger.js'
 import Card from '../../components/Card'
@@ -8,27 +8,27 @@ import Button from '../../components/Button'
 import Table from '../../components/Table'
 import Modal from '../../components/Modal'
 import { Input, Select } from '../../components/Form'
-import { useSubjects, useClasses, useTeachers, useCreateSubject, useUpdateSubject } from '../../services/queries'
+import { useSubjects, useClasses, useCreateSubject, useUpdateSubject, useDeleteSubject } from '../../services/queries'
 
 const AdminSubjects = () => {
   const navigate = useNavigate()
   const { data: subjects, isLoading } = useSubjects()
   const { data: classes } = useClasses()
-  const { data: teachers } = useTeachers()
   const createSubject = useCreateSubject()
   const updateSubject = useUpdateSubject()
+  const deleteSubject = useDeleteSubject()
   
   const [showModal, setShowModal] = useState(false)
   const [showEditModal, setShowEditModal] = useState(false)
+  const [showDeleteModal, setShowDeleteModal] = useState(false)
   const [selectedSubject, setSelectedSubject] = useState(null)
   const [searchQuery, setSearchQuery] = useState('')
   const [selectedClass, setSelectedClass] = useState('')
-  const [selectedTeacher, setSelectedTeacher] = useState('')
   const [form, setForm] = useState({
-    name: '', code: '', credits: 3, class_id: '', teacher_id: ''
+    name: '', code: '', credits: '', class_id: ''
   })
   const [editForm, setEditForm] = useState({
-    name: '', code: '', credits: 3, class_id: '', teacher_id: ''
+    name: '', code: '', credits: '', class_id: ''
   })
 
   // Filter and sort subjects
@@ -39,9 +39,8 @@ const AdminSubjects = () => {
         subject.code?.toLowerCase().includes(searchQuery.toLowerCase())
       
       const matchesClass = !selectedClass || subject.class_id?.toString() === selectedClass
-      const matchesTeacher = !selectedTeacher || subject.teacher_id?.toString() === selectedTeacher
       
-      return matchesSearch && matchesClass && matchesTeacher
+      return matchesSearch && matchesClass
     })
     .sort((a, b) => a.name?.localeCompare(b.name) || 0)
 
@@ -51,15 +50,14 @@ const AdminSubjects = () => {
     try {
       const subjectData = {
         ...form,
-        credits: parseInt(form.credits) || 3,
-        class_id: parseInt(form.class_id) || null,
-        teacher_id: parseInt(form.teacher_id) || null
+        credits: form.credits ? parseInt(form.credits) : undefined,
+        class_id: parseInt(form.class_id) || null
       }
       
       await createSubject.mutateAsync(subjectData)
       toast.success('Subject created successfully!')
       setShowModal(false)
-      setForm({ name: '', code: '', credits: 3, class_id: '', teacher_id: '' })
+      setForm({ name: '', code: '', credits: '', class_id: '' })
     } catch (error) {
       toast.error('Failed to create subject. Please try again.')
       Logger.error('Create subject error:', error)
@@ -72,9 +70,8 @@ const AdminSubjects = () => {
     try {
       const subjectData = {
         ...editForm,
-        credits: parseInt(editForm.credits) || 3,
-        class_id: parseInt(editForm.class_id) || null,
-        teacher_id: parseInt(editForm.teacher_id) || null
+        credits: editForm.credits ? parseInt(editForm.credits) : undefined,
+        class_id: parseInt(editForm.class_id) || null
       }
       
       await updateSubject.mutateAsync({ id: selectedSubject.id, ...subjectData })
@@ -92,21 +89,34 @@ const AdminSubjects = () => {
     setEditForm({
       name: subject.name || '',
       code: subject.code || '',
-      credits: subject.credits || 3,
-      class_id: subject.class_id?.toString() || '',
-      teacher_id: subject.teacher_id?.toString() || ''
+      credits: subject.credits || '',
+      class_id: subject.class_id?.toString() || ''
     })
     setShowEditModal(true)
+  }
+
+  const handleDelete = (subject) => {
+    setSelectedSubject(subject)
+    setShowDeleteModal(true)
+  }
+
+  const handleDeleteConfirm = async () => {
+    if (!selectedSubject) return
+    
+    try {
+      await deleteSubject.mutateAsync(selectedSubject.id)
+      toast.success('Subject deleted successfully!')
+      setShowDeleteModal(false)
+      setSelectedSubject(null)
+    } catch (error) {
+      toast.error('Failed to delete subject. Please try again.')
+      Logger.error('Delete subject error:', error)
+    }
   }
 
   const getClassName = (classId) => {
     const classObj = classes?.find(cls => cls.id === classId)
     return classObj?.name || `Class ${classId}`
-  }
-
-  const getTeacherName = (teacherId) => {
-    const teacher = teachers?.find(t => t.id === teacherId)
-    return teacher?.user?.full_name || `Teacher ${teacherId}`
   }
 
   if (isLoading) {
@@ -174,7 +184,7 @@ const AdminSubjects = () => {
             </div>
             
             {/* Teacher Filter */}
-            <div className="w-full sm:w-48">
+            {/* <div className="w-full sm:w-48">
               <select
                 className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                 value={selectedTeacher}
@@ -185,7 +195,7 @@ const AdminSubjects = () => {
                   <option key={teacher.id} value={teacher.id}>{teacher.user?.full_name}</option>
                 ))}
               </select>
-            </div>
+            </div> */}
           </div>
           
           <div className="flex justify-between items-center">
@@ -193,14 +203,13 @@ const AdminSubjects = () => {
               Showing {filteredSubjects.length} of {subjects?.length || 0} subjects
             </div>
             
-            {(searchQuery || selectedClass || selectedTeacher) && (
+            {(searchQuery || selectedClass) && (
               <Button
                 variant="outline"
                 size="sm"
                 onClick={() => {
                   setSearchQuery('')
                   setSelectedClass('')
-                  setSelectedTeacher('')
                 }}
               >
                 Clear Filters
@@ -222,7 +231,6 @@ const AdminSubjects = () => {
                     <Table.Head>Code</Table.Head>
                     <Table.Head>Credits</Table.Head>
                     <Table.Head>Class</Table.Head>
-                    <Table.Head>Teacher</Table.Head>
                     <Table.Head>Actions</Table.Head>
                   </Table.Row>
                 </Table.Header>
@@ -236,21 +244,22 @@ const AdminSubjects = () => {
                         </div>
                       </Table.Cell>
                       <Table.Cell>{subject.code}</Table.Cell>
-                      <Table.Cell>{subject.credits}</Table.Cell>
+                      <Table.Cell>{subject.credits || '-'}</Table.Cell>
                       <Table.Cell>{getClassName(subject.class_id)}</Table.Cell>
                       <Table.Cell>
-                        {subject.teacher_id ? (
-                          <span className="text-green-600 font-medium">
-                            {getTeacherName(subject.teacher_id)}
-                          </span>
-                        ) : (
-                          <span className="text-gray-400">No teacher assigned</span>
-                        )}
-                      </Table.Cell>
-                      <Table.Cell>
-                        <Button size="sm" variant="outline" onClick={() => handleEdit(subject)}>
-                          <Edit className="h-4 w-4" />
-                        </Button>
+                        <div className="flex items-center space-x-2">
+                          <Button size="sm" variant="outline" onClick={() => handleEdit(subject)}>
+                            <Edit className="h-4 w-4" />
+                          </Button>
+                          <Button 
+                            size="sm" 
+                            variant="outline" 
+                            onClick={() => handleDelete(subject)}
+                            className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </div>
                       </Table.Cell>
                     </Table.Row>
                   ))}
@@ -280,19 +289,19 @@ const AdminSubjects = () => {
             required
           />
           <Input
-            label="Subject Code"
+            label="Subject Code (Auto-generated if empty)"
             value={form.code}
             onChange={(e) => setForm({ ...form, code: e.target.value })}
-            required
+            placeholder="Leave empty for auto-generation"
           />
           <Input
-            label="Credits"
+            label="Credits (Optional)"
             type="number"
             min="1"
             max="10"
             value={form.credits}
             onChange={(e) => setForm({ ...form, credits: e.target.value })}
-            required
+            placeholder="Default: 3"
           />
           <Select
             label="Class"
@@ -306,18 +315,6 @@ const AdminSubjects = () => {
               })) || [])
             ]}
             required
-          />
-          <Select
-            label="Assign Teacher"
-            value={form.teacher_id}
-            onChange={(e) => setForm({ ...form, teacher_id: e.target.value })}
-            options={[
-              { value: '', label: 'No teacher assigned' },
-              ...(teachers?.map(teacher => ({ 
-                value: teacher.id, 
-                label: teacher.user?.full_name || `Teacher ${teacher.id}` 
-              })) || [])
-            ]}
           />
           <div className="flex flex-col-reverse sm:flex-row justify-end space-y-2 space-y-reverse sm:space-y-0 sm:space-x-3">
             <Button type="button" variant="outline" onClick={() => setShowModal(false)}>
@@ -351,13 +348,13 @@ const AdminSubjects = () => {
             required
           />
           <Input
-            label="Credits"
+            label="Credits (Optional)"
             type="number"
             min="1"
             max="10"
             value={editForm.credits}
             onChange={(e) => setEditForm({ ...editForm, credits: e.target.value })}
-            required
+            placeholder="Default: 3"
           />
           <Select
             label="Class"
@@ -372,18 +369,6 @@ const AdminSubjects = () => {
             ]}
             required
           />
-          <Select
-            label="Assign Teacher"
-            value={editForm.teacher_id}
-            onChange={(e) => setEditForm({ ...editForm, teacher_id: e.target.value })}
-            options={[
-              { value: '', label: 'No teacher assigned' },
-              ...(teachers?.map(teacher => ({ 
-                value: teacher.id, 
-                label: teacher.user?.full_name || `Teacher ${teacher.id}` 
-              })) || [])
-            ]}
-          />
           <div className="flex flex-col-reverse sm:flex-row justify-end space-y-2 space-y-reverse sm:space-y-0 sm:space-x-3">
             <Button type="button" variant="outline" onClick={() => setShowEditModal(false)}>
               Cancel
@@ -393,6 +378,41 @@ const AdminSubjects = () => {
             </Button>
           </div>
         </form>
+      </Modal>
+
+      {/* Delete Subject Modal */}
+      <Modal 
+        isOpen={showDeleteModal} 
+        onClose={() => setShowDeleteModal(false)}
+        title="Delete Subject"
+        className="sm:max-w-md"
+      >
+        <div className="space-y-4">
+          <div className="text-center">
+            <div className="mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-red-100 mb-4">
+              <Trash2 className="h-6 w-6 text-red-600" />
+            </div>
+            <h3 className="text-lg font-medium text-gray-900 mb-2">Delete Subject</h3>
+            <p className="text-sm text-gray-500">
+              Are you sure you want to delete <strong>{selectedSubject?.name}</strong>? 
+              This action cannot be undone.
+            </p>
+          </div>
+          
+          <div className="flex flex-col-reverse sm:flex-row justify-end space-y-2 space-y-reverse sm:space-y-0 sm:space-x-3">
+            <Button type="button" variant="outline" onClick={() => setShowDeleteModal(false)}>
+              Cancel
+            </Button>
+            <Button 
+              type="button" 
+              onClick={handleDeleteConfirm}
+              loading={deleteSubject.isPending}
+              className="bg-red-600 hover:bg-red-700 text-white"
+            >
+              Delete Subject
+            </Button>
+          </div>
+        </div>
       </Modal>
     </div>
   )

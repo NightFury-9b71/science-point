@@ -38,12 +38,7 @@ const StudentDashboard = () => {
   const { data: notices = [] } = useStudentNotices(studentId)
   
   // Get current day schedule
-  const getCurrentDayOfWeek = () => {
-    const days = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday']
-    return days[new Date().getDay()]
-  }
-  
-  const { data: todaySchedule = [] } = useStudentSchedule(studentId, getCurrentDayOfWeek())
+  const { data: weeklySchedule = [] } = useStudentSchedule(studentId)
 
   // Profile data is loaded via React Query
 
@@ -170,70 +165,91 @@ const StudentDashboard = () => {
         )
 
       case 'schedule':
+        // Group schedules by day of week
+        const groupedSchedules = weeklySchedule.reduce((acc, schedule) => {
+          const day = schedule.day_of_week
+          if (!acc[day]) {
+            acc[day] = []
+          }
+          acc[day].push(schedule)
+          return acc
+        }, {})
+
+        // Sort days in order: monday, tuesday, wednesday, thursday, friday, saturday, sunday
+        const dayOrder = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday']
+        const sortedDays = dayOrder.filter(day => groupedSchedules[day])
+
         return (
           <Card className="bg-white shadow border border-gray-200">
             <Card.Header>
               <Card.Title className="flex items-center gap-2 text-lg">
                 <Calendar className="h-5 w-5" />
-                Today's Schedule
+                Weekly Schedule
               </Card.Title>
             </Card.Header>
             <Card.Content className="p-6">
-              {todaySchedule.length > 0 ? (
-                <div className="space-y-4">
-                  <div className="mb-4 p-3 bg-blue-50 rounded border border-blue-200">
-                    <p className="text-sm text-blue-800">
-                      📅 {new Date().toLocaleDateString('en-US', { 
-                        weekday: 'long', 
-                        year: 'numeric', 
-                        month: 'long', 
-                        day: 'numeric' 
-                      })}
-                    </p>
-                  </div>
-                  
-                  {todaySchedule.map((classItem) => (
-                    <div key={classItem.id} className="bg-gray-50 p-4 rounded-lg border-l-4 border-blue-500">
-                      <div className="flex items-start justify-between">
-                        <div className="flex-1">
-                          <div className="flex items-center gap-2 mb-2">
-                            <FileText className="h-4 w-4 text-gray-600" />
-                            <span className="font-medium text-gray-900">
-                              {classItem.start_time} - {classItem.end_time}
-                            </span>
-                          </div>
-                          
-                          <div className="flex items-center gap-2 mb-2">
-                            <BookOpen className="h-4 w-4 text-blue-600" />
-                            <h3 className="font-semibold text-blue-900">
-                              {classItem.subject?.name || 'Subject'}
-                            </h3>
-                          </div>
-                          
-                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm text-gray-700">
-                            <div>
-                              <span className="font-medium">Teacher:</span> {classItem.teacher?.user?.full_name || 'N/A'}
-                            </div>
-                            <div>
-                              <span className="font-medium">Subject Code:</span> {classItem.subject?.code || 'N/A'}
-                            </div>
-                            {classItem.room_number && (
-                              <div>
-                                <span className="font-medium">Room:</span> {classItem.room_number}
+              {Object.keys(groupedSchedules).length > 0 ? (
+                <div className="space-y-6">
+                  {sortedDays.map((day) => (
+                    <div key={day} className="border rounded-lg p-4">
+                      <div className="flex items-center gap-2 mb-4">
+                        <Calendar className="h-5 w-5 text-blue-600" />
+                        <h3 className="text-lg font-semibold text-gray-900 capitalize">
+                          {day}
+                        </h3>
+                        <span className="text-sm text-gray-500">
+                          ({groupedSchedules[day].length} classes)
+                        </span>
+                      </div>
+                      
+                      <div className="space-y-3">
+                        {groupedSchedules[day]
+                          .sort((a, b) => a.start_time.localeCompare(b.start_time))
+                          .map((classItem) => (
+                          <div key={classItem.id} className="bg-gray-50 p-4 rounded-lg border-l-4 border-blue-500">
+                            <div className="flex items-start justify-between">
+                              <div className="flex-1">
+                                <div className="flex items-center gap-2 mb-2">
+                                  <FileText className="h-4 w-4 text-gray-600" />
+                                  <span className="font-medium text-gray-900">
+                                    {classItem.start_time} - {classItem.end_time}
+                                  </span>
+                                </div>
+                                
+                                <div className="flex items-center gap-2 mb-2">
+                                  <BookOpen className="h-4 w-4 text-blue-600" />
+                                  <h4 className="font-semibold text-blue-900">
+                                    {classItem.subject?.name || 'Subject'}
+                                  </h4>
+                                </div>
+                                
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm text-gray-700">
+                                  <div>
+                                    <span className="font-medium">Teacher:</span> {classItem.teacher?.user?.full_name || 'N/A'}
+                                  </div>
+                                  <div>
+                                    <span className="font-medium">Subject Code:</span> {classItem.subject?.code || 'N/A'}
+                                  </div>
+                                  {classItem.room_number && (
+                                    <div>
+                                      <span className="font-medium">Room:</span> {classItem.room_number}
+                                    </div>
+                                  )}
+                                  <div>
+                                    <span className="font-medium">Duration:</span> {
+                                      (() => {
+                                        const start = new Date(`1970-01-01T${classItem.start_time}:00`)
+                                        const end = new Date(`1970-01-01T${classItem.end_time}:00`)
+                                        const duration = (end - start) / (1000 * 60) // minutes
+                                        return `${duration} minutes`
+                                      })()
+                                    }
+                                  </div>
+                                </div>
                               </div>
-                            )}
-                            <div>
-                              <span className="font-medium">Duration:</span> {
-                                (() => {
-                                  const start = new Date(`1970-01-01T${classItem.start_time}:00`)
-                                  const end = new Date(`1970-01-01T${classItem.end_time}:00`)
-                                  const duration = (end - start) / (1000 * 60) // minutes
-                                  return `${duration} minutes`
-                                })()
-                              }
                             </div>
                           </div>
-                        </div>
+                        ))}
                       </div>
                     </div>
                   ))}
@@ -242,7 +258,7 @@ const StudentDashboard = () => {
                     <div className="flex items-center gap-2 text-green-800">
                       <TrendingUp className="h-4 w-4" />
                       <span className="font-medium">
-                        You have {todaySchedule.length} classes today
+                        Total classes this week: {weeklySchedule.length}
                       </span>
                     </div>
                   </div>
@@ -250,9 +266,9 @@ const StudentDashboard = () => {
               ) : (
                 <div className="text-center py-12">
                   <Calendar className="h-16 w-16 text-gray-300 mx-auto mb-4" />
-                  <h3 className="text-lg font-medium text-gray-900 mb-2">No Classes Today</h3>
+                  <h3 className="text-lg font-medium text-gray-900 mb-2">No Classes Scheduled</h3>
                   <p className="text-gray-500">
-                    No classes are scheduled for today. Enjoy your free day!
+                    No classes are scheduled for this week. Please contact your administrator.
                   </p>
                 </div>
               )}

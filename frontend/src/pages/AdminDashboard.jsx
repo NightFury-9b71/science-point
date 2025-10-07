@@ -10,6 +10,7 @@ import AdminSubjects from './admin/AdminSubjects'
 import AdminNotices from './admin/AdminNotices'
 import AdminProfile from './admin/AdminProfile'
 import AdminSchedule from './admin/AdminSchedule'
+import AdminPerformance from './admin/AdminPerformance'
 import NotFound from './NotFound'
 // import  --- IGNORE ---
 
@@ -44,6 +45,7 @@ const AdminDashboard = () => {
       <Route path="subjects" element={<AdminSubjects />} />
       <Route path="notices" element={<AdminNotices />} />
       <Route path="schedule" element={<AdminSchedule />} />
+      <Route path="performance" element={<AdminPerformance />} />
       <Route path="profile" element={<AdminProfile />} />
       <Route path="*" element={<NotFound />} />
     </Routes>

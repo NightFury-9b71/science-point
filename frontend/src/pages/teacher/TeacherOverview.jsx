@@ -1,6 +1,6 @@
 import React from 'react'
 import { useNavigate } from 'react-router-dom'
-import { BookOpen, Users, FileText, Award, Calendar, Upload } from 'lucide-react'
+import { BookOpen, Users, FileText, Award, Calendar, Upload, Bell } from 'lucide-react'
 import Card from '../../components/Card'
 import Button from '../../components/Button'
 import { useAuth } from '../../contexts/AuthContext'
@@ -99,7 +99,7 @@ const TeacherOverview = () => {
       </div>
 
       {/* Quick Actions - Mobile */}
-      <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 sm:gap-4 lg:hidden">
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4 lg:hidden">
         <Button
           variant="outline"
           className="flex flex-col items-center p-4 h-auto space-y-2"
@@ -156,6 +156,14 @@ const TeacherOverview = () => {
           <Calendar className="h-6 w-6 text-teal-600" />
           <span className="text-xs font-medium">Schedule</span>
         </Button>
+        <Button
+          variant="outline"
+          className="flex flex-col items-center p-4 h-auto space-y-2"
+          onClick={() => navigate('/teacher/notices')}
+        >
+          <Bell className="h-6 w-6 text-yellow-600" />
+          <span className="text-xs font-medium">Notices</span>
+        </Button>
       </div>
 
       {/* My Classes */}
@@ -193,74 +201,6 @@ const TeacherOverview = () => {
                 </Card.Content>
               </Card>
             ))}
-          </div>
-        </Card.Content>
-      </Card>
-
-      {/* Today's Schedule */}
-      <Card>
-        <Card.Header className="p-4 sm:p-6">
-          <Card.Title className="text-lg sm:text-xl">Today's Schedule</Card.Title>
-          <p className="text-sm text-gray-500 mt-1">{new Date().toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}</p>
-        </Card.Header>
-        <Card.Content className="p-4 sm:p-6">
-          <div className="space-y-3">
-            {/* Mock schedule data - replace with actual data */}
-            <div className="flex items-center space-x-4 p-3 bg-blue-50 rounded-lg border-l-4 border-blue-500">
-              <div className="text-sm font-medium text-blue-900 w-20">08:00 AM</div>
-              <div className="flex-1">
-                <h4 className="font-medium text-gray-900">Mathematics - Grade 10A</h4>
-                <p className="text-sm text-gray-600">Room 101 • Algebra & Geometry</p>
-              </div>
-              <div className="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded">
-                Active
-              </div>
-            </div>
-            
-            <div className="flex items-center space-x-4 p-3 bg-gray-50 rounded-lg border-l-4 border-gray-300">
-              <div className="text-sm font-medium text-gray-600 w-20">10:00 AM</div>
-              <div className="flex-1">
-                <h4 className="font-medium text-gray-900">Physics - Grade 11B</h4>
-                <p className="text-sm text-gray-600">Room 203 • Mechanics & Motion</p>
-              </div>
-              <div className="text-xs bg-gray-200 text-gray-700 px-2 py-1 rounded">
-                Upcoming
-              </div>
-            </div>
-
-            <div className="flex items-center space-x-4 p-3 bg-gray-50 rounded-lg border-l-4 border-gray-300">
-              <div className="text-sm font-medium text-gray-600 w-20">02:00 PM</div>
-              <div className="flex-1">
-                <h4 className="font-medium text-gray-900">Mathematics - Grade 12C</h4>
-                <p className="text-sm text-gray-600">Room 105 • Calculus</p>
-              </div>
-              <div className="text-xs bg-gray-200 text-gray-700 px-2 py-1 rounded">
-                Upcoming
-              </div>
-            </div>
-
-            <div className="flex items-center space-x-4 p-3 bg-green-50 rounded-lg border-l-4 border-green-500">
-              <div className="text-sm font-medium text-green-700 w-20">03:30 PM</div>
-              <div className="flex-1">
-                <h4 className="font-medium text-gray-900">Staff Meeting</h4>
-                <p className="text-sm text-gray-600">Conference Room • Monthly Review</p>
-              </div>
-              <div className="text-xs bg-green-100 text-green-800 px-2 py-1 rounded">
-                Meeting
-              </div>
-            </div>
-          </div>
-          
-          <div className="mt-4 pt-4 border-t">
-            <Button 
-              size="sm" 
-              variant="outline" 
-              className="w-full sm:w-auto"
-              onClick={() => navigate('/teacher/schedule')}
-            >
-              <Calendar className="h-4 w-4 mr-2" />
-              View Full Schedule
-            </Button>
           </div>
         </Card.Content>
       </Card>

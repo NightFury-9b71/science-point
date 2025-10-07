@@ -309,32 +309,32 @@ MOCK_STUDENTS = [
 
 MOCK_SUBJECTS = [
     # Class 10A subjects - will be updated with actual IDs during seeding
-    {"name": "Mathematics", "code": "MATH10A", "class_id": None, "teacher_id": None, "credits": 4},
-    {"name": "Physics", "code": "PHY10A", "class_id": None, "teacher_id": None, "credits": 3},
-    {"name": "Chemistry", "code": "CHEM10A", "class_id": None, "teacher_id": None, "credits": 3},
-    {"name": "Biology", "code": "BIO10A", "class_id": None, "teacher_id": None, "credits": 3},
-    {"name": "English", "code": "ENG10A", "class_id": None, "teacher_id": None, "credits": 2},
+    {"name": "Mathematics", "code": None, "class_id": None, "credits": 4},
+    {"name": "Physics", "code": None, "class_id": None, "credits": 3},
+    {"name": "Chemistry", "code": None, "class_id": None, "credits": 3},
+    {"name": "Biology", "code": None, "class_id": None, "credits": 3},
+    {"name": "English", "code": None, "class_id": None, "credits": 2},
     
     # Class 10B subjects
-    {"name": "Mathematics", "code": "MATH10B", "class_id": None, "teacher_id": None, "credits": 4},
-    {"name": "Physics", "code": "PHY10B", "class_id": None, "teacher_id": None, "credits": 3},
-    {"name": "Chemistry", "code": "CHEM10B", "class_id": None, "teacher_id": None, "credits": 3},
-    {"name": "Biology", "code": "BIO10B", "class_id": None, "teacher_id": None, "credits": 3},
-    {"name": "English", "code": "ENG10B", "class_id": None, "teacher_id": None, "credits": 2},
+    {"name": "Mathematics", "code": None, "class_id": None, "credits": 4},
+    {"name": "Physics", "code": None, "class_id": None, "credits": 3},
+    {"name": "Chemistry", "code": None, "class_id": None, "credits": 3},
+    {"name": "Biology", "code": None, "class_id": None, "credits": 3},
+    {"name": "English", "code": None, "class_id": None, "credits": 2},
     
     # Class 11 Science subjects
-    {"name": "Advanced Mathematics", "code": "MATH11", "class_id": None, "teacher_id": None, "credits": 5},
-    {"name": "Advanced Physics", "code": "PHY11", "class_id": None, "teacher_id": None, "credits": 4},
-    {"name": "Advanced Chemistry", "code": "CHEM11", "class_id": None, "teacher_id": None, "credits": 4},
-    {"name": "Advanced Biology", "code": "BIO11", "class_id": None, "teacher_id": None, "credits": 4},
-    {"name": "English Literature", "code": "ENG11", "class_id": None, "teacher_id": None, "credits": 2},
+    {"name": "Advanced Mathematics", "code": None, "class_id": None, "credits": 5},
+    {"name": "Advanced Physics", "code": None, "class_id": None, "credits": 4},
+    {"name": "Advanced Chemistry", "code": None, "class_id": None, "credits": 4},
+    {"name": "Advanced Biology", "code": None, "class_id": None, "credits": 4},
+    {"name": "English Literature", "code": None, "class_id": None, "credits": 2},
     
     # Class 12 Science subjects
-    {"name": "Calculus", "code": "MATH12", "class_id": None, "teacher_id": None, "credits": 5},
-    {"name": "Quantum Physics", "code": "PHY12", "class_id": None, "teacher_id": None, "credits": 4},
-    {"name": "Organic Chemistry", "code": "CHEM12", "class_id": None, "teacher_id": None, "credits": 4},
-    {"name": "Molecular Biology", "code": "BIO12", "class_id": None, "teacher_id": None, "credits": 4},
-    {"name": "Advanced English", "code": "ENG12", "class_id": None, "teacher_id": None, "credits": 2}
+    {"name": "Calculus", "code": None, "class_id": None, "credits": 5},
+    {"name": "Quantum Physics", "code": None, "class_id": None, "credits": 4},
+    {"name": "Organic Chemistry", "code": None, "class_id": None, "credits": 4},
+    {"name": "Molecular Biology", "code": None, "class_id": None, "credits": 4},
+    {"name": "Advanced English", "code": None, "class_id": None, "credits": 2}
 ]
 
 # Generate attendance data for the last 30 days

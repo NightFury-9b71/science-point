@@ -255,14 +255,23 @@ def create_user(
     session: Session = Depends(get_session),
     current_user: User = Depends(require_admin)
 ):
-    # Check if username or email already exists
-    statement = select(User).where((User.username == user.username) | (User.email == user.email))
+    # Check if username already exists
+    statement = select(User).where(User.username == user.username)
     existing_user = session.exec(statement).first()
     if existing_user:
         raise HTTPException(
             status_code=400,
-            detail="Username or email already registered"
+            detail="Username already registered"
         )
+    
+    # If email is provided, check if it already exists
+    if user.email:
+        email_check = session.exec(select(User).where(User.email == user.email)).first()
+        if email_check:
+            raise HTTPException(
+                status_code=400,
+                detail="Email already registered"
+            )
     
     # Create new user
     hashed_password = get_password_hash(user.password)
@@ -657,7 +666,31 @@ def create_subject(
     session: Session = Depends(get_session),
     current_user: User = Depends(require_admin)
 ):
-    db_subject = Subject(**subject.dict())
+    # Auto-generate subject code if not provided
+    subject_data = subject.dict()
+    if not subject_data.get('code'):
+        # Generate code based on subject name (first 3 letters + random number)
+        name_part = subject.name[:3].upper().replace(' ', '')
+        # Get the next available number for this code pattern
+        existing_codes = session.exec(
+            select(Subject.code).where(Subject.code.like(f"{name_part}%"))
+        ).all()
+        existing_codes = [code for code in existing_codes if code]
+        
+        # Extract numbers from existing codes
+        numbers = []
+        for code in existing_codes:
+            try:
+                num_part = code[len(name_part):]
+                if num_part.isdigit():
+                    numbers.append(int(num_part))
+            except:
+                pass
+        
+        next_num = max(numbers) + 1 if numbers else 1
+        subject_data['code'] = f"{name_part}{next_num:02d}"
+    
+    db_subject = Subject(**subject_data)
     session.add(db_subject)
     session.commit()
     session.refresh(db_subject)
@@ -693,6 +726,55 @@ def update_subject(
     session.commit()
     session.refresh(db_subject)
     return db_subject
+
+@app.delete("/admin/subjects/{subject_id}")
+def delete_subject(
+    subject_id: int, 
+    session: Session = Depends(get_session),
+    current_user: User = Depends(require_admin)
+):
+    # Get existing subject
+    db_subject = session.get(Subject, subject_id)
+    if not db_subject:
+        raise HTTPException(status_code=404, detail="Subject not found")
+    
+    # Check if subject has exams assigned
+    exams_count = session.exec(
+        select(func.count(Exam.id)).where(Exam.subject_id == subject_id)
+    ).first()
+    
+    if exams_count > 0:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Cannot delete subject. {exams_count} exam(s) are currently assigned to this subject."
+        )
+    
+    # Check if subject has study materials assigned
+    materials_count = session.exec(
+        select(func.count(StudyMaterial.id)).where(StudyMaterial.subject_id == subject_id)
+    ).first()
+    
+    if materials_count > 0:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Cannot delete subject. {materials_count} study material(s) are currently assigned to this subject."
+        )
+    
+    # Check if subject has class schedules assigned
+    schedules_count = session.exec(
+        select(func.count(ClassSchedule.id)).where(ClassSchedule.subject_id == subject_id)
+    ).first()
+    
+    if schedules_count > 0:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Cannot delete subject. {schedules_count} class schedule(s) are currently assigned to this subject."
+        )
+    
+    # Delete the subject
+    session.delete(db_subject)
+    session.commit()
+    return {"message": "Subject deleted successfully"}
 
 # Attendance management
 @app.post("/admin/attendance", response_model=AttendanceRead)
@@ -787,9 +869,79 @@ def get_all_exams(
     exams = session.exec(statement).all()
     return exams
 
+@app.put("/admin/exams/{exam_id}", response_model=ExamRead)
+def update_exam(
+    exam_id: int,
+    exam_update: ExamUpdate,
+    session: Session = Depends(get_session),
+    current_user: User = Depends(require_teacher_or_admin)
+):
+    # Get existing exam
+    db_exam = session.get(Exam, exam_id)
+    if not db_exam:
+        raise HTTPException(status_code=404, detail="Exam not found")
+    
+    # Update exam fields
+    update_data = exam_update.dict(exclude_unset=True)
+    datetime_fields = ['exam_date']
+    
+    for field, value in update_data.items():
+        # Handle datetime field conversion from string to datetime
+        if field in datetime_fields:
+            value = parse_datetime_field(value, field)
+            if value is None:
+                continue  # Skip field if parsing failed
+        setattr(db_exam, field, value)
+    
+    session.add(db_exam)
+    session.commit()
+    session.refresh(db_exam)
+    return db_exam
+
+@app.delete("/admin/exams/{exam_id}")
+def delete_exam(
+    exam_id: int,
+    session: Session = Depends(get_session),
+    current_user: User = Depends(require_teacher_or_admin)
+):
+    # Get existing exam
+    db_exam = session.get(Exam, exam_id)
+    if not db_exam:
+        raise HTTPException(status_code=404, detail="Exam not found")
+    
+    # Check if exam has results
+    results_count = session.exec(
+        select(func.count(ExamResult.id)).where(ExamResult.exam_id == exam_id)
+    ).first()
+    
+    if results_count > 0:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Cannot delete exam. {results_count} result(s) are already recorded for this exam."
+        )
+    
+    # Delete the exam
+    session.delete(db_exam)
+    session.commit()
+    return {"message": "Exam deleted successfully"}
+
 # Exam results
 @app.post("/admin/exam-results", response_model=ExamResultRead)
 def create_exam_result(result: ExamResultCreate, session: Session = Depends(get_session)):
+    # Check if result already exists for this student-exam combination
+    existing_result = session.exec(
+        select(ExamResult).where(
+            ExamResult.exam_id == result.exam_id,
+            ExamResult.student_id == result.student_id
+        )
+    ).first()
+    
+    if existing_result:
+        raise HTTPException(
+            status_code=400,
+            detail="Exam result already exists for this student. Use update instead."
+        )
+    
     # Validate marks don't exceed maximum
     exam = session.get(Exam, result.exam_id)
     if not exam:
@@ -897,11 +1049,18 @@ def get_notices(
     target_role: UserRole = None,
     active_only: bool = True,
     session: Session = Depends(get_session),
-    current_user: User = Depends(require_admin)
+    current_user: User = Depends(require_teacher_or_admin)
 ):
     statement = select(Notice)
-    if target_role:
+    
+    # If user is a teacher, they can only see notices targeted at teachers or general notices
+    if current_user.role == UserRole.TEACHER:
+        statement = statement.where(
+            (Notice.target_role == UserRole.TEACHER) | (Notice.target_role == None)
+        )
+    elif target_role:
         statement = statement.where(Notice.target_role == target_role)
+    
     if active_only:
         statement = statement.where(Notice.is_active == True)
     
@@ -926,6 +1085,66 @@ def get_public_notices(
     ).order_by(Notice.created_at.desc())
     notices = session.exec(statement).all()
     return notices
+
+# Public admission endpoint (no authentication required)
+@app.post("/public/admission", response_model=StudentRead)
+def submit_admission_request(
+    student: StudentCreate,
+    session: Session = Depends(get_session)
+):
+    """Allow prospective students to submit admission requests"""
+    # Check if username already exists
+    existing_user = session.exec(select(User).where(User.username == student.user.username)).first()
+    if existing_user:
+        raise HTTPException(
+            status_code=400,
+            detail="Username already registered"
+        )
+    
+    # If email is provided, check if it already exists
+    if student.user.email:
+        email_check = session.exec(select(User).where(User.email == student.user.email)).first()
+        if email_check:
+            raise HTTPException(
+                status_code=400,
+                detail="Email already registered"
+            )
+    
+    # Check if roll number already exists
+    existing_student = session.exec(select(Student).where(Student.roll_number == student.roll_number)).first()
+    if existing_student:
+        raise HTTPException(
+            status_code=400,
+            detail="Roll number already exists"
+        )
+    
+    # Validate class exists and has capacity
+    class_obj = session.get(Class, student.class_id)
+    if not class_obj:
+        raise HTTPException(status_code=404, detail="Selected class not found")
+    
+    # Check current enrollment
+    current_students = session.exec(select(Student).where(Student.class_id == student.class_id)).all()
+    if len(current_students) >= class_obj.capacity:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Class {class_obj.name} is at full capacity ({class_obj.capacity} students)"
+        )
+    
+    # Create new user
+    hashed_password = get_password_hash(student.user.password)
+    user_data = student.user.dict(exclude={'password'})
+    db_user = User(**user_data, password_hash=hashed_password)
+    session.add(db_user)
+    session.flush()  # Flush to get the user ID
+    
+    # Create the student
+    student_dict = student.dict(exclude={'user'})
+    db_student = Student(**student_dict, user_id=db_user.id)
+    session.add(db_student)
+    session.commit()
+    session.refresh(db_student)
+    return db_student
 
 @app.put("/admin/notices/{notice_id}", response_model=NoticeRead)
 def update_notice(
@@ -1203,41 +1422,40 @@ def seed_mock_data(session: Session = Depends(get_session)):
         subjects = []
         subject_assignments = [
             # Class 10A subjects (class_id = classes[0].id)
-            (0, 0, 0),  # Math -> Math teacher, Class 10A
-            (0, 1, 1),  # Physics -> Physics teacher, Class 10A
-            (0, 2, 2),  # Chemistry -> Chemistry teacher, Class 10A
-            (0, 3, 3),  # Biology -> Biology teacher, Class 10A
-            (0, 4, 4),  # English -> English teacher, Class 10A
+            (0, 0),  # Math, Class 10A
+            (0, 1),  # Physics, Class 10A
+            (0, 2),  # Chemistry, Class 10A
+            (0, 3),  # Biology, Class 10A
+            (0, 4),  # English, Class 10A
             
             # Class 10B subjects (class_id = classes[1].id)
-            (1, 0, 5),  # Math -> Math teacher, Class 10B
-            (1, 1, 6),  # Physics -> Physics teacher, Class 10B
-            (1, 2, 7),  # Chemistry -> Chemistry teacher, Class 10B
-            (1, 3, 8),  # Biology -> Biology teacher, Class 10B
-            (1, 4, 9),  # English -> English teacher, Class 10B
+            (1, 5),  # Math, Class 10B
+            (1, 6),  # Physics, Class 10B
+            (1, 7),  # Chemistry, Class 10B
+            (1, 8),  # Biology, Class 10B
+            (1, 9),  # English, Class 10B
             
             # Class 11 Science subjects (class_id = classes[2].id)
-            (2, 0, 10), # Advanced Math -> Math teacher, Class 11
-            (2, 1, 11), # Advanced Physics -> Physics teacher, Class 11
-            (2, 2, 12), # Advanced Chemistry -> Chemistry teacher, Class 11
-            (2, 3, 13), # Advanced Biology -> Biology teacher, Class 11
-            (2, 4, 14), # English Literature -> English teacher, Class 11
+            (2, 10), # Advanced Math, Class 11
+            (2, 11), # Advanced Physics, Class 11
+            (2, 12), # Advanced Chemistry, Class 11
+            (2, 13), # Advanced Biology, Class 11
+            (2, 14), # English Literature, Class 11
             
             # Class 12 Science subjects (class_id = classes[3].id)
-            (3, 0, 15), # Calculus -> Math teacher, Class 12
-            (3, 1, 16), # Quantum Physics -> Physics teacher, Class 12
-            (3, 2, 17), # Organic Chemistry -> Chemistry teacher, Class 12
-            (3, 3, 18), # Molecular Biology -> Biology teacher, Class 12
-            (3, 4, 19), # Advanced English -> English teacher, Class 12
+            (3, 15), # Calculus, Class 12
+            (3, 16), # Quantum Physics, Class 12
+            (3, 17), # Organic Chemistry, Class 12
+            (3, 18), # Molecular Biology, Class 12
+            (3, 19), # Advanced English, Class 12
         ]
         
         for assignment in subject_assignments:
-            class_idx, teacher_idx, subject_idx = assignment
+            class_idx, subject_idx = assignment
             subject_data = MOCK_SUBJECTS[subject_idx].copy()
             
-            # Set the actual IDs from created objects
+            # Set the actual class ID from created objects
             subject_data["class_id"] = classes[class_idx].id
-            subject_data["teacher_id"] = teachers[teacher_idx].id
             
             subject = Subject(**subject_data)
             session.add(subject)
@@ -1374,19 +1592,47 @@ def reset_all_data(confirm: bool = False, session: Session = Depends(get_session
         session.rollback()
         raise HTTPException(status_code=500, detail=f"Error resetting data: {str(e)}")
 
-@app.post("/admin/recreate-tables")
-def recreate_database_tables():
-    """Recreate all database tables (drops and creates fresh tables)"""
+@app.post("/admin/cleanup-duplicate-results")
+def cleanup_duplicate_exam_results(session: Session = Depends(get_session)):
+    """Clean up duplicate exam results, keeping only the first one for each student-exam combination"""
     try:
-        # Drop all tables
-        SQLModel.metadata.drop_all(engine)
-        # Create all tables
-        SQLModel.metadata.create_all(engine)
+        # Find duplicate results
+        duplicates_query = select(
+            ExamResult.exam_id,
+            ExamResult.student_id,
+            func.count(ExamResult.id).label('count'),
+            func.min(ExamResult.id).label('keep_id')
+        ).group_by(ExamResult.exam_id, ExamResult.student_id).having(func.count(ExamResult.id) > 1)
         
-        return {"message": "Database tables recreated successfully"}
+        duplicates = session.exec(duplicates_query).all()
+        
+        if not duplicates:
+            return {"message": "No duplicate results found"}
+        
+        deleted_count = 0
+        for dup in duplicates:
+            # Delete all results except the one with the smallest ID (first created)
+            delete_query = select(ExamResult).where(
+                ExamResult.exam_id == dup.exam_id,
+                ExamResult.student_id == dup.student_id,
+                ExamResult.id != dup.keep_id
+            )
+            duplicate_results = session.exec(delete_query).all()
+            
+            for result in duplicate_results:
+                session.delete(result)
+                deleted_count += 1
+        
+        session.commit()
+        
+        return {
+            "message": f"Cleaned up {deleted_count} duplicate exam results",
+            "duplicates_found": len(duplicates)
+        }
         
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Error recreating tables: {str(e)}")
+        session.rollback()
+        raise HTTPException(status_code=500, detail=f"Error cleaning up duplicates: {str(e)}")
 
 @app.get("/admin/data-stats")
 def get_data_statistics(session: Session = Depends(get_session)):
@@ -1662,16 +1908,16 @@ def get_student_notices(
 @app.get("/teacher/{teacher_id}/exams", response_model=List[ExamRead])
 def get_teacher_exams(teacher_id: int, session: Session = Depends(get_session)):
     """Get all exams for subjects taught by a specific teacher"""
-    # First get all subjects taught by this teacher
-    teacher_subjects = session.exec(
-        select(Subject).where(Subject.teacher_id == teacher_id)
+    # First get all subjects taught by this teacher from class schedules
+    teacher_subject_ids = session.exec(
+        select(ClassSchedule.subject_id).distinct().where(ClassSchedule.teacher_id == teacher_id)
     ).all()
     
-    if not teacher_subjects:
+    if not teacher_subject_ids:
         return []
     
-    # Get subject IDs
-    subject_ids = [subject.id for subject in teacher_subjects]
+    # subject_ids is already a list of integers
+    subject_ids = teacher_subject_ids
     
     # Get exams for those subjects
     statement = select(Exam).where(Exam.subject_id.in_(subject_ids))
@@ -1682,32 +1928,43 @@ def get_teacher_exams(teacher_id: int, session: Session = Depends(get_session)):
 @app.get("/teacher/{teacher_id}/subjects", response_model=List[SubjectRead])
 def get_teacher_subjects(teacher_id: int, session: Session = Depends(get_session)):
     """Get all subjects taught by a specific teacher"""
-    statement = select(Subject).where(Subject.teacher_id == teacher_id)
-    subjects = session.exec(statement).all()
+    # Get distinct subjects from class schedules where teacher is assigned
+    subject_ids = session.exec(
+        select(ClassSchedule.subject_id).distinct().where(ClassSchedule.teacher_id == teacher_id)
+    ).all()
+    
+    if not subject_ids:
+        return []
+    
+    # Get the actual subject objects
+    subjects = session.exec(
+        select(Subject).where(Subject.id.in_(subject_ids))
+    ).all()
+    
     return subjects
 
 @app.get("/teacher/{teacher_id}/classes", response_model=List[ClassRead])
 def get_teacher_classes(teacher_id: int, session: Session = Depends(get_session)):
-    """Get all classes where the teacher teaches subjects"""
-    # Get classes where teacher teaches subjects
-    teacher_subjects = session.exec(
-        select(Subject).where(Subject.teacher_id == teacher_id)
+    """Get all classes where the teacher is scheduled to teach"""
+    # Get distinct classes where teacher has class schedules
+    class_ids = session.exec(
+        select(ClassSchedule.class_id).distinct().where(ClassSchedule.teacher_id == teacher_id)
     ).all()
     
-    subject_class_ids = [subject.class_id for subject in teacher_subjects]
+    if not class_ids:
+        return []
+    
+    # Get the actual class objects
     classes = session.exec(
-        select(Class).where(Class.id.in_(subject_class_ids))
-    ).all() if subject_class_ids else []
+        select(Class).where(Class.id.in_(class_ids))
+    ).all()
     
-    # Remove duplicates
-    unique_classes = {cls.id: cls for cls in classes}.values()
-    
-    return list(unique_classes)
+    return classes
 
 @app.get("/teacher/{teacher_id}/students", response_model=List[StudentRead])
 def get_teacher_students(teacher_id: int, session: Session = Depends(get_session)):
-    """Get all students in classes taught by a specific teacher"""
-    # Get all classes taught by this teacher
+    """Get all students in classes where the teacher is scheduled to teach"""
+    # Get all classes where the teacher is scheduled
     teacher_classes = get_teacher_classes(teacher_id, session)
     
     if not teacher_classes:

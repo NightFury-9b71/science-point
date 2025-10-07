@@ -1,13 +1,13 @@
 import React, { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { ArrowLeft, Plus, Search, Eye } from 'lucide-react'
+import { ArrowLeft, Plus, Search, Eye, Edit, Trash2 } from 'lucide-react'
 import { toast } from 'sonner'
 import Card from '../../components/Card'
 import Button from '../../components/Button'
 import Modal from '../../components/Modal'
 import { Input, Select } from '../../components/Form'
 import { useAuth } from '../../contexts/AuthContext'
-import { useTeacherExams, useTeacherClasses, useTeacherSubjects, useCreateExam } from '../../services/queries'
+import { useTeacherExams, useTeacherClasses, useTeacherSchedule, useCreateExam, useUpdateExam, useDeleteExam } from '../../services/queries'
 
 const TeacherExams = () => {
   const navigate = useNavigate()
@@ -42,8 +42,10 @@ const TeacherExams = () => {
   
   const { data: myExams = [], isLoading } = useTeacherExams(teacherId)
   const { data: myClasses = [] } = useTeacherClasses(teacherId)
-  const { data: mySubjects = [] } = useTeacherSubjects(teacherId)
+  const { data: mySchedules = [] } = useTeacherSchedule(teacherId)
   const createExam = useCreateExam()
+  const updateExam = useUpdateExam()
+  const deleteExam = useDeleteExam()
 
   // Debug logging
   console.log('TeacherExams Debug:', {
@@ -52,12 +54,27 @@ const TeacherExams = () => {
     myExamsLength: myExams.length,
     isLoading,
     myClasses,
-    mySubjects
+    mySchedules
   })
+
+  // Helper function to get subjects for a specific class from schedules
+  const getSubjectsForClass = (classId) => {
+    if (!classId) return []
+    const classSchedules = mySchedules?.filter(schedule => schedule.class_id === parseInt(classId)) || []
+    const subjects = classSchedules.map(schedule => schedule.subject).filter(Boolean)
+    // Remove duplicates based on subject id
+    const uniqueSubjects = subjects.filter((subject, index, self) => 
+      index === self.findIndex(s => s.id === subject.id)
+    )
+    return uniqueSubjects
+  }
   
   const [showCreateModal, setShowCreateModal] = useState(false)
+  const [showEditModal, setShowEditModal] = useState(false)
   const [showViewModal, setShowViewModal] = useState(false)
+  const [showDeleteModal, setShowDeleteModal] = useState(false)
   const [selectedExam, setSelectedExam] = useState(null)
+  const [examToDelete, setExamToDelete] = useState(null)
   const [searchQuery, setSearchQuery] = useState('')
   const [selectedSubject, setSelectedSubject] = useState('')
   const [selectedClass, setSelectedClass] = useState('')
@@ -105,6 +122,63 @@ const TeacherExams = () => {
   const handleViewExam = (exam) => {
     setSelectedExam(exam)
     setShowViewModal(true)
+  }
+
+  const handleEditExam = (exam) => {
+    setSelectedExam(exam)
+    setExamForm({
+      title: exam.title || exam.name || '',
+      subject_id: exam.subject_id?.toString() || '',
+      class_id: exam.class_id?.toString() || '',
+      exam_date: exam.exam_date ? new Date(exam.exam_date).toISOString().slice(0, 16) : '',
+      duration_minutes: exam.duration_minutes || 60,
+      total_marks: exam.total_marks || exam.max_marks || 100,
+      instructions: exam.instructions || ''
+    })
+    setShowEditModal(true)
+  }
+
+  const handleDeleteExam = (exam) => {
+    setExamToDelete(exam)
+    setShowDeleteModal(true)
+  }
+
+  const handleUpdateExam = async (e) => {
+    e.preventDefault()
+    try {
+      await updateExam.mutateAsync({
+        id: selectedExam.id,
+        name: examForm.title,
+        max_marks: examForm.total_marks,
+        exam_date: examForm.exam_date,
+        duration_minutes: examForm.duration_minutes
+      })
+      setShowEditModal(false)
+      setSelectedExam(null)
+      setExamForm({
+        title: '',
+        subject_id: '',
+        class_id: '',
+        exam_date: '',
+        duration_minutes: 60,
+        total_marks: 100,
+        instructions: ''
+      })
+      toast.success('Exam updated successfully!')
+    } catch (error) {
+      toast.error('Failed to update exam')
+    }
+  }
+
+  const handleConfirmDelete = async () => {
+    try {
+      await deleteExam.mutateAsync(examToDelete.id)
+      setShowDeleteModal(false)
+      setExamToDelete(null)
+      toast.success('Exam deleted successfully!')
+    } catch (error) {
+      toast.error('Failed to delete exam')
+    }
   }
 
   // Filter and sort exams
@@ -192,9 +266,13 @@ const TeacherExams = () => {
                 onChange={(e) => setSelectedSubject(e.target.value)}
               >
                 <option value="">All Subjects</option>
-                {mySubjects.map(subject => (
-                  <option key={subject.id} value={subject.id}>{subject.name}</option>
-                ))}
+                {Array.from(new Set(mySchedules?.map(schedule => schedule.subject).filter(Boolean) || []), subject => subject.id)
+                  .map(subjectId => {
+                    const subject = mySchedules.find(schedule => schedule.subject?.id === subjectId)?.subject
+                    return subject ? (
+                      <option key={subject.id} value={subject.id}>{subject.name}</option>
+                    ) : null
+                  })}
               </select>
             </div>
             
@@ -272,9 +350,17 @@ const TeacherExams = () => {
                     <h3 className="font-semibold text-gray-900 text-sm sm:text-base">{exam.title}</h3>
                     <p className="text-gray-600 text-sm">{exam.subject?.name} • {exam.class?.name}</p>
                   </div>
-                  <Button size="sm" variant="outline" onClick={() => handleViewExam(exam)}>
-                    <Eye className="h-4 w-4" />
-                  </Button>
+                  <div className="flex space-x-2">
+                    <Button size="sm" variant="outline" onClick={() => handleViewExam(exam)}>
+                      <Eye className="h-4 w-4" />
+                    </Button>
+                    <Button size="sm" variant="outline" onClick={() => handleEditExam(exam)}>
+                      <Edit className="h-4 w-4" />
+                    </Button>
+                    <Button size="sm" variant="outline" onClick={() => handleDeleteExam(exam)}>
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  </div>
                 </div>
                 <div className="flex flex-wrap items-center gap-4 text-xs sm:text-sm text-gray-500">
                   <span>Date: {new Date(exam.exam_date).toLocaleDateString()}</span>
@@ -310,22 +396,9 @@ const TeacherExams = () => {
             required
           />
           <Select
-            label="Subject"
-            value={examForm.subject_id}
-            onChange={(e) => setExamForm({ ...examForm, subject_id: e.target.value })}
-            options={[
-              { value: '', label: 'Select subject' },
-              ...mySubjects.map(subject => ({ 
-                value: subject.id, 
-                label: subject.name 
-              }))
-            ]}
-            required
-          />
-          <Select
             label="Class"
             value={examForm.class_id}
-            onChange={(e) => setExamForm({ ...examForm, class_id: e.target.value })}
+            onChange={(e) => setExamForm({ ...examForm, class_id: e.target.value, subject_id: '' })}
             options={[
               { value: '', label: 'Select class' },
               ...myClasses.map(cls => ({ 
@@ -335,6 +408,21 @@ const TeacherExams = () => {
             ]}
             required
           />
+
+          <Select
+            label="Subject"
+            value={examForm.subject_id}
+            onChange={(e) => setExamForm({ ...examForm, subject_id: e.target.value })}
+            options={[
+              { value: '', label: 'Select subject' },
+              ...getSubjectsForClass(examForm.class_id).map(subject => ({ 
+                value: subject.id, 
+                label: subject.name 
+              }))
+            ]}
+            required
+          />
+          
           <Input
             label="Exam Date"
             type="datetime-local"
@@ -434,6 +522,127 @@ const TeacherExams = () => {
         ) : (
           <div>Loading...</div>
         )}
+      </Modal>
+
+      {/* Edit Exam Modal */}
+      <Modal 
+        isOpen={showEditModal} 
+        onClose={() => setShowEditModal(false)}
+        title="Edit Exam"
+        className="sm:max-w-lg"
+      >
+        <form onSubmit={handleUpdateExam} className="space-y-4">
+          <Input
+            label="Exam Title"
+            value={examForm.title}
+            onChange={(e) => setExamForm({ ...examForm, title: e.target.value })}
+            required
+          />
+          <Select
+            label="Class"
+            value={examForm.class_id}
+            onChange={(e) => setExamForm({ ...examForm, class_id: e.target.value, subject_id: '' })}
+            options={[
+              { value: '', label: 'Select class' },
+              ...myClasses.map(cls => ({ 
+                value: cls.id, 
+                label: cls.name 
+              }))
+            ]}
+            required
+          />
+
+          <Select
+            label="Subject"
+            value={examForm.subject_id}
+            onChange={(e) => setExamForm({ ...examForm, subject_id: e.target.value })}
+            options={[
+              { value: '', label: 'Select subject' },
+              ...getSubjectsForClass(examForm.class_id).map(subject => ({ 
+                value: subject.id, 
+                label: subject.name 
+              }))
+            ]}
+            required
+          />
+          
+          <Input
+            label="Exam Date"
+            type="datetime-local"
+            value={examForm.exam_date}
+            onChange={(e) => setExamForm({ ...examForm, exam_date: e.target.value })}
+            required
+          />
+          <div className="grid grid-cols-2 gap-4">
+            <Input
+              label="Duration (minutes)"
+              type="number"
+              value={examForm.duration_minutes}
+              onChange={(e) => setExamForm({ ...examForm, duration_minutes: parseInt(e.target.value) })}
+              required
+            />
+            <Input
+              label="Total Marks"
+              type="number"
+              value={examForm.total_marks}
+              onChange={(e) => setExamForm({ ...examForm, total_marks: parseInt(e.target.value) })}
+              required
+            />
+          </div>
+          <div className="space-y-1">
+            <label className="block text-sm font-medium text-gray-700">Instructions</label>
+            <textarea
+              className="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 text-sm"
+              rows={3}
+              value={examForm.instructions}
+              onChange={(e) => setExamForm({ ...examForm, instructions: e.target.value })}
+              placeholder="Enter exam instructions..."
+            />
+          </div>
+          <div className="flex flex-col-reverse sm:flex-row justify-end space-y-2 space-y-reverse sm:space-y-0 sm:space-x-3">
+            <Button type="button" variant="outline" onClick={() => setShowEditModal(false)}>
+              Cancel
+            </Button>
+            <Button type="submit" loading={updateExam.isPending}>
+              Update Exam
+            </Button>
+          </div>
+        </form>
+      </Modal>
+
+      {/* Delete Confirmation Modal */}
+      <Modal 
+        isOpen={showDeleteModal} 
+        onClose={() => setShowDeleteModal(false)}
+        title="Delete Exam"
+        className="sm:max-w-md"
+      >
+        <div className="space-y-4">
+          <div className="flex items-center space-x-3">
+            <div className="flex-shrink-0">
+              <Trash2 className="h-6 w-6 text-red-500" />
+            </div>
+            <div>
+              <h3 className="text-lg font-medium text-gray-900">Delete Exam</h3>
+              <p className="text-sm text-gray-500 mt-1">
+                Are you sure you want to delete "{examToDelete?.title}"? This action cannot be undone.
+              </p>
+            </div>
+          </div>
+          <div className="flex flex-col-reverse sm:flex-row justify-end space-y-2 space-y-reverse sm:space-y-0 sm:space-x-3">
+            <Button type="button" variant="outline" onClick={() => setShowDeleteModal(false)}>
+              Cancel
+            </Button>
+            <Button 
+              type="button" 
+              variant="danger" 
+              onClick={handleConfirmDelete}
+              loading={deleteExam.isPending}
+            >
+              Delete Exam
+            </Button>
+          </div>
+        </div>
       </Modal>
     </div>
   )

@@ -1,4 +1,4 @@
-from sqlmodel import SQLModel, Field, Relationship
+from sqlmodel import SQLModel, Field, Relationship, UniqueConstraint
 from typing import Optional, List
 from datetime import datetime
 from enum import Enum
@@ -16,7 +16,7 @@ class AttendanceStatus(str, Enum):
 # Base models for table creation
 class UserBase(SQLModel):
     username: str = Field(max_length=50, unique=True, index=True)
-    email: str = Field(max_length=100, unique=True, index=True)
+    email: Optional[str] = Field(default=None, max_length=100, unique=True, index=True)
     full_name: str = Field(max_length=100)
     phone: Optional[str] = Field(default=None, max_length=15)
     role: UserRole
@@ -88,7 +88,6 @@ class Teacher(TeacherBase, table=True):
     
     # Relationships
     user: Optional[User] = Relationship(back_populates="teacher")
-    subjects: List["Subject"] = Relationship(back_populates="teacher")
     reviews: List["TeacherReview"] = Relationship(back_populates="teacher")
 
 class TeacherCreate(TeacherBase):
@@ -126,30 +125,26 @@ class ClassRead(ClassBase):
 
 class SubjectBase(SQLModel):
     name: str = Field(max_length=100)
-    code: str = Field(max_length=10, unique=True)
-    credits: int = Field(default=1, ge=1, le=10)
+    code: Optional[str] = Field(default=None, max_length=10, unique=True)
+    credits: Optional[int] = Field(default=3, ge=1, le=10)
 
 class Subject(SubjectBase, table=True):
     __tablename__ = "subjects"
     
     id: Optional[int] = Field(default=None, primary_key=True)
     class_id: int = Field(foreign_key="classes.id")
-    teacher_id: int = Field(foreign_key="teachers.id")
     
     # Relationships
     class_assigned: Optional[Class] = Relationship(back_populates="subjects")
-    teacher: Optional[Teacher] = Relationship(back_populates="subjects")
     study_materials: List["StudyMaterial"] = Relationship(back_populates="subject")
     exams: List["Exam"] = Relationship(back_populates="subject")
 
 class SubjectCreate(SubjectBase):
     class_id: int
-    teacher_id: int
 
 class SubjectRead(SubjectBase):
     id: int
     class_id: int
-    teacher_id: int
 
 # Class Schedule Model
 class DayOfWeek(str, Enum):
@@ -263,6 +258,11 @@ class ExamResult(ExamResultBase, table=True):
     # Relationships
     exam: Optional[Exam] = Relationship(back_populates="results")
     student: Optional[Student] = Relationship(back_populates="exam_results")
+    
+    # Add unique constraint to prevent duplicate results for same student-exam
+    __table_args__ = (
+        UniqueConstraint('exam_id', 'student_id', name='unique_student_exam_result'),
+    )
 
 class ExamResultCreate(ExamResultBase):
     exam_id: int

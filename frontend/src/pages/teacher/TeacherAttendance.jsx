@@ -155,7 +155,8 @@ const TeacherAttendance = () => {
       
       setShowSubmitModal(false)
       if (!isEditMode) {
-        setAttendance({})
+        setIsEditMode(true)
+        toast.success('Attendance submitted successfully! You can now edit it if needed.')
       }
     } catch (error) {
       console.error('Attendance submission error:', error)
