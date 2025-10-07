@@ -102,6 +102,68 @@ def get_current_active_user(current_user: User = Depends(get_current_user)) -> U
         raise HTTPException(status_code=400, detail="Inactive user")
     return current_user
 
+# Role-based authorization dependencies
+def require_admin(current_user: User = Depends(get_current_active_user)) -> User:
+    if current_user.role != UserRole.ADMIN:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Admin access required"
+        )
+    return current_user
+
+def require_teacher(current_user: User = Depends(get_current_active_user)) -> User:
+    if current_user.role != UserRole.TEACHER:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Teacher access required"
+        )
+    return current_user
+
+def require_student(current_user: User = Depends(get_current_active_user)) -> User:
+    if current_user.role != UserRole.STUDENT:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Student access required"
+        )
+    return current_user
+
+def require_teacher_or_admin(current_user: User = Depends(get_current_active_user)) -> User:
+    if current_user.role not in [UserRole.TEACHER, UserRole.ADMIN]:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Teacher or Admin access required"
+        )
+    return current_user
+
+def require_student_or_teacher(current_user: User = Depends(get_current_active_user)) -> User:
+    if current_user.role not in [UserRole.STUDENT, UserRole.TEACHER]:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Student or Teacher access required"
+        )
+    return current_user
+
+def validate_student_access(student_id: int, current_user: User, session: Session) -> User:
+    """Validate that the current user can access the specified student's data"""
+    if current_user.role == UserRole.ADMIN:
+        return current_user  # Admins can access any student data
+    elif current_user.role == UserRole.TEACHER:
+        return current_user  # Teachers can access any student data (for now)
+    elif current_user.role == UserRole.STUDENT:
+        # Students can only access their own data
+        student = session.get(Student, student_id)
+        if not student or student.user_id != current_user.id:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Access denied. You can only view your own data."
+            )
+        return current_user
+    else:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Access denied"
+        )
+
 def authenticate_user(username: str, password: str, session: Session) -> Optional[User]:
     user = session.exec(select(User).where(User.username == username)).first()
     if not user:
@@ -171,7 +233,11 @@ def logout():
 
 # Admin endpoints for user management
 @app.post("/admin/users", response_model=UserRead)
-def create_user(user: UserCreate, session: Session = Depends(get_session)):
+def create_user(
+    user: UserCreate, 
+    session: Session = Depends(get_session),
+    current_user: User = Depends(require_admin)
+):
     # Check if username or email already exists
     statement = select(User).where((User.username == user.username) | (User.email == user.email))
     existing_user = session.exec(statement).first()
@@ -191,13 +257,22 @@ def create_user(user: UserCreate, session: Session = Depends(get_session)):
     return db_user
 
 @app.get("/admin/users", response_model=List[UserRead])
-def get_all_users(skip: int = 0, limit: int = 100, session: Session = Depends(get_session)):
+def get_users(
+    skip: int = 0,
+    limit: int = 100,
+    session: Session = Depends(get_session),
+    current_user: User = Depends(require_admin)
+):
     statement = select(User).offset(skip).limit(limit)
     users = session.exec(statement).all()
     return users
 
 @app.get("/admin/users/{user_id}", response_model=UserRead)
-def get_user(user_id: int, session: Session = Depends(get_session)):
+def get_user(
+    user_id: int, 
+    session: Session = Depends(get_session),
+    current_user: User = Depends(require_admin)
+):
     user = session.get(User, user_id)
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
@@ -205,7 +280,11 @@ def get_user(user_id: int, session: Session = Depends(get_session)):
 
 # Student management
 @app.post("/admin/students", response_model=StudentRead)
-def create_student(student: StudentCreate, session: Session = Depends(get_session)):
+def create_student(
+    student: StudentCreate, 
+    session: Session = Depends(get_session),
+    current_user: User = Depends(require_admin)
+):
     # First create the user
     user_data = student.user
     user_dict = user_data.dict(exclude={'password'})
@@ -226,7 +305,12 @@ def create_student(student: StudentCreate, session: Session = Depends(get_sessio
     return db_student
 
 @app.get("/admin/students", response_model=List[StudentRead])
-def get_all_students(skip: int = 0, limit: int = 100, session: Session = Depends(get_session)):
+def get_all_students(
+    skip: int = 0, 
+    limit: int = 100, 
+    session: Session = Depends(get_session),
+    current_user: User = Depends(require_admin)
+):
     statement = select(Student).offset(skip).limit(limit)
     students = session.exec(statement).all()
     
@@ -239,14 +323,23 @@ def get_all_students(skip: int = 0, limit: int = 100, session: Session = Depends
     return students
 
 @app.get("/admin/students/{student_id}", response_model=StudentRead)
-def get_student(student_id: int, session: Session = Depends(get_session)):
+def get_student(
+    student_id: int, 
+    session: Session = Depends(get_session),
+    current_user: User = Depends(require_admin)
+):
     student = session.get(Student, student_id)
     if not student:
         raise HTTPException(status_code=404, detail="Student not found")
     return student
 
 @app.put("/admin/students/{student_id}", response_model=StudentRead)
-def update_student(student_id: int, student_update: StudentUpdate, session: Session = Depends(get_session)):
+def update_student(
+    student_id: int, 
+    student_update: StudentUpdate, 
+    session: Session = Depends(get_session),
+    current_user: User = Depends(require_admin)
+):
     # Get existing student
     db_student = session.get(Student, student_id)
     if not db_student:
@@ -278,7 +371,11 @@ def update_student(student_id: int, student_update: StudentUpdate, session: Sess
     return db_student
 
 @app.delete("/admin/students/{student_id}")
-def delete_student(student_id: int, session: Session = Depends(get_session)):
+def delete_student(
+    student_id: int, 
+    session: Session = Depends(get_session),
+    current_user: User = Depends(require_admin)
+):
     # Get existing student
     db_student = session.get(Student, student_id)
     if not db_student:
@@ -298,7 +395,12 @@ def delete_student(student_id: int, session: Session = Depends(get_session)):
     return {"message": "Student deleted successfully"}
 
 @app.patch("/admin/students/{student_id}/password")
-def update_student_password(student_id: int, password_data: PasswordUpdate, session: Session = Depends(get_session)):
+def update_student_password(
+    student_id: int, 
+    password_data: PasswordUpdate, 
+    session: Session = Depends(get_session),
+    current_user: User = Depends(require_admin)
+):
     # Get existing student
     db_student = session.get(Student, student_id)
     if not db_student:
@@ -318,7 +420,11 @@ def update_student_password(student_id: int, password_data: PasswordUpdate, sess
 
 # Teacher management
 @app.post("/admin/teachers", response_model=TeacherRead)
-def create_teacher(teacher: TeacherCreate, session: Session = Depends(get_session)):
+def create_teacher(
+    teacher: TeacherCreate, 
+    session: Session = Depends(get_session),
+    current_user: User = Depends(require_admin)
+):
     # First create the user
     user_data = teacher.user
     user_dict = user_data.dict(exclude={'password'})
@@ -339,7 +445,12 @@ def create_teacher(teacher: TeacherCreate, session: Session = Depends(get_sessio
     return db_teacher
 
 @app.get("/admin/teachers", response_model=List[TeacherRead])
-def get_all_teachers(skip: int = 0, limit: int = 100, session: Session = Depends(get_session)):
+def get_all_teachers(
+    skip: int = 0, 
+    limit: int = 100, 
+    session: Session = Depends(get_session),
+    current_user: User = Depends(require_admin)
+):
     statement = select(Teacher).offset(skip).limit(limit)
     teachers = session.exec(statement).all()
     
@@ -352,7 +463,12 @@ def get_all_teachers(skip: int = 0, limit: int = 100, session: Session = Depends
     return teachers
 
 @app.put("/admin/teachers/{teacher_id}", response_model=TeacherRead)
-def update_teacher(teacher_id: int, teacher_update: TeacherUpdate, session: Session = Depends(get_session)):
+def update_teacher(
+    teacher_id: int, 
+    teacher_update: TeacherUpdate, 
+    session: Session = Depends(get_session),
+    current_user: User = Depends(require_admin)
+):
     # Get existing teacher
     db_teacher = session.get(Teacher, teacher_id)
     if not db_teacher:
@@ -384,7 +500,11 @@ def update_teacher(teacher_id: int, teacher_update: TeacherUpdate, session: Sess
     return db_teacher
 
 @app.delete("/admin/teachers/{teacher_id}")
-def delete_teacher(teacher_id: int, session: Session = Depends(get_session)):
+def delete_teacher(
+    teacher_id: int, 
+    session: Session = Depends(get_session),
+    current_user: User = Depends(require_admin)
+):
     # Get existing teacher
     db_teacher = session.get(Teacher, teacher_id)
     if not db_teacher:
@@ -404,7 +524,12 @@ def delete_teacher(teacher_id: int, session: Session = Depends(get_session)):
     return {"message": "Teacher deleted successfully"}
 
 @app.patch("/admin/teachers/{teacher_id}/password")
-def update_teacher_password(teacher_id: int, password_update: PasswordUpdate, session: Session = Depends(get_session)):
+def update_teacher_password(
+    teacher_id: int, 
+    password_update: PasswordUpdate, 
+    session: Session = Depends(get_session),
+    current_user: User = Depends(require_admin)
+):
     # Get existing teacher
     db_teacher = session.get(Teacher, teacher_id)
     if not db_teacher:
@@ -424,7 +549,11 @@ def update_teacher_password(teacher_id: int, password_update: PasswordUpdate, se
 
 # Class management
 @app.post("/admin/classes", response_model=ClassRead)
-def create_class(class_data: ClassCreate, session: Session = Depends(get_session)):
+def create_class(
+    class_data: ClassCreate, 
+    session: Session = Depends(get_session),
+    current_user: User = Depends(require_admin)
+):
     db_class = Class(**class_data.dict())
     session.add(db_class)
     session.commit()
@@ -432,13 +561,21 @@ def create_class(class_data: ClassCreate, session: Session = Depends(get_session
     return db_class
 
 @app.get("/admin/classes", response_model=List[ClassRead])
-def get_all_classes(session: Session = Depends(get_session)):
+def get_all_classes(
+    session: Session = Depends(get_session),
+    current_user: User = Depends(require_teacher_or_admin)
+):
     statement = select(Class)
     classes = session.exec(statement).all()
     return classes
 
 @app.put("/admin/classes/{class_id}", response_model=ClassRead)
-def update_class(class_id: int, class_data: ClassCreate, session: Session = Depends(get_session)):
+def update_class(
+    class_id: int, 
+    class_data: ClassCreate, 
+    session: Session = Depends(get_session),
+    current_user: User = Depends(require_admin)
+):
     # Get the existing class
     statement = select(Class).where(Class.id == class_id)
     db_class = session.exec(statement).first()
@@ -458,7 +595,11 @@ def update_class(class_id: int, class_data: ClassCreate, session: Session = Depe
 
 # Subject management
 @app.post("/admin/subjects", response_model=SubjectRead)
-def create_subject(subject: SubjectCreate, session: Session = Depends(get_session)):
+def create_subject(
+    subject: SubjectCreate, 
+    session: Session = Depends(get_session),
+    current_user: User = Depends(require_admin)
+):
     db_subject = Subject(**subject.dict())
     session.add(db_subject)
     session.commit()
@@ -466,13 +607,21 @@ def create_subject(subject: SubjectCreate, session: Session = Depends(get_sessio
     return db_subject
 
 @app.get("/admin/subjects", response_model=List[SubjectRead])
-def get_all_subjects(session: Session = Depends(get_session)):
+def get_all_subjects(
+    session: Session = Depends(get_session),
+    current_user: User = Depends(require_teacher_or_admin)
+):
     statement = select(Subject)
     subjects = session.exec(statement).all()
     return subjects
 
 @app.put("/admin/subjects/{subject_id}", response_model=SubjectRead)
-def update_subject(subject_id: int, subject_update: SubjectCreate, session: Session = Depends(get_session)):
+def update_subject(
+    subject_id: int, 
+    subject_update: SubjectCreate, 
+    session: Session = Depends(get_session),
+    current_user: User = Depends(require_admin)
+):
     # Get existing subject
     db_subject = session.get(Subject, subject_id)
     if not db_subject:
@@ -490,7 +639,11 @@ def update_subject(subject_id: int, subject_update: SubjectCreate, session: Sess
 
 # Attendance management
 @app.post("/admin/attendance", response_model=AttendanceRead)
-def mark_attendance(attendance: AttendanceCreate, session: Session = Depends(get_session)):
+def mark_attendance(
+    attendance: AttendanceCreate, 
+    session: Session = Depends(get_session),
+    current_user: User = Depends(require_teacher_or_admin)
+):
     # Check if attendance already exists for this student on this date
     statement = select(Attendance).where(
         Attendance.student_id == attendance.student_id,
@@ -511,7 +664,12 @@ def mark_attendance(attendance: AttendanceCreate, session: Session = Depends(get
     return db_attendance
 
 @app.put("/admin/attendance/{attendance_id}", response_model=AttendanceRead)
-def update_attendance(attendance_id: int, attendance_update: AttendanceCreate, session: Session = Depends(get_session)):
+def update_attendance(
+    attendance_id: int, 
+    attendance_update: AttendanceCreate, 
+    session: Session = Depends(get_session),
+    current_user: User = Depends(require_teacher_or_admin)
+):
     # Get existing attendance record
     db_attendance = session.get(Attendance, attendance_id)
     if not db_attendance:
@@ -552,7 +710,11 @@ def get_attendance(
 
 # Exam management
 @app.post("/admin/exams", response_model=ExamRead)
-def create_exam(exam: ExamCreate, session: Session = Depends(get_session)):
+def create_exam(
+    exam: ExamCreate, 
+    session: Session = Depends(get_session),
+    current_user: User = Depends(require_teacher_or_admin)
+):
     db_exam = Exam(**exam.dict())
     session.add(db_exam)
     session.commit()
@@ -560,7 +722,10 @@ def create_exam(exam: ExamCreate, session: Session = Depends(get_session)):
     return db_exam
 
 @app.get("/admin/exams", response_model=List[ExamRead])
-def get_all_exams(session: Session = Depends(get_session)):
+def get_all_exams(
+    session: Session = Depends(get_session),
+    current_user: User = Depends(require_teacher_or_admin)
+):
     statement = select(Exam)
     exams = session.exec(statement).all()
     return exams
@@ -630,12 +795,12 @@ def update_exam_result(result_id: int, result_update: ExamResultUpdate, session:
 @app.post("/admin/study-materials", response_model=StudyMaterialRead)
 def create_study_material(
     material: StudyMaterialCreate,
-    current_user_id: int = 1,  # Placeholder for authentication
-    session: Session = Depends(get_session)
+    session: Session = Depends(get_session),
+    current_user: User = Depends(require_teacher_or_admin)
 ):
     db_material = StudyMaterial(
         **material.dict(),
-        created_by_id=current_user_id
+        created_by_id=current_user.id
     )
     session.add(db_material)
     session.commit()
@@ -658,12 +823,12 @@ def get_study_materials(
 @app.post("/admin/notices", response_model=NoticeRead)
 def create_notice(
     notice: NoticeCreate,
-    current_user_id: int = 1,  # Placeholder for authentication
-    session: Session = Depends(get_session)
+    session: Session = Depends(get_session),
+    current_user: User = Depends(require_admin)
 ):
     db_notice = Notice(
         **notice.dict(),
-        created_by_id=current_user_id
+        created_by_id=current_user.id
     )
     session.add(db_notice)
     session.commit()
@@ -674,7 +839,8 @@ def create_notice(
 def get_notices(
     target_role: UserRole = None,
     active_only: bool = True,
-    session: Session = Depends(get_session)
+    session: Session = Depends(get_session),
+    current_user: User = Depends(require_admin)
 ):
     statement = select(Notice)
     if target_role:
@@ -690,8 +856,8 @@ def get_notices(
 def update_notice(
     notice_id: int,
     notice_update: NoticeUpdate,
-    current_user_id: int = 1,  # Placeholder for authentication
-    session: Session = Depends(get_session)
+    session: Session = Depends(get_session),
+    current_user: User = Depends(require_admin)
 ):
     notice = session.get(Notice, notice_id)
     if not notice:
@@ -709,8 +875,8 @@ def update_notice(
 @app.delete("/admin/notices/{notice_id}")
 def delete_notice(
     notice_id: int,
-    current_user_id: int = 1,  # Placeholder for authentication
-    session: Session = Depends(get_session)
+    session: Session = Depends(get_session),
+    current_user: User = Depends(require_admin)
 ):
     notice = session.get(Notice, notice_id)
     if not notice:
@@ -724,8 +890,8 @@ def delete_notice(
 @app.post("/admin/class-schedules", response_model=ClassScheduleRead)
 def create_class_schedule(
     schedule: ClassScheduleCreate,
-    current_user_id: int = 1,  # Placeholder for authentication
-    session: Session = Depends(get_session)
+    session: Session = Depends(get_session),
+    current_user: User = Depends(require_admin)
 ):
     # Check for time conflicts
     statement = select(ClassSchedule).where(
@@ -803,8 +969,12 @@ def get_teacher_schedule(
 def get_student_schedule(
     student_id: int,
     day_of_week: DayOfWeek = None,
-    session: Session = Depends(get_session)
+    session: Session = Depends(get_session),
+    current_user: User = Depends(get_current_active_user)
 ):
+    # Validate access
+    validate_student_access(student_id, current_user, session)
+    
     # First get the student's class
     student_statement = select(Student).where(Student.id == student_id)
     student = session.exec(student_statement).first()
@@ -844,8 +1014,8 @@ def delete_class_schedule(
 @app.post("/admin/teacher-reviews", response_model=TeacherReviewRead)
 def create_teacher_review(
     review: TeacherReviewCreate,
-    current_user_id: int = 1,  # Placeholder for authentication
-    session: Session = Depends(get_session)
+    session: Session = Depends(get_session),
+    current_user: User = Depends(require_admin)
 ):
     # Calculate overall rating
     ratings = [
@@ -858,7 +1028,7 @@ def create_teacher_review(
     
     db_review = TeacherReview(
         **review.dict(),
-        reviewed_by_id=current_user_id,
+        reviewed_by_id=current_user.id,
         overall_rating=overall_rating
     )
     session.add(db_review)
@@ -1167,8 +1337,14 @@ def get_data_statistics(session: Session = Depends(get_session)):
 
 # Student-specific endpoints
 @app.get("/student/{student_id}/profile", response_model=StudentRead)
-def get_student_profile(student_id: int, session: Session = Depends(get_session)):
+def get_student_profile(
+    student_id: int, 
+    session: Session = Depends(get_session),
+    current_user: User = Depends(get_current_active_user)
+):
     """Get student profile with user information"""
+    # Validate access
+    validate_student_access(student_id, current_user, session)
     student = session.get(Student, student_id)
     if not student:
         raise HTTPException(status_code=404, detail="Student not found")
@@ -1181,22 +1357,43 @@ def get_student_profile(student_id: int, session: Session = Depends(get_session)
     return student
 
 @app.get("/student/{student_id}/attendance", response_model=List[AttendanceRead])
-def get_student_attendance(student_id: int, session: Session = Depends(get_session)):
+def get_student_attendance(
+    student_id: int, 
+    session: Session = Depends(get_session),
+    current_user: User = Depends(get_current_active_user)
+):
     """Get all attendance records for a specific student"""
+    # Validate access
+    validate_student_access(student_id, current_user, session)
+    
     statement = select(Attendance).where(Attendance.student_id == student_id).order_by(Attendance.date.desc())
     attendance = session.exec(statement).all()
     return attendance
 
 @app.get("/student/{student_id}/exam-results", response_model=List[ExamResultRead])
-def get_student_exam_results(student_id: int, session: Session = Depends(get_session)):
+def get_student_exam_results(
+    student_id: int, 
+    session: Session = Depends(get_session),
+    current_user: User = Depends(get_current_active_user)
+):
     """Get all exam results for a specific student"""
+    # Validate access
+    validate_student_access(student_id, current_user, session)
+    
     statement = select(ExamResult).where(ExamResult.student_id == student_id)
     results = session.exec(statement).all()
     return results
 
 @app.get("/student/{student_id}/subjects", response_model=List[SubjectRead])
-def get_student_subjects(student_id: int, session: Session = Depends(get_session)):
+def get_student_subjects(
+    student_id: int, 
+    session: Session = Depends(get_session),
+    current_user: User = Depends(get_current_active_user)
+):
     """Get all subjects for a student's class"""
+    # Validate access
+    validate_student_access(student_id, current_user, session)
+    
     # First get the student to find their class
     student = session.get(Student, student_id)
     if not student:
@@ -1208,8 +1405,15 @@ def get_student_subjects(student_id: int, session: Session = Depends(get_session
     return subjects
 
 @app.get("/student/{student_id}/study-materials", response_model=List[StudyMaterialRead])
-def get_student_study_materials(student_id: int, session: Session = Depends(get_session)):
+def get_student_study_materials(
+    student_id: int, 
+    session: Session = Depends(get_session),
+    current_user: User = Depends(get_current_active_user)
+):
     """Get all study materials for a student's subjects"""
+    # Validate access
+    validate_student_access(student_id, current_user, session)
+    
     # First get the student to find their class
     student = session.get(Student, student_id)
     if not student:
@@ -1233,8 +1437,15 @@ def get_student_study_materials(student_id: int, session: Session = Depends(get_
     return materials
 
 @app.get("/student/{student_id}/notices", response_model=List[NoticeRead])
-def get_student_notices(student_id: int, session: Session = Depends(get_session)):
+def get_student_notices(
+    student_id: int, 
+    session: Session = Depends(get_session),
+    current_user: User = Depends(get_current_active_user)
+):
     """Get notices relevant to students"""
+    # Validate access
+    validate_student_access(student_id, current_user, session)
+    
     # Get active notices for students or general notices
     statement = select(Notice).where(
         Notice.is_active == True,
