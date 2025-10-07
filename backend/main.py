@@ -928,7 +928,8 @@ def get_class_schedules(
     day_of_week: DayOfWeek = None,
     class_id: int = None,
     teacher_id: int = None,
-    session: Session = Depends(get_session)
+    session: Session = Depends(get_session),
+    current_user: User = Depends(require_admin)
 ):
     statement = select(ClassSchedule).options(
         selectinload(ClassSchedule.subject),
@@ -951,8 +952,16 @@ def get_class_schedules(
 def get_teacher_schedule(
     teacher_id: int,
     day_of_week: DayOfWeek = None,
-    session: Session = Depends(get_session)
+    session: Session = Depends(get_session),
+    current_user: User = Depends(require_teacher_or_admin)
 ):
+    # Validate teacher access (teachers can only see their own schedule, admins can see any)
+    if current_user.role == UserRole.TEACHER:
+        teacher_statement = select(Teacher).where(Teacher.user_id == current_user.id)
+        teacher = session.exec(teacher_statement).first()
+        if not teacher or teacher.id != teacher_id:
+            raise HTTPException(status_code=403, detail="Access denied. You can only view your own schedule.")
+    
     statement = select(ClassSchedule).options(
         selectinload(ClassSchedule.subject),
         selectinload(ClassSchedule.class_assigned)

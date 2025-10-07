@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
-import { Menu, X, LogOut, User, Settings, GraduationCap, BookOpen, Users, Calendar, Award, BarChart3, Home } from 'lucide-react'
+import { Menu, X, LogOut, User, Settings, GraduationCap, BookOpen, Users, Calendar, Award, BarChart3, Home, Clock, Shield, UserCheck, Bell, FileText } from 'lucide-react'
 import { useAuth } from '../contexts/AuthContext'
 import Button from './Button'
 
@@ -43,6 +43,53 @@ const Layout = ({ children }) => {
   const navigationItems = useMemo(() => {
     const currentPath = location.pathname
     
+    if (user?.role === 'admin') {
+      return [
+        {
+          name: 'Dashboard',
+          href: '/admin-dashboard',
+          icon: Home,
+          current: currentPath === '/admin-dashboard' || currentPath === '/admin-dashboard/'
+        },
+        {
+          name: 'Students',
+          href: '/admin-dashboard/students',
+          icon: Users,
+          current: currentPath === '/admin-dashboard/students'
+        },
+        {
+          name: 'Teachers',
+          href: '/admin-dashboard/teachers',
+          icon: UserCheck,
+          current: currentPath === '/admin-dashboard/teachers'
+        },
+        {
+          name: 'Classes',
+          href: '/admin-dashboard/classes',
+          icon: BookOpen,
+          current: currentPath === '/admin-dashboard/classes'
+        },
+        {
+          name: 'Schedule',
+          href: '/admin-dashboard/schedule',
+          icon: Clock,
+          current: currentPath === '/admin-dashboard/schedule'
+        },
+        {
+          name: 'Subjects',
+          href: '/admin-dashboard/subjects',
+          icon: Award,
+          current: currentPath === '/admin-dashboard/subjects'
+        },
+        {
+          name: 'Notices',
+          href: '/admin-dashboard/notices',
+          icon: Bell,
+          current: currentPath === '/admin-dashboard/notices'
+        }
+      ]
+    }
+    
     if (user?.role === 'teacher') {
       return [
         {
@@ -56,6 +103,12 @@ const Layout = ({ children }) => {
           href: '/teacher/classes',
           icon: BookOpen,
           current: currentPath === '/teacher/classes'
+        },
+        {
+          name: 'Schedule',
+          href: '/teacher/schedule',
+          icon: Clock,
+          current: currentPath === '/teacher/schedule'
         },
         {
           name: 'Students',
@@ -82,6 +135,11 @@ const Layout = ({ children }) => {
           current: currentPath === '/teacher/results'
         }
       ]
+    }
+
+    if (user?.role === 'student') {
+      // Student dashboard uses internal tab navigation, not routing
+      return []
     }
     
     return []
