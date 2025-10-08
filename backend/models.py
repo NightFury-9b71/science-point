@@ -19,6 +19,7 @@ class UserBase(SQLModel):
     email: Optional[str] = Field(default=None, max_length=100, unique=True, index=True)
     full_name: str = Field(max_length=100)
     phone: Optional[str] = Field(default=None, max_length=15)
+    photo_path: Optional[str] = Field(default=None, max_length=500)
     role: UserRole
     is_active: bool = Field(default=True)
 

@@ -1,9 +1,9 @@
 import { Bell, Calendar, AlertTriangle } from 'lucide-react'
 import Card from '../../components/Card'
-import { useNotices } from '../../services/queries'
+import { useStudentNotices } from '../../services/queries'
 
-function StudentNotices() {
-  const { data: notices = [], isLoading, error } = useNotices()
+function StudentNotices({ studentId }) {
+  const { data: notices = [], isLoading, error } = useStudentNotices(studentId)
 
   if (isLoading) {
     return (

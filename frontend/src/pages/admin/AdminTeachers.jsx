@@ -7,11 +7,12 @@ import Button from '../../components/Button'
 import Table from '../../components/Table'
 import Modal from '../../components/Modal'
 import { Input } from '../../components/Form'
-import { useTeachers, useCreateTeacher, useUpdateTeacher, useDeleteTeacher, useUpdateTeacherPassword } from '../../services/queries'
+import { useTeachers, useCreateTeacher, useUpdateTeacher, useDeleteTeacher, useUpdateTeacherPassword, useStudents } from '../../services/queries'
 
 const AdminTeachers = () => {
   const navigate = useNavigate()
   const { data: teachers, isLoading } = useTeachers()
+  const { data: students } = useStudents()
   const createTeacher = useCreateTeacher()
   const updateTeacher = useUpdateTeacher()
   const deleteTeacher = useDeleteTeacher()
@@ -103,7 +104,7 @@ const AdminTeachers = () => {
         baseUsername = firstName + lastInitial
       }
       
-      // Get all existing usernames from teachers
+      // Get all existing usernames from teachers and students
       const existingUsernames = new Set()
       
       // Add teacher usernames  
@@ -111,6 +112,15 @@ const AdminTeachers = () => {
         teachers.forEach(teacher => {
           if (teacher.user?.username) {
             existingUsernames.add(teacher.user.username.toLowerCase())
+          }
+        })
+      }
+      
+      // Add student usernames
+      if (students) {
+        students.forEach(student => {
+          if (student.user?.username) {
+            existingUsernames.add(student.user.username.toLowerCase())
           }
         })
       }
@@ -147,15 +157,15 @@ const AdminTeachers = () => {
     const existingIds = teachers
       .map(teacher => {
         const idStr = teacher.employee_id || ''
-        const match = idStr.match(/\d+$/) // Get trailing numbers
-        return match ? parseInt(match[0]) : 0
+        const match = idStr.match(/T(\d+)$/) // Get trailing numbers after 'T'
+        return match ? parseInt(match[1]) : 0
       })
       .filter(id => !isNaN(id))
     
     const maxId = existingIds.length > 0 ? Math.max(...existingIds) : 0
     const nextId = maxId + 1
     
-    return `EMP${nextId.toString().padStart(4, '0')}`
+    return `T${nextId.toString().padStart(3, '0')}`
   }
 
   const handleSubmit = async (e) => {
@@ -171,12 +181,25 @@ const AdminTeachers = () => {
       }
       const result = await createTeacher.mutateAsync(formData)
       
+      // Store credentials for display
+      setNewTeacherCredentials({
+        fullName: form.user.full_name,
+        username: form.user.username,
+        password: form.user.password,
+        employeeId: form.employee_id,
+        email: form.user.email
+      })
+      
       setShowModal(false)
       setForm({
-        user: { username: '', email: '', full_name: '', phone: '', password: '' },
+        user: { username: '', email: '', full_name: '', phone: '', password: generatePassword() },
         employee_id: generateEmployeeId(), qualification: '', experience_years: 0, salary: 0
       })
+      
+      // Show credentials modal instead of just toast
+      setShowCredentialsModal(true)
       toast.success('Teacher created successfully!')
+      
     } catch (error) {
       console.error('Error creating teacher:', error)
       toast.error('Failed to create teacher. Please try again.')
@@ -359,9 +382,9 @@ Please keep these credentials secure and share them with the teacher.`
         </div>
         <Button 
           onClick={() => {
-            // Reset form with auto-generated employee ID
+            // Reset form with auto-generated employee ID and password
             setForm({
-              user: { username: '', email: '', full_name: '', phone: '', password: '' },
+              user: { username: '', email: '', full_name: '', phone: '', password: generatePassword() },
               employee_id: generateEmployeeId(), 
               qualification: '', 
               experience_years: 0, 
@@ -463,32 +486,47 @@ Please keep these credentials secure and share them with the teacher.`
       <div className="block sm:hidden space-y-3">
         {filteredTeachers?.map((teacher) => (
           <Card key={teacher.id} className="p-4">
-            <div className="space-y-2">
-              <div className="flex justify-between items-start">
-                <div>
-                  <h3 className="font-medium text-gray-900">{teacher.user?.full_name || 'N/A'}</h3>
-                  <p className="text-sm text-gray-600">ID: {teacher.employee_id}</p>
-                </div>
-                <div className="flex gap-1">
-                  <Button size="sm" variant="outline" onClick={() => handleViewTeacher(teacher)}>
-                    <Eye className="h-4 w-4" />
-                  </Button>
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    onClick={() => handleResetPassword(teacher)}
-                    className="text-orange-600 hover:text-orange-700 hover:bg-orange-50"
-                    title="Reset Password"
-                  >
-                    <KeyRound className="h-4 w-4" />
-                  </Button>
-                </div>
+            <div className="flex items-start space-x-3">
+              <div className="w-12 h-12 rounded-full overflow-hidden bg-gray-200 flex items-center justify-center flex-shrink-0">
+                {teacher.user?.photo_path ? (
+                  <img 
+                    src={`/uploads/${teacher.user.photo_path}`} 
+                    alt={`${teacher.user?.full_name || 'Teacher'} profile`}
+                    className="w-full h-full object-cover"
+                  />
+                ) : (
+                  <span className="text-gray-600 font-medium">
+                    {(teacher.user?.full_name || 'T').charAt(0).toUpperCase()}
+                  </span>
+                )}
               </div>
-              <div className="text-xs text-gray-500 space-y-1">
-                <p>Email: {teacher.user?.email || 'N/A'}</p>
-                <p>Phone: {teacher.user?.phone || 'N/A'}</p>
-                <p>Qualification: {teacher.qualification || 'N/A'}</p>
-                <p>Experience: {teacher.experience_years} years</p>
+              <div className="flex-1 min-w-0">
+                <div className="flex justify-between items-start">
+                  <div className="min-w-0 flex-1">
+                    <h3 className="font-medium text-gray-900 truncate">{teacher.user?.full_name || 'N/A'}</h3>
+                    <p className="text-sm text-gray-600">ID: {teacher.employee_id}</p>
+                  </div>
+                  <div className="flex gap-1">
+                    <Button size="sm" variant="outline" onClick={() => handleViewTeacher(teacher)}>
+                      <Eye className="h-4 w-4" />
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => handleResetPassword(teacher)}
+                      className="text-orange-600 hover:text-orange-700 hover:bg-orange-50"
+                      title="Reset Password"
+                    >
+                      <KeyRound className="h-4 w-4" />
+                    </Button>
+                  </div>
+                </div>
+                <div className="text-xs text-gray-500 space-y-1 mt-2">
+                  <p>Email: {teacher.user?.email || 'N/A'}</p>
+                  <p>Phone: {teacher.user?.phone || 'N/A'}</p>
+                  <p>Qualification: {teacher.qualification || 'N/A'}</p>
+                  <p>Experience: {teacher.experience_years} years</p>
+                </div>
               </div>
             </div>
           </Card>
@@ -502,6 +540,7 @@ Please keep these credentials secure and share them with the teacher.`
             <Table>
               <Table.Header>
                 <Table.Row>
+                  <Table.Head>Photo</Table.Head>
                   <Table.Head>Employee ID</Table.Head>
                   <Table.Head>Full Name</Table.Head>
                   <Table.Head className="hidden md:table-cell">Email</Table.Head>
@@ -515,6 +554,21 @@ Please keep these credentials secure and share them with the teacher.`
               <Table.Body>
                 {filteredTeachers?.map((teacher) => (
                   <Table.Row key={teacher.id}>
+                    <Table.Cell>
+                      <div className="w-10 h-10 rounded-full overflow-hidden bg-gray-200 flex items-center justify-center">
+                        {teacher.user?.photo_path ? (
+                          <img 
+                            src={`/uploads/${teacher.user.photo_path}`} 
+                            alt={`${teacher.user?.full_name || 'Teacher'} profile`}
+                            className="w-full h-full object-cover"
+                          />
+                        ) : (
+                          <span className="text-gray-600 font-medium text-sm">
+                            {(teacher.user?.full_name || 'T').charAt(0).toUpperCase()}
+                          </span>
+                        )}
+                      </div>
+                    </Table.Cell>
                     <Table.Cell>{teacher.employee_id}</Table.Cell>
                     <Table.Cell>{teacher.user?.full_name || 'N/A'}</Table.Cell>
                     <Table.Cell className="hidden md:table-cell">{teacher.user?.email || 'N/A'}</Table.Cell>
@@ -568,15 +622,35 @@ Please keep these credentials secure and share them with the teacher.`
             value={form.user.full_name}
             onChange={(e) => {
               const fullName = e.target.value
-              setForm({
-                ...form,
+              
+              // Immediate state update for responsive UI
+              setForm(prev => ({
+                ...prev,
                 user: { 
-                  ...form.user, 
-                  full_name: fullName,
-                  // Always auto-generate unique username from full name
-                  username: generateUsername(fullName)
+                  ...prev.user, 
+                  full_name: fullName
                 }
-              })
+              }))
+              
+              // Debounced username generation to avoid blocking input
+              if (fullName && fullName.trim().length > 1) {
+                setTimeout(() => {
+                  try {
+                    const username = generateUsername(fullName)
+                    if (username) {
+                      setForm(prev => ({
+                        ...prev,
+                        user: { 
+                          ...prev.user, 
+                          username: username
+                        }
+                      }))
+                    }
+                  } catch (err) {
+                    console.error('Username generation error:', err)
+                  }
+                }, 300)
+              }
             }}
             required
           />
@@ -634,46 +708,66 @@ Please keep these credentials secure and share them with the teacher.`
             })}
           />
           <div className="space-y-2">
+            <Input
+              label="Password"
+              type="password"
+              value={form.user.password}
+              onChange={(e) => setForm({
+                ...form,
+                user: { ...form.user, password: e.target.value }
+              })}
+              required
+              placeholder="Enter password or generate one"
+            />
             <div className="flex gap-2">
-              <Input
-                label="Password"
-                type="password"
-                value={form.user.password}
-                onChange={(e) => setForm({
-                  ...form,
-                  user: { ...form.user, password: e.target.value }
-                })}
-                required
-                className="flex-1"
-              />
               <Button
                 type="button"
                 variant="outline"
                 size="sm"
-                onClick={() => {
-                  const password = generatePassword()
-                  setForm({
-                    ...form,
-                    user: { ...form.user, password }
-                  })
-                }}
-                className="mt-6 px-3"
-                title="Auto-generate secure password"
+                onClick={() => setForm({
+                  ...form,
+                  user: { ...form.user, password: generatePassword() }
+                })}
+                className="text-xs"
               >
-                Auto
+                Generate Secure Password
               </Button>
+              {form.user.password && (
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => {
+                    navigator.clipboard.writeText(form.user.password)
+                    toast.success('Password copied!')
+                  }}
+                  className="text-xs"
+                >
+                  Copy Password
+                </Button>
+              )}
             </div>
+            {form.user.password && (
+              <div className="text-xs text-gray-600 bg-gray-50 p-2 rounded border">
+                <strong>Password:</strong> {form.user.password}
+              </div>
+            )}
           </div>
           
           <div className="space-y-2">
             <Input
               label="Employee ID"
               type="text"
-              placeholder="e.g., EMP0001 (auto-generated)"
               value={form.employee_id}
               onChange={(e) => setForm({ ...form, employee_id: e.target.value })}
               required
+              placeholder="e.g., T001, T002 (auto-generated)"
             />
+            {!/^T\d{3,}$/.test(form.employee_id) && form.employee_id && (
+              <div className="text-xs text-orange-600">
+                Employee ID format: T + 3-digit number (e.g., T001, T002)
+              </div>
+            )}
             <Button
               type="button"
               variant="outline"
@@ -684,7 +778,7 @@ Please keep these credentials secure and share them with the teacher.`
               })}
               className="text-xs"
             >
-              Auto-generate employee ID
+              Generate next employee ID
             </Button>
           </div>
           
@@ -1012,7 +1106,7 @@ Please keep these credentials secure and share them with the teacher.`
           setShowCredentialsModal(false)
           setNewTeacherCredentials(null)
         }}
-        title="Teacher Password Reset Successfully!"
+        title="Teacher Account Created Successfully!"
         className="sm:max-w-lg"
       >
         {newTeacherCredentials && (
@@ -1020,10 +1114,10 @@ Please keep these credentials secure and share them with the teacher.`
             <div className="bg-green-50 border border-green-200 rounded-lg p-4">
               <div className="flex items-center mb-3">
                 <CheckCircle className="h-5 w-5 text-green-600 mr-2" />
-                <h3 className="text-lg font-medium text-green-900">Password Reset Complete</h3>
+                <h3 className="text-lg font-medium text-green-900">Account Created</h3>
               </div>
               <p className="text-green-800 text-sm">
-                Teacher password has been reset successfully. Please share these login credentials with the teacher.
+                Teacher account has been created successfully. Please share these login credentials with the teacher.
               </p>
             </div>
 
@@ -1039,21 +1133,17 @@ Please keep these credentials secure and share them with the teacher.`
                   <span className="text-gray-900">{newTeacherCredentials.employeeId}</span>
                 </div>
                 <div className="flex justify-between items-center">
-                  <span className="font-medium text-gray-700">Email:</span>
-                  <span className="text-gray-900">{newTeacherCredentials.email}</span>
-                </div>
-                <div className="flex justify-between items-center bg-yellow-50 p-2 rounded border">
                   <span className="font-medium text-gray-700">Username:</span>
                   <span className="text-gray-900 font-mono">{newTeacherCredentials.username}</span>
                 </div>
                 <div className="flex justify-between items-center bg-yellow-50 p-2 rounded border">
-                  <span className="font-medium text-gray-700">New Password:</span>
+                  <span className="font-medium text-gray-700">Password:</span>
                   <span className="text-gray-900 font-mono">{newTeacherCredentials.password}</span>
                 </div>
               </div>
             </div>
 
-            <div className="bg-amber-50 border border-amber-200 rounded-lg p-4">
+            {/* <div className="bg-amber-50 border border-amber-200 rounded-lg p-4">
               <h4 className="font-medium text-amber-900 mb-2">Important Instructions</h4>
               <ul className="text-amber-800 text-sm space-y-1">
                 <li>• Share these credentials securely with the teacher</li>
@@ -1061,7 +1151,7 @@ Please keep these credentials secure and share them with the teacher.`
                 <li>• Keep a secure copy for your records</li>
                 <li>• Teacher can login at: <span className="font-mono">your-school-portal.com</span></li>
               </ul>
-            </div>
+            </div> */}
 
             <div className="flex gap-3 justify-end pt-4">
               <Button
@@ -1084,8 +1174,8 @@ Please keep these credentials secure and share them with the teacher.`
                 onClick={() => {
                   setShowCredentialsModal(false)
                   setNewTeacherCredentials(null)
+                  toast.success('Teacher account ready for use!')
                 }}
-                className="bg-blue-600 hover:bg-blue-700 text-white"
               >
                 Done
               </Button>

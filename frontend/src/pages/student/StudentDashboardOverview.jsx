@@ -1,0 +1,197 @@
+import React from 'react'
+import {
+  User,
+  Award,
+  BookOpen,
+  Bell,
+  Calendar,
+  FileText,
+  BarChart3
+} from 'lucide-react'
+
+import Card from '../../components/Card'
+import Button from '../../components/Button'
+import {
+  useStudentExamResults,
+  useStudentMaterials,
+  useStudentNotices,
+  useStudentSchedule
+} from '../../services/queries'
+
+// Utility function to get current day of week
+const getCurrentDayOfWeek = () => {
+  const days = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday']
+  return days[new Date().getDay()]
+}
+
+const StudentDashboardOverview = ({ studentId }) => {
+  const { data: examResults = [] } = useStudentExamResults(studentId)
+  const { data: studyMaterials = [] } = useStudentMaterials(studentId)
+  const { data: notices = [] } = useStudentNotices(studentId)
+
+  // Get current day schedule
+  const { data: weeklySchedule = [] } = useStudentSchedule(studentId)
+
+  return (
+    <div className="space-y-6">
+      {/* Quick Stats */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        <Card className="p-6">
+          <div className="flex items-center">
+            <div className="flex-shrink-0">
+              <Calendar className="h-8 w-8 text-blue-600" />
+            </div>
+            <div className="ml-4">
+              <p className="text-sm font-medium text-gray-500">Today's Classes</p>
+              <p className="text-2xl font-bold text-gray-900">
+                {weeklySchedule.filter(s => s.day_of_week === getCurrentDayOfWeek()).length}
+              </p>
+            </div>
+          </div>
+        </Card>
+
+        <Card className="p-6">
+          <div className="flex items-center">
+            <div className="flex-shrink-0">
+              <FileText className="h-8 w-8 text-green-600" />
+            </div>
+            <div className="ml-4">
+              <p className="text-sm font-medium text-gray-500">Study Materials</p>
+              <p className="text-2xl font-bold text-gray-900">{studyMaterials.length}</p>
+            </div>
+          </div>
+        </Card>
+
+        <Card className="p-6">
+          <div className="flex items-center">
+            <div className="flex-shrink-0">
+              <Bell className="h-8 w-8 text-yellow-600" />
+            </div>
+            <div className="ml-4">
+              <p className="text-sm font-medium text-gray-500">New Notices</p>
+              <p className="text-2xl font-bold text-gray-900">{notices.length}</p>
+            </div>
+          </div>
+        </Card>
+
+        <Card className="p-6">
+          <div className="flex items-center">
+            <div className="flex-shrink-0">
+              <Award className="h-8 w-8 text-purple-600" />
+            </div>
+            <div className="ml-4">
+              <p className="text-sm font-medium text-gray-500">Exam Results</p>
+              <p className="text-2xl font-bold text-gray-900">{examResults.length}</p>
+            </div>
+          </div>
+        </Card>
+      </div>
+
+      {/* Recent Activity */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* Today's Schedule */}
+        <Card>
+          <Card.Header>
+            <Card.Title className="flex items-center gap-2">
+              <Calendar className="h-5 w-5" />
+              Today's Schedule
+            </Card.Title>
+          </Card.Header>
+          <Card.Content>
+            {weeklySchedule.filter(s => s.day_of_week === getCurrentDayOfWeek()).length > 0 ? (
+              <div className="space-y-3">
+                {weeklySchedule
+                  .filter(s => s.day_of_week === getCurrentDayOfWeek())
+                  .sort((a, b) => a.start_time.localeCompare(b.start_time))
+                  .map((schedule) => (
+                    <div key={schedule.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                      <div>
+                        <p className="font-medium text-gray-900">{schedule.subject?.name}</p>
+                        <p className="text-sm text-gray-600">{schedule.start_time} - {schedule.end_time}</p>
+                      </div>
+                      <div className="text-right text-sm text-gray-600">
+                        <p>{schedule.teacher?.user?.full_name}</p>
+                        {schedule.room_number && <p>Room {schedule.room_number}</p>}
+                      </div>
+                    </div>
+                  ))}
+              </div>
+            ) : (
+              <div className="text-center py-8">
+                <Calendar className="h-12 w-12 text-gray-300 mx-auto mb-4" />
+                <p className="text-gray-500">No classes scheduled for today</p>
+              </div>
+            )}
+          </Card.Content>
+        </Card>
+
+        {/* Recent Notices */}
+        <Card>
+          <Card.Header>
+            <Card.Title className="flex items-center gap-2">
+              <Bell className="h-5 w-5" />
+              Recent Notices
+            </Card.Title>
+          </Card.Header>
+          <Card.Content>
+            {notices.slice(0, 3).length > 0 ? (
+              <div className="space-y-3">
+                {notices.slice(0, 3).map((notice) => (
+                  <div key={notice.id} className="p-3 bg-gray-50 rounded-lg">
+                    <div className="flex items-start justify-between">
+                      <div className="flex-1">
+                        <p className="font-medium text-gray-900 text-sm">{notice.title}</p>
+                        <p className="text-xs text-gray-500 mt-1">
+                          {new Date(notice.created_at).toLocaleDateString()}
+                        </p>
+                      </div>
+                      {notice.is_urgent && (
+                        <span className="bg-red-100 text-red-800 px-2 py-1 rounded text-xs font-medium">
+                          Urgent
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="text-center py-8">
+                <Bell className="h-12 w-12 text-gray-300 mx-auto mb-4" />
+                <p className="text-gray-500">No notices available</p>
+              </div>
+            )}
+          </Card.Content>
+        </Card>
+      </div>
+
+      {/* Quick Actions */}
+      <Card>
+        <Card.Header>
+          <Card.Title>Quick Actions</Card.Title>
+        </Card.Header>
+        <Card.Content>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            <Button variant="outline" className="flex flex-col items-center p-4 h-auto">
+              <User className="h-6 w-6 mb-2" />
+              <span className="text-sm">View Profile</span>
+            </Button>
+            <Button variant="outline" className="flex flex-col items-center p-4 h-auto">
+              <Calendar className="h-6 w-6 mb-2" />
+              <span className="text-sm">Schedule</span>
+            </Button>
+            <Button variant="outline" className="flex flex-col items-center p-4 h-auto">
+              <FileText className="h-6 w-6 mb-2" />
+              <span className="text-sm">Materials</span>
+            </Button>
+            <Button variant="outline" className="flex flex-col items-center p-4 h-auto">
+              <Award className="h-6 w-6 mb-2" />
+              <span className="text-sm">Results</span>
+            </Button>
+          </div>
+        </Card.Content>
+      </Card>
+    </div>
+  )
+}
+
+export default StudentDashboardOverview

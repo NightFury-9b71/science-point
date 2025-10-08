@@ -153,7 +153,15 @@ const AdminClasses = () => {
       toast.success('Class deleted successfully!')
     } catch (error) {
       console.error('Error deleting class:', error)
-      toast.error('Failed to delete class')
+      
+      // Show specific error message from backend
+      if (error.response?.data?.detail) {
+        toast.error(error.response.data.detail)
+      } else if (error.message) {
+        toast.error(`Failed to delete class: ${error.message}`)
+      } else {
+        toast.error('Failed to delete class')
+      }
     }
   }
 

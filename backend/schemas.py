@@ -45,6 +45,7 @@ class UserUpdate(BaseModel):
     email: Optional[str] = None
     full_name: Optional[str] = None
     phone: Optional[str] = None
+    photo_path: Optional[str] = None
     is_active: Optional[bool] = None
 
 class StudentUpdate(BaseModel):

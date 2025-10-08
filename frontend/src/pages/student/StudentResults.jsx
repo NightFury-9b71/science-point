@@ -3,8 +3,8 @@ import Card from '../../components/Card'
 import Table from '../../components/Table'
 import { useStudentExamResults } from '../../services/queries'
 
-function StudentResults() {
-  const { data: examResults = [], isLoading, error } = useStudentExamResults()
+function StudentResults({ studentId }) {
+  const { data: examResults = [], isLoading, error } = useStudentExamResults(studentId)
 
   const getGradeColor = (grade) => {
     const gradeColors = {

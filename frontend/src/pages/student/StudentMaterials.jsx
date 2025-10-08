@@ -9,6 +9,8 @@ function StudentMaterials() {
   const { user, isLoading: authLoading } = useAuth()
   const studentId = user?.student_id || user?.studentId
   
+  const { data: studyMaterials = [], isLoading, error } = useStudentMaterials(studentId)
+
   // Show loading while auth is being checked
   if (authLoading) {
     return (
@@ -34,8 +36,6 @@ function StudentMaterials() {
       </div>
     )
   }
-
-  const { data: studyMaterials = [], isLoading, error } = useStudentMaterials(studentId)
 
   const handleDownload = (material) => {
     // Open the file in a new tab/window for download from frontend public folder

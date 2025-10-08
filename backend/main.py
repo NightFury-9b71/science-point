@@ -380,6 +380,120 @@ def get_user(
         raise HTTPException(status_code=404, detail="User not found")
     return user
 
+@app.post("/users/{user_id}/photo", response_model=UserRead)
+def upload_user_photo(
+    user_id: int,
+    file: UploadFile = File(...),
+    session: Session = Depends(get_session),
+    current_user: User = Depends(get_current_active_user)
+):
+    """Upload a photo for a user. Users can upload their own photo, admins can upload for anyone."""
+    # Check permissions
+    if current_user.role != UserRole.ADMIN and current_user.id != user_id:
+        raise HTTPException(status_code=403, detail="Access denied. You can only upload your own photo.")
+    
+    # Get the user
+    user = session.get(User, user_id)
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    
+    # Validate file type
+    allowed_types = ["image/jpeg", "image/png", "image/jpg", "image/gif"]
+    if file.content_type not in allowed_types:
+        raise HTTPException(status_code=400, detail="Invalid file type. Only JPEG, PNG, and GIF images are allowed.")
+    
+    # Create uploads directory if it doesn't exist
+    upload_dir = "uploads/user_photos"
+    os.makedirs(upload_dir, exist_ok=True)
+    
+    # Generate unique filename
+    file_extension = os.path.splitext(file.filename)[1].lower()
+    unique_filename = f"{datetime.utcnow().strftime('%Y%m%d_%H%M%S')}_{user_id}{file_extension}"
+    file_path = os.path.join(upload_dir, unique_filename)
+    
+    # Save the file
+    try:
+        with open(file_path, "wb") as buffer:
+            shutil.copyfileobj(file.file, buffer)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to save file: {str(e)}")
+    
+    # Copy file to frontend public folder for direct access
+    frontend_public_dir = "../frontend/public/uploads/user_photos"
+    os.makedirs(frontend_public_dir, exist_ok=True)
+    frontend_file_path = os.path.join(frontend_public_dir, unique_filename)
+    
+    try:
+        shutil.copy2(file_path, frontend_file_path)
+    except Exception as e:
+        print(f"Warning: Failed to copy file to frontend public folder: {e}")
+    
+    # Delete old photo if exists
+    if user.photo_path:
+        old_backend_path = os.path.join("uploads", user.photo_path)
+        if os.path.exists(old_backend_path):
+            try:
+                os.remove(old_backend_path)
+            except Exception as e:
+                print(f"Warning: Failed to delete old photo from backend: {e}")
+        
+        old_frontend_path = os.path.join("../frontend/public/uploads", user.photo_path)
+        if os.path.exists(old_frontend_path):
+            try:
+                os.remove(old_frontend_path)
+            except Exception as e:
+                print(f"Warning: Failed to delete old photo from frontend: {e}")
+    
+    # Update user with new photo path - store relative path for URL construction
+    relative_file_path = f"user_photos/{unique_filename}"
+    user.photo_path = relative_file_path
+    session.add(user)
+    session.commit()
+    session.refresh(user)
+    
+    return user
+
+@app.delete("/users/{user_id}/photo")
+def delete_user_photo(
+    user_id: int,
+    session: Session = Depends(get_session),
+    current_user: User = Depends(get_current_active_user)
+):
+    """Delete a user's photo. Users can delete their own photo, admins can delete anyone's."""
+    # Check permissions
+    if current_user.role != UserRole.ADMIN and current_user.id != user_id:
+        raise HTTPException(status_code=403, detail="Access denied. You can only delete your own photo.")
+    
+    # Get the user
+    user = session.get(User, user_id)
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    
+    if not user.photo_path:
+        raise HTTPException(status_code=404, detail="User has no photo to delete")
+    
+    # Delete the file if it exists
+    backend_file_path = os.path.join("uploads", user.photo_path)
+    if os.path.exists(backend_file_path):
+        try:
+            os.remove(backend_file_path)
+        except Exception as e:
+            print(f"Warning: Failed to delete photo from backend: {e}")
+    
+    frontend_file_path = os.path.join("../frontend/public/uploads", user.photo_path)
+    if os.path.exists(frontend_file_path):
+        try:
+            os.remove(frontend_file_path)
+        except Exception as e:
+            print(f"Warning: Failed to delete photo from frontend: {e}")
+    
+    # Remove photo path from user
+    user.photo_path = None
+    session.add(user)
+    session.commit()
+    
+    return {"message": "Photo deleted successfully"}
+
 # Student management
 @app.post("/admin/students", response_model=StudentRead)
 def create_student(

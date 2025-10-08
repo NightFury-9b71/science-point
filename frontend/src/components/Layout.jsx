@@ -70,6 +70,12 @@ const Layout = ({ children }) => {
           current: currentPath === '/admin-dashboard/classes'
         },
         {
+          name: 'Schedule',
+          href: '/admin-dashboard/schedule',
+          icon: Clock,
+          current: currentPath === '/admin-dashboard/schedule'
+        },
+        {
           name: 'Performance',
           href: '/admin-dashboard/performance',
           icon: BarChart3,
@@ -187,9 +193,21 @@ const Layout = ({ children }) => {
               <div className="relative">
                 <button
                   onClick={() => setUserMenuOpen(!userMenuOpen)}
-                  className="flex items-center p-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-md transition-colors"
+                  className="flex items-center p-1 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-full transition-colors"
                 >
-                  <User className="h-5 w-5" />
+                  <div className="w-8 h-8 rounded-full overflow-hidden bg-gray-200 flex items-center justify-center">
+                    {user?.photo_path ? (
+                      <img 
+                        src={`/uploads/${user.photo_path}`} 
+                        alt={`${user?.full_name || 'User'} profile`}
+                        className="w-full h-full object-cover"
+                      />
+                    ) : (
+                      <span className="text-gray-600 font-medium text-sm">
+                        {(user?.full_name || user?.username || 'U').charAt(0).toUpperCase()}
+                      </span>
+                    )}
+                  </div>
                 </button>
 
                 {userMenuOpen && (
@@ -204,6 +222,23 @@ const Layout = ({ children }) => {
                       <p className="text-sm text-gray-600">Signed in as</p>
                       <p className="text-sm font-medium text-gray-900">{user?.email}</p>
                     </div>
+                    <button
+                      className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center space-x-2"
+                      onClick={() => {
+                        setUserMenuOpen(false)
+                        // Navigate to profile based on user role
+                        if (user?.role === 'admin') {
+                          navigate('/admin/profile')
+                        } else if (user?.role === 'teacher') {
+                          navigate('/teacher/profile')
+                        } else if (user?.role === 'student') {
+                          navigate('/student/profile')
+                        }
+                      }}
+                    >
+                      <User className="h-4 w-4" />
+                      <span>Profile</span>
+                    </button>
                     <button
                       className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center space-x-2"
                       onClick={() => setUserMenuOpen(false)}
@@ -276,6 +311,23 @@ const Layout = ({ children }) => {
               
               {navigationItems.length > 0 && <div className="border-t border-gray-200 my-2"></div>}
               
+              <button
+                className="w-full text-left px-3 py-2 text-sm text-gray-700 hover:bg-gray-100 rounded-md flex items-center space-x-2"
+                onClick={() => {
+                  setMobileMenuOpen(false)
+                  // Navigate to profile based on user role
+                  if (user?.role === 'admin') {
+                    navigate('/admin/profile')
+                  } else if (user?.role === 'teacher') {
+                    navigate('/teacher/profile')
+                  } else if (user?.role === 'student') {
+                    navigate('/student/profile')
+                  }
+                }}
+              >
+                <User className="h-4 w-4" />
+                <span>Profile</span>
+              </button>
               <button
                 className="w-full text-left px-3 py-2 text-sm text-gray-700 hover:bg-gray-100 rounded-md flex items-center space-x-2"
                 onClick={() => setMobileMenuOpen(false)}

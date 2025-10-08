@@ -22,11 +22,7 @@ const TeacherDashboard = React.lazy(() => import('./pages/TeacherDashboard'))
 const StudentDashboard = React.lazy(() => import('./pages/StudentDashboard'))
 const NotFound = React.lazy(() => import('./pages/NotFound'))
 const DeveloperPage = React.lazy(() => import('./pages/DeveloperPage'))
-// import StudentProfile from './pages/StudentProfile'
-// import StudentAttendance from './pages/StudentAttendance'
-// import StudentResults from './pages/StudentResults'
-// import StudentMaterials from './pages/StudentMaterials'
-// import StudentNotices from './pages/StudentNotices'
+
 
 // Create a client with production-ready configuration
 const queryClient = new QueryClient({

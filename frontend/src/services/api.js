@@ -186,7 +186,17 @@ export const adminAPI = {
   // Admission Requests
   getAdmissionRequests: () => api.get('/admin/admission-requests?status=pending'),
   approveAdmissionRequest: (requestId) => api.post(`/admin/admission-requests/${requestId}/approve`).then(res => res.data),
-  rejectAdmissionRequest: (requestId) => api.post(`/admin/admission-requests/${requestId}/reject`).then(res => res.data)
+  rejectAdmissionRequest: (requestId) => api.post(`/admin/admission-requests/${requestId}/reject`).then(res => res.data),
+
+  // User Photos
+  uploadUserPhoto: (userId, formData) => {
+    return api.post(`/users/${userId}/photo`, formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      },
+    })
+  },
+  deleteUserPhoto: (userId) => api.delete(`/users/${userId}/photo`)
 }
 
 // Public API functions (no authentication required)
@@ -221,7 +231,17 @@ export const teacherAPI = {
   getMySchedule: (teacherId, dayOfWeek) => {
     const params = dayOfWeek ? `?day_of_week=${dayOfWeek}` : ''
     return api.get(`/teacher/${teacherId}/schedule${params}`)
-  }
+  },
+
+  // User Photos
+  uploadUserPhoto: (userId, formData) => {
+    return api.post(`/users/${userId}/photo`, formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      },
+    })
+  },
+  deleteUserPhoto: (userId) => api.delete(`/users/${userId}/photo`)
 }
 
 // Student-specific API functions
@@ -235,7 +255,17 @@ export const studentAPI = {
   getMySchedule: (studentId, dayOfWeek) => {
     const params = dayOfWeek ? `?day_of_week=${dayOfWeek}` : ''
     return api.get(`/student/${studentId}/schedule${params}`)
-  }
+  },
+
+  // User Photos
+  uploadUserPhoto: (userId, formData) => {
+    return api.post(`/users/${userId}/photo`, formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      },
+    })
+  },
+  deleteUserPhoto: (userId) => api.delete(`/users/${userId}/photo`)
 }
 
 export default api

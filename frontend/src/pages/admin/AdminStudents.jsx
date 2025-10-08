@@ -589,41 +589,56 @@ Please keep these credentials safe and change the password after first login.`
           {filteredStudents && filteredStudents.length > 0 ? (
             filteredStudents.map((student) => (
             <Card key={student.id} className="p-4">
-              <div className="space-y-2">
-                <div className="flex justify-between items-start">
-                  <div>
-                    <h3 className="font-medium text-gray-900">{student.user?.full_name || 'N/A'}</h3>
-                    <p className="text-sm text-gray-600">Roll: {student.roll_number}</p>
-                  </div>
-                  <div className="flex gap-1 flex-wrap">
-                    <Button size="sm" variant="outline" onClick={() => handleViewStudent(student)}>
-                      <Eye className="h-4 w-4" />
-                    </Button>
-                    <Button size="sm" variant="outline" onClick={() => handleEditStudent(student)}>
-                      Edit
-                    </Button>
-                    <Button 
-                      size="sm" 
-                      variant="outline" 
-                      onClick={() => handleResetPassword(student)}
-                      className="text-orange-600 hover:bg-orange-50"
-                      title="Reset Password"
-                    >
-                      Reset PWD
-                    </Button>
-                    <Button size="sm" variant="outline" onClick={() => handleDeleteStudent(student)}>
-                      Delete
-                    </Button>
-                  </div>
+              <div className="flex items-start space-x-3">
+                <div className="w-12 h-12 rounded-full overflow-hidden bg-gray-200 flex items-center justify-center flex-shrink-0">
+                  {student.user?.photo_path ? (
+                    <img 
+                      src={`/uploads/${student.user.photo_path}`} 
+                      alt={`${student.user?.full_name || 'Student'} profile`}
+                      className="w-full h-full object-cover"
+                    />
+                  ) : (
+                    <span className="text-gray-600 font-medium">
+                      {(student.user?.full_name || 'S').charAt(0).toUpperCase()}
+                    </span>
+                  )}
                 </div>
-                <div className="text-xs text-gray-500 space-y-1">
-                  <p>Email: {student.user?.email || 'N/A'}</p>
-                  <p>Username: {student.user?.username || 'N/A'}</p>
-                  <p>Phone: {student.user?.phone || 'N/A'}</p>
-                  <p>Parent Name: {student.parent_name || 'N/A'}</p>
-                  <p>Parent Phone: {student.parent_phone || 'N/A'}</p>
-                  <p>Address: {student.address || 'N/A'}</p>
-                  <p>Class: {classes?.find(cls => cls.id === student.class_id)?.name || `Class ${student.class_id}` || 'N/A'}</p>
+                <div className="flex-1 min-w-0">
+                  <div className="flex justify-between items-start">
+                    <div className="min-w-0 flex-1">
+                      <h3 className="font-medium text-gray-900 truncate">{student.user?.full_name || 'N/A'}</h3>
+                      <p className="text-sm text-gray-600">Roll: {student.roll_number}</p>
+                    </div>
+                    <div className="flex gap-1 flex-wrap ml-2">
+                      <Button size="sm" variant="outline" onClick={() => handleViewStudent(student)}>
+                        <Eye className="h-4 w-4" />
+                      </Button>
+                      <Button size="sm" variant="outline" onClick={() => handleEditStudent(student)}>
+                        Edit
+                      </Button>
+                      <Button 
+                        size="sm" 
+                        variant="outline" 
+                        onClick={() => handleResetPassword(student)}
+                        className="text-orange-600 hover:bg-orange-50"
+                        title="Reset Password"
+                      >
+                        Reset PWD
+                      </Button>
+                      <Button size="sm" variant="outline" onClick={() => handleDeleteStudent(student)}>
+                        Delete
+                      </Button>
+                    </div>
+                  </div>
+                  <div className="text-xs text-gray-500 space-y-1 mt-2">
+                    <p>Email: {student.user?.email || 'N/A'}</p>
+                    <p>Username: {student.user?.username || 'N/A'}</p>
+                    <p>Phone: {student.user?.phone || 'N/A'}</p>
+                    <p>Parent Name: {student.parent_name || 'N/A'}</p>
+                    <p>Parent Phone: {student.parent_phone || 'N/A'}</p>
+                    <p>Address: {student.address || 'N/A'}</p>
+                    <p>Class: {classes?.find(cls => cls.id === student.class_id)?.name || `Class ${student.class_id}` || 'N/A'}</p>
+                  </div>
                 </div>
               </div>
             </Card>
@@ -642,6 +657,7 @@ Please keep these credentials safe and change the password after first login.`
               <Table>
                 <Table.Header>
                   <Table.Row>
+                    <Table.Head>Photo</Table.Head>
                     <Table.Head>Roll Number</Table.Head>
                     <Table.Head>Full Name</Table.Head>
                     <Table.Head className="hidden md:table-cell">Username</Table.Head>
@@ -656,6 +672,21 @@ Please keep these credentials safe and change the password after first login.`
                 <Table.Body>
                   {filteredStudents.map((student) => (
                   <Table.Row key={student.id}>
+                    <Table.Cell>
+                      <div className="w-10 h-10 rounded-full overflow-hidden bg-gray-200 flex items-center justify-center">
+                        {student.user?.photo_path ? (
+                          <img 
+                            src={`/uploads/${student.user.photo_path}`} 
+                            alt={`${student.user?.full_name || 'Student'} profile`}
+                            className="w-full h-full object-cover"
+                          />
+                        ) : (
+                          <span className="text-gray-600 font-medium text-sm">
+                            {(student.user?.full_name || 'S').charAt(0).toUpperCase()}
+                          </span>
+                        )}
+                      </div>
+                    </Table.Cell>
                     <Table.Cell>{student.roll_number}</Table.Cell>
                     <Table.Cell>{student.user?.full_name || 'N/A'}</Table.Cell>
                     <Table.Cell className="hidden md:table-cell">{student.user?.username || 'N/A'}</Table.Cell>
@@ -787,6 +818,18 @@ Please keep these credentials safe and change the password after first login.`
               ...form,
               user: { ...form.user, email: e.target.value }
             })}
+          />
+          
+          <Input
+            label="Phone Number"
+            type="tel"
+            value={form.user.phone}
+            onChange={(e) => setForm({
+              ...form,
+              user: { ...form.user, phone: e.target.value }
+            })}
+            required
+            placeholder="Enter student's phone number"
           />
           
           <div className="space-y-2">

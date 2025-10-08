@@ -739,3 +739,36 @@ export const usePublicClasses = () => {
     queryFn: () => publicAPI.getClasses().then(res => res.data),
   })
 }
+
+// Photo Upload/Delete Mutations
+export const useUploadUserPhoto = () => {
+  const queryClient = useQueryClient()
+  
+  return useMutation({
+    mutationFn: ({ userId, formData }) => adminAPI.uploadUserPhoto(userId, formData),
+    onSuccess: () => {
+      // Invalidate relevant queries that might show user photos
+      queryClient.invalidateQueries({ queryKey: queryKeys.students })
+      queryClient.invalidateQueries({ queryKey: queryKeys.teachers })
+      queryClient.invalidateQueries({ queryKey: ['studentProfile'] })
+      queryClient.invalidateQueries({ queryKey: ['teacherClasses'] })
+      queryClient.invalidateQueries({ queryKey: ['teacherStudents'] })
+    },
+  })
+}
+
+export const useDeleteUserPhoto = () => {
+  const queryClient = useQueryClient()
+  
+  return useMutation({
+    mutationFn: (userId) => adminAPI.deleteUserPhoto(userId),
+    onSuccess: () => {
+      // Invalidate relevant queries that might show user photos
+      queryClient.invalidateQueries({ queryKey: queryKeys.students })
+      queryClient.invalidateQueries({ queryKey: queryKeys.teachers })
+      queryClient.invalidateQueries({ queryKey: ['studentProfile'] })
+      queryClient.invalidateQueries({ queryKey: ['teacherClasses'] })
+      queryClient.invalidateQueries({ queryKey: ['teacherStudents'] })
+    },
+  })
+}
