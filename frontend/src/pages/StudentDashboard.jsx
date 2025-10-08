@@ -11,7 +11,9 @@ import {
   FileText,
   GraduationCap,
   Download,
-  Calendar
+  Calendar,
+  Grid,
+  List
 } from 'lucide-react'
 import Card from '../components/Card'
 import Button from '../components/Button'
@@ -30,6 +32,25 @@ const StudentDashboard = () => {
   const { user } = useAuth()
   const studentId = user?.student_id || user?.studentId
   const [activeTab, setActiveTab] = useState('profile')
+  const [viewMode, setViewMode] = useState('weekly') // 'daily' or 'weekly'
+  
+  // Get current day of week in lowercase
+  const getCurrentDayOfWeek = () => {
+    const days = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday']
+    return days[new Date().getDay()]
+  }
+  
+  const [selectedDay, setSelectedDay] = useState(getCurrentDayOfWeek())
+  
+  const daysOfWeek = [
+    { value: 'monday', label: 'Monday' },
+    { value: 'tuesday', label: 'Tuesday' },
+    { value: 'wednesday', label: 'Wednesday' },
+    { value: 'thursday', label: 'Thursday' },
+    { value: 'friday', label: 'Friday' },
+    { value: 'saturday', label: 'Saturday' },
+    { value: 'sunday', label: 'Sunday' }
+  ]
   
   const { data: profile, isLoading: profileLoading } = useStudentProfile(studentId)
   const { data: examResults = [] } = useStudentExamResults(studentId)
@@ -179,99 +200,233 @@ const StudentDashboard = () => {
         const dayOrder = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday']
         const sortedDays = dayOrder.filter(day => groupedSchedules[day])
 
+        // Group schedules by day for weekly view
+        const schedulesByDay = daysOfWeek.reduce((acc, day) => {
+          acc[day.value] = weeklySchedule
+            .filter(s => s.day_of_week === day.value)
+            .sort((a, b) => a.start_time.localeCompare(b.start_time))
+          return acc
+        }, {})
+
+        const isToday = (day) => day === getCurrentDayOfWeek()
+
         return (
           <Card className="bg-white shadow border border-gray-200">
             <Card.Header>
-              <Card.Title className="flex items-center gap-2 text-lg">
-                <Calendar className="h-5 w-5" />
-                Weekly Schedule
-              </Card.Title>
+              <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center space-y-3 sm:space-y-0">
+                <Card.Title className="flex items-center gap-2 text-lg">
+                  <Calendar className="h-5 w-5" />
+                  Weekly Schedule
+                </Card.Title>
+                <div className="flex items-center space-x-2">
+                  <div className="flex rounded-lg border border-gray-300">
+                    <Button
+                      variant={viewMode === 'weekly' ? 'default' : 'ghost'}
+                      size="sm"
+                      onClick={() => setViewMode('weekly')}
+                      className="rounded-r-none border-0"
+                    >
+                      <Grid className="h-4 w-4 mr-1" />
+                      Weekly
+                    </Button>
+                    <Button
+                      variant={viewMode === 'daily' ? 'default' : 'ghost'}
+                      size="sm"
+                      onClick={() => setViewMode('daily')}
+                      className="rounded-l-none border-0"
+                    >
+                      <List className="h-4 w-4 mr-1" />
+                      Daily
+                    </Button>
+                  </div>
+                </div>
+              </div>
             </Card.Header>
             <Card.Content className="p-6">
-              {Object.keys(groupedSchedules).length > 0 ? (
-                <div className="space-y-6">
-                  {sortedDays.map((day) => (
-                    <div key={day} className="border rounded-lg p-4">
-                      <div className="flex items-center gap-2 mb-4">
-                        <Calendar className="h-5 w-5 text-blue-600" />
-                        <h3 className="text-lg font-semibold text-gray-900 capitalize">
-                          {day}
-                        </h3>
-                        <span className="text-sm text-gray-500">
-                          ({groupedSchedules[day].length} classes)
-                        </span>
+              {/* Day Selector - Only show in daily view */}
+              {viewMode === 'daily' && (
+                <div className="mb-6">
+                  <div className="flex flex-wrap gap-2">
+                    {daysOfWeek.map((day) => (
+                      <Button
+                        key={day.value}
+                        variant={selectedDay === day.value ? "default" : "outline"}
+                        size="sm"
+                        onClick={() => setSelectedDay(day.value)}
+                        className={isToday(day.value) ? "ring-2 ring-blue-300" : ""}
+                      >
+                        {day.label}
+                        {isToday(day.value) && <span className="ml-1 text-xs">(Today)</span>}
+                      </Button>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Schedule Display */}
+              {viewMode === 'weekly' ? (
+                /* Weekly View */
+                <div className="grid grid-cols-1 lg:grid-cols-7 divide-y lg:divide-y-0 lg:divide-x">
+                  {daysOfWeek.map((day) => {
+                    const daySchedules = schedulesByDay[day.value] || []
+                    const today = getCurrentDayOfWeek()
+                    const isCurrentDay = day.value === today
+                    
+                    return (
+                      <div key={day.value} className={`p-4 ${isCurrentDay ? 'bg-blue-50' : ''}`}>
+                        <div className="mb-3">
+                          <h3 className={`font-semibold ${isCurrentDay ? 'text-blue-900' : 'text-gray-900'}`}>
+                            {day.label}
+                            {isCurrentDay && <span className="ml-1 text-xs text-blue-600">(Today)</span>}
+                          </h3>
+                        </div>
+                        
+                        <div className="space-y-2">
+                          {daySchedules.length > 0 ? (
+                            daySchedules.map((item) => (
+                              <div
+                                key={item.id}
+                                className="p-3 rounded-lg border-l-4 border-blue-500 bg-blue-50"
+                              >
+                                <div className="text-xs font-medium text-blue-600 mb-1">
+                                  {item.start_time} - {item.end_time}
+                                </div>
+                                <div className="font-medium text-sm text-blue-900 mb-1">
+                                  {item.subject?.name}
+                                </div>
+                                <div className="text-xs text-blue-700 mb-1">
+                                  Teacher: {item.teacher?.user?.full_name}
+                                </div>
+                                {item.room_number && (
+                                  <div className="text-xs text-blue-600">
+                                    Room: {item.room_number}
+                                  </div>
+                                )}
+                              </div>
+                            ))
+                          ) : (
+                            <div className="text-center py-8 text-gray-400">
+                              <Calendar className="h-8 w-8 mx-auto mb-2 opacity-50" />
+                              <p className="text-sm">No classes</p>
+                            </div>
+                          )}
+                        </div>
                       </div>
-                      
-                      <div className="space-y-3">
-                        {groupedSchedules[day]
-                          .sort((a, b) => a.start_time.localeCompare(b.start_time))
-                          .map((classItem) => (
-                          <div key={classItem.id} className="bg-gray-50 p-4 rounded-lg border-l-4 border-blue-500">
-                            <div className="flex items-start justify-between">
-                              <div className="flex-1">
-                                <div className="flex items-center gap-2 mb-2">
-                                  <FileText className="h-4 w-4 text-gray-600" />
-                                  <span className="font-medium text-gray-900">
-                                    {classItem.start_time} - {classItem.end_time}
-                                  </span>
+                    )
+                  })}
+                </div>
+              ) : (
+                /* Daily View */
+                <div>
+                  {schedulesByDay[selectedDay] && schedulesByDay[selectedDay].length > 0 ? (
+                    <div className="space-y-4">
+                      {schedulesByDay[selectedDay].map((item) => (
+                        <div key={item.id} className="bg-blue-50 p-4 rounded-lg border-l-4 border-blue-500">
+                          <div className="flex items-start justify-between">
+                            <div className="flex-1">
+                              <div className="flex items-center gap-2 mb-2">
+                                <Calendar className="h-4 w-4 text-gray-600" />
+                                <span className="font-medium text-gray-900">
+                                  {item.start_time} - {item.end_time}
+                                </span>
+                              </div>
+                              
+                              <div className="flex items-center gap-2 mb-2">
+                                <BookOpen className="h-4 w-4 text-blue-600" />
+                                <h3 className="font-semibold text-blue-900">
+                                  {item.subject?.name || 'Subject'}
+                                </h3>
+                              </div>
+                              
+                              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm text-gray-700">
+                                <div>
+                                  <span className="font-medium">Teacher:</span> {item.teacher?.user?.full_name || 'N/A'}
                                 </div>
-                                
-                                <div className="flex items-center gap-2 mb-2">
-                                  <BookOpen className="h-4 w-4 text-blue-600" />
-                                  <h4 className="font-semibold text-blue-900">
-                                    {classItem.subject?.name || 'Subject'}
-                                  </h4>
+                                <div>
+                                  <span className="font-medium">Subject Code:</span> {item.subject?.code || 'N/A'}
                                 </div>
-                                
-                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm text-gray-700">
+                                {item.room_number && (
                                   <div>
-                                    <span className="font-medium">Teacher:</span> {classItem.teacher?.user?.full_name || 'N/A'}
+                                    <span className="font-medium">Room:</span> {item.room_number}
                                   </div>
-                                  <div>
-                                    <span className="font-medium">Subject Code:</span> {classItem.subject?.code || 'N/A'}
-                                  </div>
-                                  {classItem.room_number && (
-                                    <div>
-                                      <span className="font-medium">Room:</span> {classItem.room_number}
-                                    </div>
-                                  )}
-                                  <div>
-                                    <span className="font-medium">Duration:</span> {
-                                      (() => {
-                                        const start = new Date(`1970-01-01T${classItem.start_time}:00`)
-                                        const end = new Date(`1970-01-01T${classItem.end_time}:00`)
-                                        const duration = (end - start) / (1000 * 60) // minutes
-                                        return `${duration} minutes`
-                                      })()
-                                    }
-                                  </div>
+                                )}
+                                <div>
+                                  <span className="font-medium">Duration:</span> {
+                                    (() => {
+                                      const start = new Date(`1970-01-01T${item.start_time}:00`)
+                                      const end = new Date(`1970-01-01T${item.end_time}:00`)
+                                      const duration = (end - start) / (1000 * 60) // minutes
+                                      return `${duration} minutes`
+                                    })()
+                                  }
                                 </div>
                               </div>
                             </div>
                           </div>
-                        ))}
-                      </div>
+                        </div>
+                      ))}
                     </div>
-                  ))}
-                  
-                  <div className="mt-6 p-4 bg-green-50 rounded border border-green-200">
-                    <div className="flex items-center gap-2 text-green-800">
-                      <TrendingUp className="h-4 w-4" />
-                      <span className="font-medium">
-                        Total classes this week: {weeklySchedule.length}
-                      </span>
+                  ) : (
+                    <div className="text-center py-12">
+                      <Calendar className="h-16 w-16 text-gray-300 mx-auto mb-4" />
+                      <h3 className="text-lg font-medium text-gray-900 mb-2">No Classes Scheduled</h3>
+                      <p className="text-gray-500">
+                        No classes are scheduled for {daysOfWeek.find(d => d.value === selectedDay)?.label.toLowerCase()}.
+                      </p>
                     </div>
-                  </div>
-                </div>
-              ) : (
-                <div className="text-center py-12">
-                  <Calendar className="h-16 w-16 text-gray-300 mx-auto mb-4" />
-                  <h3 className="text-lg font-medium text-gray-900 mb-2">No Classes Scheduled</h3>
-                  <p className="text-gray-500">
-                    No classes are scheduled for this week. Please contact your administrator.
-                  </p>
+                  )}
                 </div>
               )}
+
+              {/* Quick Info */}
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mt-6">
+                <Card className="p-4">
+                  <div className="text-center">
+                    <div className="text-2xl font-bold text-blue-600">
+                      {viewMode === 'daily' ? (schedulesByDay[selectedDay] ? schedulesByDay[selectedDay].length : 0) : weeklySchedule.length}
+                    </div>
+                    <div className="text-sm text-gray-600">
+                      {viewMode === 'daily' ? 'Classes Today' : 'Total Classes'}
+                    </div>
+                  </div>
+                </Card>
+                <Card className="p-4">
+                  <div className="text-center">
+                    <div className="text-2xl font-bold text-green-600">
+                      {weeklySchedule.length > 0 ? (
+                        (() => {
+                          const scheduleToUse = viewMode === 'daily' ? schedulesByDay[selectedDay] || [] : weeklySchedule
+                          const totalMinutes = scheduleToUse.reduce((total, item) => {
+                            const start = new Date(`1970-01-01T${item.start_time}:00`)
+                            const end = new Date(`1970-01-01T${item.end_time}:00`)
+                            return total + (end - start) / (1000 * 60)
+                          }, 0)
+                          return `${Math.round(totalMinutes / 60 * 10) / 10}h`
+                        })()
+                      ) : '0h'}
+                    </div>
+                    <div className="text-sm text-gray-600">
+                      {viewMode === 'daily' ? 'Hours Today' : 'Total Hours/Week'}
+                    </div>
+                  </div>
+                </Card>
+                <Card className="p-4">
+                  <div className="text-center">
+                    <div className="text-2xl font-bold text-purple-600">
+                      {weeklySchedule.length > 0 ? new Set(weeklySchedule.map(s => s.class_id)).size : 0}
+                    </div>
+                    <div className="text-sm text-gray-600">Different Classes</div>
+                  </div>
+                </Card>
+                <Card className="p-4">
+                  <div className="text-center">
+                    <div className="text-2xl font-bold text-orange-600">
+                      {weeklySchedule.length > 0 ? new Set(weeklySchedule.map(s => s.subject_id)).size : 0}
+                    </div>
+                    <div className="text-sm text-gray-600">Subjects</div>
+                  </div>
+                </Card>
+              </div>
             </Card.Content>
           </Card>
         )

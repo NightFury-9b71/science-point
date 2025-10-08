@@ -1,4 +1,4 @@
-from fastapi import FastAPI, HTTPException, Depends, status
+from fastapi import FastAPI, HTTPException, Depends, status, UploadFile, File, Form
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from sqlmodel import Session, select
@@ -12,6 +12,8 @@ from jose import JWTError, jwt
 from datetime import datetime, timedelta
 import uvicorn
 from typing import List, Optional
+import os
+import shutil
 
 def parse_datetime_field(value, field_name):
     """Helper function to parse datetime fields from string to datetime object"""
@@ -182,7 +184,12 @@ def validate_student_access(student_id: int, current_user: User, session: Sessio
         )
 
 def authenticate_user(username: str, password: str, session: Session) -> Optional[User]:
-    user = session.exec(select(User).where(User.username == username)).first()
+    user = session.exec(
+        select(User).options(
+            selectinload(User.student),
+            selectinload(User.teacher)
+        ).where(User.username == username)
+    ).first()
     if not user:
         return None
     if not verify_password(password, user.password_hash):
@@ -1830,7 +1837,11 @@ def get_student_exam_results(
     # Validate access
     validate_student_access(student_id, current_user, session)
     
-    statement = select(ExamResult).where(ExamResult.student_id == student_id)
+    # Get exam results with exam and subject information
+    statement = select(ExamResult).options(
+        selectinload(ExamResult.exam).selectinload(Exam.subject)
+    ).where(ExamResult.student_id == student_id)
+    
     results = session.exec(statement).all()
     return results
 
@@ -1977,6 +1988,155 @@ def get_teacher_students(teacher_id: int, session: Session = Depends(get_session
     students = session.exec(statement).all()
     
     return students
+
+@app.get("/teacher/{teacher_id}/study-materials", response_model=List[StudyMaterialRead])
+def get_teacher_study_materials(teacher_id: int, session: Session = Depends(get_session)):
+    """Get all study materials for subjects taught by a specific teacher"""
+    # Get all subjects taught by this teacher
+    teacher_subjects = get_teacher_subjects(teacher_id, session)
+    
+    if not teacher_subjects:
+        return []
+    
+    subject_ids = [subject.id for subject in teacher_subjects]
+    
+    # Get study materials for those subjects
+    statement = select(StudyMaterial).where(
+        StudyMaterial.subject_id.in_(subject_ids)
+    ).order_by(StudyMaterial.created_at.desc())
+    materials = session.exec(statement).all()
+    
+    return materials
+
+@app.post("/teacher/{teacher_id}/study-materials", response_model=StudyMaterialRead)
+def upload_teacher_study_material(
+    teacher_id: int,
+    title: str = Form(...),
+    description: str = Form(""),
+    subject_id: int = Form(...),
+    file: UploadFile = File(...),
+    is_public: bool = Form(True),
+    session: Session = Depends(get_session),
+    current_user: User = Depends(require_teacher)
+):
+    """Upload a study material for a subject taught by the teacher"""
+    # Verify the teacher is authenticated and matches the teacher_id
+    teacher = session.get(Teacher, teacher_id)
+    if not teacher or teacher.user_id != current_user.id:
+        raise HTTPException(status_code=403, detail="Access denied. You can only upload materials for your subjects.")
+    
+    # Verify the subject is taught by this teacher
+    teacher_subjects = get_teacher_subjects(teacher_id, session)
+    subject_ids = [subject.id for subject in teacher_subjects]
+    
+    if subject_id not in subject_ids:
+        raise HTTPException(status_code=403, detail="Access denied. You can only upload materials for subjects you teach.")
+    
+    # Create uploads directory if it doesn't exist
+    upload_dir = "uploads/study_materials"
+    os.makedirs(upload_dir, exist_ok=True)
+    
+    # Generate unique filename
+    file_extension = os.path.splitext(file.filename)[1]
+    unique_filename = f"{datetime.utcnow().strftime('%Y%m%d_%H%M%S')}_{teacher_id}_{subject_id}{file_extension}"
+    file_path = os.path.join(upload_dir, unique_filename)
+    
+    # Save the file
+    try:
+        with open(file_path, "wb") as buffer:
+            shutil.copyfileobj(file.file, buffer)
+        
+        # Get file size
+        file_size = os.path.getsize(file_path)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to save file: {str(e)}")
+    
+    # Create database record
+    db_material = StudyMaterial(
+        title=title,
+        description=description,
+        file_path=file_path,
+        file_type=file.content_type,
+        file_size=file_size,
+        subject_id=subject_id,
+        created_by_id=current_user.id,
+        is_public=is_public
+    )
+    
+    session.add(db_material)
+    session.commit()
+    session.refresh(db_material)
+    
+    return db_material
+
+@app.put("/teacher/{teacher_id}/study-materials/{material_id}", response_model=StudyMaterialRead)
+def update_teacher_study_material(
+    teacher_id: int,
+    material_id: int,
+    material_update: StudyMaterialUpdate,
+    session: Session = Depends(get_session),
+    current_user: User = Depends(require_teacher)
+):
+    """Update a study material uploaded by the teacher"""
+    # Verify the teacher is authenticated and matches the teacher_id
+    teacher = session.get(Teacher, teacher_id)
+    if not teacher or teacher.user_id != current_user.id:
+        raise HTTPException(status_code=403, detail="Access denied.")
+    
+    # Get the material
+    material = session.get(StudyMaterial, material_id)
+    if not material:
+        raise HTTPException(status_code=404, detail="Study material not found")
+    
+    # Verify the material was created by this teacher
+    if material.created_by_id != current_user.id:
+        raise HTTPException(status_code=403, detail="Access denied. You can only update your own materials.")
+    
+    # Update the material
+    update_data = material_update.dict(exclude_unset=True)
+    for field, value in update_data.items():
+        setattr(material, field, value)
+    
+    session.add(material)
+    session.commit()
+    session.refresh(material)
+    
+    return material
+
+@app.delete("/teacher/{teacher_id}/study-materials/{material_id}")
+def delete_teacher_study_material(
+    teacher_id: int,
+    material_id: int,
+    session: Session = Depends(get_session),
+    current_user: User = Depends(require_teacher)
+):
+    """Delete a study material uploaded by the teacher"""
+    # Verify the teacher is authenticated and matches the teacher_id
+    teacher = session.get(Teacher, teacher_id)
+    if not teacher or teacher.user_id != current_user.id:
+        raise HTTPException(status_code=403, detail="Access denied.")
+    
+    # Get the material
+    material = session.get(StudyMaterial, material_id)
+    if not material:
+        raise HTTPException(status_code=404, detail="Study material not found")
+    
+    # Verify the material was created by this teacher
+    if material.created_by_id != current_user.id:
+        raise HTTPException(status_code=403, detail="Access denied. You can only delete your own materials.")
+    
+    # Delete the file if it exists
+    if material.file_path and os.path.exists(material.file_path):
+        try:
+            os.remove(material.file_path)
+        except Exception as e:
+            print(f"Warning: Failed to delete file {material.file_path}: {e}")
+    
+    # Delete the database record
+    session.delete(material)
+    session.commit()
+    
+    return {"message": "Study material deleted successfully"}
 
 if __name__ == "__main__":
     uvicorn.run("main:app", host="0.0.0.0", port=8000, reload=True)

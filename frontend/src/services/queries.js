@@ -178,10 +178,11 @@ export const useTeacherExams = (teacherId) => {
   })
 }
 
-export const useTeacherMaterials = () => {
+export const useTeacherMaterials = (teacherId) => {
   return useQuery({
-    queryKey: ['teacherMaterials'],
-    queryFn: () => teacherAPI.getMyStudyMaterials().then(res => res.data),
+    queryKey: ['teacherMaterials', teacherId],
+    queryFn: () => teacherAPI.getMyStudyMaterials(teacherId).then(res => res.data),
+    enabled: !!teacherId,
   })
 }
 
@@ -213,32 +214,20 @@ export const useStudentExamResults = (studentId) => {
   return useQuery({
     queryKey: ['studentExamResults', studentId],
     queryFn: async () => {
-      const [resultsRes, examsRes, subjectsRes] = await Promise.all([
-        studentAPI.getMyExamResults(studentId),
-        adminAPI.getExams(), // Get all exams to match with results
-        studentAPI.getMySubjects(studentId)
-      ])
-      
+      const resultsRes = await studentAPI.getMyExamResults(studentId)
       const results = resultsRes.data
-      const exams = examsRes.data
-      const subjects = subjectsRes.data
       
-      // Enrich results with exam and subject information
-      return results.map(result => {
-        const exam = exams.find(e => e.id === result.exam_id) || null
-        const subject = exam ? subjects.find(s => s.id === exam.subject_id) : null
-        
-        return {
-          ...result,
-          exam: exam ? {
-            ...exam,
-            title: exam.name,
-            total_marks: exam.max_marks,
-            subject: subject
-          } : null,
-          obtained_marks: result.marks_obtained
-        }
-      })
+      // Transform results data (backend now returns enriched data)
+      return results.map(result => ({
+        ...result,
+        obtained_marks: result.marks_obtained,
+        exam: result.exam ? {
+          ...result.exam,
+          title: result.exam.name,
+          total_marks: result.exam.max_marks,
+          subject: result.exam.subject
+        } : null
+      }))
     },
     enabled: !!studentId,
   })
@@ -446,7 +435,7 @@ export const useUploadStudyMaterial = () => {
   const queryClient = useQueryClient()
   
   return useMutation({
-    mutationFn: (materialData) => teacherAPI.uploadStudyMaterial(materialData),
+    mutationFn: ({ formData, teacherId }) => teacherAPI.uploadStudyMaterial(formData, teacherId),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: queryKeys.studyMaterials })
       queryClient.invalidateQueries({ queryKey: ['teacherMaterials'] })

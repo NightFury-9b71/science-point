@@ -200,8 +200,17 @@ export const teacherAPI = {
   createExam: (examData) => adminAPI.createExam(examData),
   getMyExams: (teacherId) => api.get(`/teacher/${teacherId}/exams`),
   recordExamResult: (resultData) => adminAPI.createExamResult(resultData),
-  uploadStudyMaterial: (materialData) => adminAPI.createStudyMaterial(materialData),
-  getMyStudyMaterials: (subjectId) => adminAPI.getStudyMaterials(subjectId),
+  uploadStudyMaterial: (formData, teacherId) => {
+    // For file uploads, we need to set the correct content type
+    return api.post(`/teacher/${teacherId}/study-materials`, formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      },
+    })
+  },
+  getMyStudyMaterials: (teacherId) => api.get(`/teacher/${teacherId}/study-materials`),
+  updateStudyMaterial: (teacherId, materialId, materialData) => api.put(`/teacher/${teacherId}/study-materials/${materialId}`, materialData),
+  deleteStudyMaterial: (teacherId, materialId) => api.delete(`/teacher/${teacherId}/study-materials/${materialId}`),
   getNotices: () => adminAPI.getNotices({ target_role: 'teacher' }),
   getMySchedule: (teacherId, dayOfWeek) => {
     const params = dayOfWeek ? `?day_of_week=${dayOfWeek}` : ''

@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
-import { Menu, X, LogOut, User, Settings, GraduationCap, BookOpen, Users, Calendar, Award, BarChart3, Home, Clock, Shield, UserCheck, Bell, FileText } from 'lucide-react'
+import { Menu, X, LogOut, User, Settings, GraduationCap, BookOpen, Users, Calendar, Award, BarChart3, Home, Clock, Shield, UserCheck, Bell, FileText, Upload } from 'lucide-react'
 import { useAuth } from '../contexts/AuthContext'
 import Button from './Button'
 
@@ -23,7 +23,7 @@ const Layout = ({ children }) => {
   }
 
   const getUserDisplayName = () => {
-    return user?.name || user?.email || 'User'
+    return user?.username || user?.email || 'User'
   }
 
   const getRoleColor = () => {
@@ -141,11 +141,11 @@ const Layout = ({ children }) => {
           current: currentPath === '/teacher/performance'
         },
         {
-          name: 'Notices',
-          href: '/teacher/notices',
-          icon: Bell,
-          current: currentPath === '/teacher/notices'
-        }
+          name: 'Materials',
+          href: '/teacher/materials',
+          icon: Upload,
+          current: currentPath === '/teacher/materials'
+        },
       ]
     }
 

@@ -242,6 +242,7 @@ class ExamRead(ExamBase):
     id: int
     subject_id: int
     class_id: int
+    subject: Optional[SubjectRead] = None
 
 class ExamResultBase(SQLModel):
     marks_obtained: float = Field(ge=0)
@@ -272,12 +273,14 @@ class ExamResultRead(ExamResultBase):
     id: int
     exam_id: int
     student_id: int
+    exam: Optional[ExamRead] = None
 
 class StudyMaterialBase(SQLModel):
     title: str = Field(max_length=200)
     description: Optional[str] = Field(default=None)
     file_path: Optional[str] = Field(default=None, max_length=500)
     file_type: Optional[str] = Field(default=None, max_length=50)
+    file_size: Optional[int] = Field(default=None)
     is_public: bool = Field(default=True)
 
 class StudyMaterial(StudyMaterialBase, table=True):
