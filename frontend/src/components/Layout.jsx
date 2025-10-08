@@ -156,8 +156,44 @@ const Layout = ({ children }) => {
     }
 
     if (user?.role === 'student') {
-      // Student dashboard uses internal tab navigation, not routing
-      return []
+      return [
+        {
+          name: 'Dashboard',
+          href: '/student',
+          icon: Home,
+          current: currentPath === '/student' || currentPath === '/student/'
+        },
+        {
+          name: 'Results',
+          href: '/student/results',
+          icon: Award,
+          current: currentPath === '/student/results'
+        },
+        {
+          name: 'Schedule',
+          href: '/student/schedule',
+          icon: Clock,
+          current: currentPath === '/student/schedule'
+        },
+        {
+          name: 'Notices',
+          href: '/student/notices',
+          icon: Bell,
+          current: currentPath === '/student/notices'
+        },
+        {
+          name: 'Materials',
+          href: '/student/materials',
+          icon: FileText,
+          current: currentPath === '/student/materials'
+        },
+        {
+          name: 'Profile',
+          href: '/student/profile',
+          icon: User,
+          current: currentPath === '/student/profile'
+        }
+      ]
     }
     
     return []
@@ -228,7 +264,7 @@ const Layout = ({ children }) => {
                         setUserMenuOpen(false)
                         // Navigate to profile based on user role
                         if (user?.role === 'admin') {
-                          navigate('/admin/profile')
+                          navigate('/admin-dashboard/profile')
                         } else if (user?.role === 'teacher') {
                           navigate('/teacher/profile')
                         } else if (user?.role === 'student') {

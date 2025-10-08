@@ -1,19 +1,7 @@
-import React, { useState } from 'react'
+import React from 'react'
 import { Routes, Route } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
 import withAuthGuard from '../components/withAuthGuard'
-import {
-  User,
-  Award,
-  BookOpen,
-  Bell,
-  Calendar,
-  FileText,
-  BarChart3
-} from 'lucide-react'
-
-import Card from '../components/Card'
-import Button from '../components/Button'
 
 // Import student components
 import StudentProfile from './student/StudentProfile'
@@ -27,8 +15,7 @@ import NotFound from './NotFound'
 
 const StudentDashboard = () => {
   const { user } = useAuth()
-  const [activeTab, setActiveTab] = useState('overview')
-
+  
   // Verify student authentication
   if (!user?.student_id && !user?.studentId) {
     return (
@@ -48,77 +35,16 @@ const StudentDashboard = () => {
     )
   }
 
-  const studentId = user?.student_id || user?.studentId
-
-  const tabs = [
-    { id: 'overview', label: 'Overview', icon: BarChart3 },
-    { id: 'results', label: 'Results', icon: Award },
-    { id: 'schedule', label: 'Schedule', icon: Calendar },
-    { id: 'notices', label: 'Notices', icon: Bell },
-    { id: 'materials', label: 'Study Materials', icon: FileText }
-  ]
-
-  const TabButton = ({ tab, activeTab, onClick }) => {
-    const Icon = tab.icon
-    return (
-      <button
-        onClick={() => onClick(tab.id)}
-        className={`flex items-center gap-2 py-4 px-1 border-b-2 font-medium text-sm ${
-          activeTab === tab.id
-            ? 'border-blue-500 text-blue-600'
-            : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-        }`}
-      >
-        <Icon className="h-5 w-5" />
-        {tab.label}
-      </button>
-    )
-  }
-
-  const renderTabContent = () => {
-    switch (activeTab) {
-      case 'overview':
-        return <StudentDashboardOverview studentId={studentId} />
-      case 'results':
-        return <StudentResults studentId={studentId} />
-      case 'schedule':
-        return <StudentScheduleView studentId={studentId} />
-      case 'notices':
-        return <StudentNotices studentId={studentId} />
-      case 'materials':
-        return <StudentMaterials />
-      default:
-        return <StudentDashboardOverview studentId={studentId} />
-    }
-  }
-
   return (
-    <div className="space-y-6">
-      {/* Welcome Header */}
-      <div className="bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-lg p-6">
-        <h1 className="text-2xl font-bold mb-2">Welcome back, {user?.full_name || 'Student'}!</h1>
-        <p className="text-blue-100">Here's your learning dashboard</p>
-      </div>
-
-      {/* Tab Navigation */}
-      <div className="border-b border-gray-200">
-        <nav className="-mb-px flex space-x-8">
-          {tabs.map((tab) => (
-            <TabButton
-              key={tab.id}
-              tab={tab}
-              activeTab={activeTab}
-              onClick={setActiveTab}
-            />
-          ))}
-        </nav>
-      </div>
-
-      {/* Tab Content */}
-      <div className="mt-6">
-        {renderTabContent()}
-      </div>
-    </div>
+    <Routes>
+      <Route path="/" element={<StudentDashboardOverview />} />
+      <Route path="/results" element={<StudentResults />} />
+      <Route path="/schedule" element={<StudentScheduleView />} />
+      <Route path="/notices" element={<StudentNotices />} />
+      <Route path="/materials" element={<StudentMaterials />} />
+      <Route path="/profile" element={<StudentProfile />} />
+      <Route path="*" element={<NotFound />} />
+    </Routes>
   )
 }
 

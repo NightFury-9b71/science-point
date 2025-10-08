@@ -1,6 +1,6 @@
 import React, { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Plus, Eye, ArrowLeft, Users, GraduationCap, Camera, X } from 'lucide-react'
+import { Plus, Eye, ArrowLeft,User, Users, GraduationCap, Camera, X } from 'lucide-react'
 import { toast } from 'sonner'
 import Card from '../../components/Card'
 import Button from '../../components/Button'
