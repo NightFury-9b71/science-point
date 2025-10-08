@@ -5,25 +5,21 @@ import { toast } from 'sonner'
 import Button from '../components/Button'
 import Card from '../components/Card'
 import { Input, Select, TextArea } from '../components/Form'
-import { useSubmitAdmission, useClasses } from '../services/queries'
+import { useSubmitAdmission, usePublicClasses } from '../services/queries'
 
 const AdmissionForm = () => {
   const navigate = useNavigate()
-  const { data: classes = [] } = useClasses()
+  const { data: classes = [] } = usePublicClasses()
   const submitAdmission = useSubmitAdmission()
 
   const [formData, setFormData] = useState({
     // User data
     user: {
-      username: '',
       email: '',
       full_name: '',
-      phone: '',
-      password: '',
-      role: 'student' // Fixed for admission
+      phone: ''
     },
     // Student data
-    roll_number: '',
     parent_name: '',
     parent_phone: '',
     address: '',
@@ -70,15 +66,7 @@ const AdmissionForm = () => {
     const newErrors = {}
 
     // User validation
-    if (!formData.user.username.trim()) {
-      newErrors['user.username'] = 'Username is required'
-    } else if (formData.user.username.length < 3) {
-      newErrors['user.username'] = 'Username must be at least 3 characters'
-    }
-
-    if (!formData.user.email.trim()) {
-      newErrors['user.email'] = 'Email is required'
-    } else if (!/\S+@\S+\.\S+/.test(formData.user.email)) {
+    if (formData.user.email.trim() && !/\S+@\S+\.\S+/.test(formData.user.email)) {
       newErrors['user.email'] = 'Please enter a valid email address'
     }
 
@@ -90,23 +78,17 @@ const AdmissionForm = () => {
       newErrors['user.phone'] = 'Phone number is required'
     }
 
-    if (!formData.user.password) {
-      newErrors['user.password'] = 'Password is required'
-    } else if (formData.user.password.length < 6) {
-      newErrors['user.password'] = 'Password must be at least 6 characters'
-    }
-
     // Student validation
-    if (!formData.roll_number.trim()) {
-      newErrors.roll_number = 'Roll number is required'
-    }
-
     if (!formData.class_id) {
       newErrors.class_id = 'Please select a class'
     }
 
     if (!formData.date_of_birth) {
       newErrors.date_of_birth = 'Date of birth is required'
+    }
+
+    if (!formData.parent_phone.trim()) {
+      newErrors.parent_phone = 'Parent/Guardian phone number is required'
     }
 
     setErrors(newErrors)
@@ -124,9 +106,14 @@ const AdmissionForm = () => {
     try {
       // Prepare the data for submission
       const submissionData = {
-        ...formData,
-        class_id: parseInt(formData.class_id),
-        date_of_birth: formData.date_of_birth ? new Date(formData.date_of_birth).toISOString() : null
+        full_name: formData.user.full_name,
+        email: formData.user.email || null,
+        phone: formData.user.phone,
+        parent_name: formData.parent_name || null,
+        parent_phone: formData.parent_phone,
+        address: formData.address || null,
+        date_of_birth: formData.date_of_birth ? new Date(formData.date_of_birth).toISOString() : null,
+        class_id: parseInt(formData.class_id)
       }
 
       await submitAdmission.mutateAsync(submissionData)
@@ -209,7 +196,6 @@ const AdmissionForm = () => {
                   value={formData.user.email}
                   onChange={(e) => handleInputChange('user.email', e.target.value)}
                   error={errors['user.email']}
-                  required
                 />
                 <Input
                   label="Phone Number"
@@ -229,39 +215,10 @@ const AdmissionForm = () => {
               </div>
             </div>
 
-            {/* Account Information */}
-            <div>
-              <h3 className="text-lg font-semibold text-gray-900 mb-4">Account Information</h3>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <Input
-                  label="Username"
-                  value={formData.user.username}
-                  onChange={(e) => handleInputChange('user.username', e.target.value)}
-                  error={errors['user.username']}
-                  required
-                />
-                <Input
-                  label="Password"
-                  type="password"
-                  value={formData.user.password}
-                  onChange={(e) => handleInputChange('user.password', e.target.value)}
-                  error={errors['user.password']}
-                  required
-                />
-              </div>
-            </div>
-
             {/* Academic Information */}
             <div>
               <h3 className="text-lg font-semibold text-gray-900 mb-4">Academic Information</h3>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <Input
-                  label="Roll Number"
-                  value={formData.roll_number}
-                  onChange={(e) => handleInputChange('roll_number', e.target.value)}
-                  error={errors.roll_number}
-                  required
-                />
                 <Select
                   label="Desired Class"
                   options={classOptions}
@@ -289,6 +246,7 @@ const AdmissionForm = () => {
                   value={formData.parent_phone}
                   onChange={(e) => handleInputChange('parent_phone', e.target.value)}
                   error={errors.parent_phone}
+                  required
                 />
               </div>
               <div className="mt-4">

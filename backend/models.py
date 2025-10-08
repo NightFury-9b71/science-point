@@ -360,6 +360,45 @@ class TeacherReviewRead(TeacherReviewBase):
     overall_rating: Optional[float] = None
     review_date: datetime
 
+# Admission Request Model (for pending admissions)
+class AdmissionRequestBase(SQLModel):
+    # User data
+    full_name: str = Field(max_length=100)
+    email: Optional[str] = Field(default=None, max_length=100)
+    phone: str = Field(max_length=15)
+    
+    # Student data
+    parent_name: Optional[str] = Field(default=None, max_length=100)
+    parent_phone: str = Field(max_length=15)
+    address: Optional[str] = Field(default=None)
+    date_of_birth: Optional[datetime] = Field(default=None)
+    class_id: int = Field(foreign_key="classes.id")
+    
+    # Status
+    status: str = Field(default="pending", max_length=20)  # pending, approved, rejected
+    reviewed_by_id: Optional[int] = Field(default=None, foreign_key="users.id")
+    reviewed_at: Optional[datetime] = Field(default=None)
+    review_notes: Optional[str] = Field(default=None)
+
+class AdmissionRequest(AdmissionRequestBase, table=True):
+    __tablename__ = "admission_requests"
+    
+    id: Optional[int] = Field(default=None, primary_key=True)
+    created_at: Optional[datetime] = Field(default_factory=datetime.utcnow)
+    
+    # Relationships
+    class_assigned: Optional["Class"] = Relationship()
+    reviewed_by: Optional[User] = Relationship()
+
+class AdmissionRequestCreate(AdmissionRequestBase):
+    pass
+
+class AdmissionRequestRead(AdmissionRequestBase):
+    id: int
+    created_at: datetime
+    class_assigned: Optional["ClassRead"] = None
+    reviewed_by: Optional[UserRead] = None
+
 # Dashboard schemas
 class DashboardStats(SQLModel):
     total_students: int

@@ -1,6 +1,7 @@
 from fastapi import FastAPI, HTTPException, Depends, status, UploadFile, File, Form
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
+from fastapi.staticfiles import StaticFiles
 from sqlmodel import Session, select
 from sqlalchemy import func, or_, and_
 from sqlalchemy.orm import selectinload
@@ -56,6 +57,9 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# Mount static files directory for uploads
+app.mount("/uploads", StaticFiles(directory="uploads"), name="uploads")
 
 # Create tables on startup
 @app.on_event("startup")
@@ -195,6 +199,71 @@ def authenticate_user(username: str, password: str, session: Session) -> Optiona
     if not verify_password(password, user.password_hash):
         return None
     return user
+
+# Helper function for generating student credentials
+def generate_student_credentials(full_name: str, class_id: int, session: Session) -> dict:
+    """Generate consistent username, password, and roll number for a student"""
+    # Generate roll number for the class
+    # Find the next available roll number for this class
+    existing_roll_numbers = session.exec(
+        select(Student.roll_number).where(Student.class_id == class_id)
+    ).all()
+    
+    # Extract numeric parts from existing roll numbers
+    existing_nums = []
+    for roll_num in existing_roll_numbers:
+        # Extract numbers from roll number (e.g., "STU001" -> 1)
+        num_part = ''.join(filter(str.isdigit, str(roll_num)))
+        if num_part:
+            try:
+                existing_nums.append(int(num_part))
+            except ValueError:
+                pass
+    
+    # Generate next roll number
+    next_num = max(existing_nums) + 1 if existing_nums else 1
+    roll_number = f"STU{next_num:03d}"  # Format as STU001, STU002, etc.
+    
+    # Double-check roll number doesn't exist
+    existing_student = session.exec(select(Student).where(Student.roll_number == roll_number)).first()
+    while existing_student:
+        next_num += 1
+        roll_number = f"STU{next_num:03d}"
+        existing_student = session.exec(select(Student).where(Student.roll_number == roll_number)).first()
+    
+    # Generate username
+    # Use first 3 letters of first name + first letter of last name + roll number
+    name_parts = full_name.strip().split()
+    if len(name_parts) >= 2:
+        first_name = name_parts[0].lower()[:3]
+        last_name_initial = name_parts[-1].lower()[:1]
+        base_username = f"{first_name}{last_name_initial}{next_num:03d}"
+    else:
+        # If only one name, use first 4 letters + roll number
+        first_name = name_parts[0].lower()[:4] if name_parts else "stud"
+        base_username = f"{first_name}{next_num:03d}"
+    
+    # Ensure username is unique
+    username = base_username
+    counter = 1
+    existing_user = session.exec(select(User).where(User.username == username)).first()
+    while existing_user:
+        username = f"{base_username}{counter}"
+        existing_user = session.exec(select(User).where(User.username == username)).first()
+        counter += 1
+    
+    # Generate password (8 characters: 4 letters + 4 numbers)
+    import random
+    import string
+    letters = ''.join(random.choices(string.ascii_letters, k=4))
+    numbers = ''.join(random.choices(string.digits, k=4))
+    password = letters + numbers
+    
+    return {
+        "username": username,
+        "password": password,
+        "roll_number": roll_number
+    }
 
 # Root endpoint
 @app.get("/")
@@ -1093,65 +1162,51 @@ def get_public_notices(
     notices = session.exec(statement).all()
     return notices
 
+# Public classes endpoint (no authentication required)
+@app.get("/public/classes", response_model=List[ClassRead])
+def get_public_classes(
+    session: Session = Depends(get_session)
+):
+    """Get all available classes for public admission forms"""
+    statement = select(Class)
+    classes = session.exec(statement).all()
+    return classes
+
 # Public admission endpoint (no authentication required)
-@app.post("/public/admission", response_model=StudentRead)
+@app.post("/public/admission", response_model=AdmissionRequestRead)
 def submit_admission_request(
-    student: StudentCreate,
+    admission: AdmissionRequestCreate,
     session: Session = Depends(get_session)
 ):
     """Allow prospective students to submit admission requests"""
-    # Check if username already exists
-    existing_user = session.exec(select(User).where(User.username == student.user.username)).first()
-    if existing_user:
-        raise HTTPException(
-            status_code=400,
-            detail="Username already registered"
-        )
-    
-    # If email is provided, check if it already exists
-    if student.user.email:
-        email_check = session.exec(select(User).where(User.email == student.user.email)).first()
-        if email_check:
-            raise HTTPException(
-                status_code=400,
-                detail="Email already registered"
-            )
-    
-    # Check if roll number already exists
-    existing_student = session.exec(select(Student).where(Student.roll_number == student.roll_number)).first()
-    if existing_student:
-        raise HTTPException(
-            status_code=400,
-            detail="Roll number already exists"
-        )
-    
     # Validate class exists and has capacity
-    class_obj = session.get(Class, student.class_id)
+    class_obj = session.get(Class, admission.class_id)
     if not class_obj:
         raise HTTPException(status_code=404, detail="Selected class not found")
     
     # Check current enrollment
-    current_students = session.exec(select(Student).where(Student.class_id == student.class_id)).all()
+    current_students = session.exec(select(Student).where(Student.class_id == admission.class_id)).all()
     if len(current_students) >= class_obj.capacity:
         raise HTTPException(
             status_code=400,
             detail=f"Class {class_obj.name} is at full capacity ({class_obj.capacity} students)"
         )
     
-    # Create new user
-    hashed_password = get_password_hash(student.user.password)
-    user_data = student.user.dict(exclude={'password'})
-    db_user = User(**user_data, password_hash=hashed_password)
-    session.add(db_user)
-    session.flush()  # Flush to get the user ID
+    # If email is provided, check if it already exists
+    if admission.email:
+        email_check = session.exec(select(User).where(User.email == admission.email)).first()
+        if email_check:
+            raise HTTPException(
+                status_code=400,
+                detail="Email already registered"
+            )
     
-    # Create the student
-    student_dict = student.dict(exclude={'user'})
-    db_student = Student(**student_dict, user_id=db_user.id)
-    session.add(db_student)
+    # Create the admission request
+    db_admission = AdmissionRequest(**admission.dict())
+    session.add(db_admission)
     session.commit()
-    session.refresh(db_student)
-    return db_student
+    session.refresh(db_admission)
+    return db_admission
 
 @app.put("/admin/notices/{notice_id}", response_model=NoticeRead)
 def update_notice(
@@ -1792,6 +1847,151 @@ def delete_admin_creation_code(
     session.commit()
     return {"message": "Admin creation code deleted successfully"}
 
+# Admin admission request management
+@app.get("/admin/admission-requests", response_model=List[AdmissionRequestRead])
+def get_admission_requests(
+    status: str = None,
+    skip: int = 0,
+    limit: int = 100,
+    session: Session = Depends(get_session),
+    current_user: User = Depends(require_admin)
+):
+    """Get all admission requests (admin only)"""
+    statement = select(AdmissionRequest).options(
+        selectinload(AdmissionRequest.class_assigned),
+        selectinload(AdmissionRequest.reviewed_by)
+    )
+    
+    if status:
+        statement = statement.where(AdmissionRequest.status == status)
+    
+    statement = statement.order_by(AdmissionRequest.created_at.desc())
+    requests = session.exec(statement.offset(skip).limit(limit)).all()
+    return requests
+
+@app.get("/admin/admission-requests/{request_id}", response_model=AdmissionRequestRead)
+def get_admission_request(
+    request_id: int,
+    session: Session = Depends(get_session),
+    current_user: User = Depends(require_admin)
+):
+    """Get a specific admission request (admin only)"""
+    request = session.get(AdmissionRequest, request_id)
+    if not request:
+        raise HTTPException(status_code=404, detail="Admission request not found")
+    
+    # Load relationships
+    if request.class_id:
+        request.class_assigned = session.get(Class, request.class_id)
+    if request.reviewed_by_id:
+        request.reviewed_by = session.get(User, request.reviewed_by_id)
+    
+    return request
+
+@app.post("/admin/admission-requests/{request_id}/approve")
+def approve_admission_request(
+    request_id: int,
+    session: Session = Depends(get_session),
+    current_user: User = Depends(require_admin)
+):
+    """Approve an admission request and create student account (admin only)"""
+    # Get the admission request
+    admission_request = session.get(AdmissionRequest, request_id)
+    if not admission_request:
+        raise HTTPException(status_code=404, detail="Admission request not found")
+    
+    if admission_request.status != "pending":
+        raise HTTPException(status_code=400, detail="Admission request has already been processed")
+    
+    # Generate student credentials using the helper function
+    credentials = generate_student_credentials(admission_request.full_name, admission_request.class_id, session)
+    username = credentials["username"]
+    default_password = credentials["password"]
+    roll_number = credentials["roll_number"]
+    
+    # Create user account
+    hashed_password = get_password_hash(default_password)
+    db_user = User(
+        username=username,
+        email=admission_request.email,
+        full_name=admission_request.full_name,
+        phone=admission_request.phone,
+        role=UserRole.STUDENT,
+        password_hash=hashed_password
+    )
+    session.add(db_user)
+    session.flush()
+    
+    # Create student record
+    db_student = Student(
+        user_id=db_user.id,
+        roll_number=roll_number,
+        parent_name=admission_request.parent_name,
+        parent_phone=admission_request.parent_phone,
+        address=admission_request.address,
+        date_of_birth=admission_request.date_of_birth,
+        class_id=admission_request.class_id
+    )
+    session.add(db_student)
+    
+    # Update admission request status
+    admission_request.status = "approved"
+    admission_request.reviewed_by_id = current_user.id
+    admission_request.reviewed_at = datetime.utcnow()
+    admission_request.review_notes = f"Auto-approved with roll number: {roll_number}, username: {username}"
+    
+    session.commit()
+    
+    return {
+        "message": "Admission request approved successfully",
+        "student_id": db_student.id,
+        "username": username,
+        "roll_number": roll_number,
+        "password": default_password  # Return the generated password so admin can share it
+    }
+
+@app.post("/admin/admission-requests/{request_id}/reject")
+def reject_admission_request(
+    request_id: int,
+    review_notes: str = None,
+    session: Session = Depends(get_session),
+    current_user: User = Depends(require_admin)
+):
+    """Reject an admission request (admin only)"""
+    # Get the admission request
+    admission_request = session.get(AdmissionRequest, request_id)
+    if not admission_request:
+        raise HTTPException(status_code=404, detail="Admission request not found")
+    
+    if admission_request.status != "pending":
+        raise HTTPException(status_code=400, detail="Admission request has already been processed")
+    
+    # Update admission request status
+    admission_request.status = "rejected"
+    admission_request.reviewed_by_id = current_user.id
+    admission_request.reviewed_at = datetime.utcnow()
+    admission_request.review_notes = review_notes or "Admission request rejected"
+    
+    session.commit()
+    
+    return {"message": "Admission request rejected successfully"}
+
+@app.delete("/admin/admission-requests/{request_id}")
+def delete_admission_request(
+    request_id: int,
+    session: Session = Depends(get_session),
+    current_user: User = Depends(require_admin)
+):
+    """Delete an admission request (admin only)"""
+    admission_request = session.get(AdmissionRequest, request_id)
+    if not admission_request:
+        raise HTTPException(status_code=404, detail="Admission request not found")
+    
+    session.delete(admission_request)
+    session.commit()
+    
+    return {"message": "Admission request deleted successfully"}
+
 # Student-specific endpoints
 @app.get("/student/{student_id}/profile", response_model=StudentRead)
 def get_student_profile(
@@ -2051,11 +2251,22 @@ def upload_teacher_study_material(
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to save file: {str(e)}")
     
-    # Create database record
+    # Copy file to frontend public folder for direct access
+    frontend_public_dir = "../frontend/public/uploads/study_materials"
+    os.makedirs(frontend_public_dir, exist_ok=True)
+    frontend_file_path = os.path.join(frontend_public_dir, unique_filename)
+    
+    try:
+        shutil.copy2(file_path, frontend_file_path)
+    except Exception as e:
+        print(f"Warning: Failed to copy file to frontend public folder: {e}")
+    
+    # Create database record - store relative path for URL construction
+    relative_file_path = f"study_materials/{unique_filename}"
     db_material = StudyMaterial(
         title=title,
         description=description,
-        file_path=file_path,
+        file_path=relative_file_path,
         file_type=file.content_type,
         file_size=file_size,
         subject_id=subject_id,
@@ -2126,11 +2337,22 @@ def delete_teacher_study_material(
         raise HTTPException(status_code=403, detail="Access denied. You can only delete your own materials.")
     
     # Delete the file if it exists
-    if material.file_path and os.path.exists(material.file_path):
-        try:
-            os.remove(material.file_path)
-        except Exception as e:
-            print(f"Warning: Failed to delete file {material.file_path}: {e}")
+    if material.file_path:
+        # Delete from backend uploads folder
+        backend_file_path = os.path.join("uploads", material.file_path)
+        if os.path.exists(backend_file_path):
+            try:
+                os.remove(backend_file_path)
+            except Exception as e:
+                print(f"Warning: Failed to delete file from backend: {e}")
+        
+        # Delete from frontend public folder
+        frontend_file_path = os.path.join("../frontend/public/uploads", material.file_path)
+        if os.path.exists(frontend_file_path):
+            try:
+                os.remove(frontend_file_path)
+            except Exception as e:
+                print(f"Warning: Failed to delete file from frontend: {e}")
     
     # Delete the database record
     session.delete(material)

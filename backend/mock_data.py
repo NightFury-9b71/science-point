@@ -438,13 +438,7 @@ def generate_exam_results():
 MOCK_EXAM_RESULTS = generate_exam_results()
 
 MOCK_STUDY_MATERIALS = [
-    {"title": "Algebra Basics", "description": "Fundamental concepts of algebra", "subject_id": 1, "created_by_id": 1, "file_path": "/materials/algebra_basics.pdf", "file_type": "PDF", "is_public": True},
-    {"title": "Newton's Laws", "description": "Detailed explanation of Newton's three laws", "subject_id": 2, "created_by_id": 1, "file_path": "/materials/newtons_laws.pdf", "file_type": "PDF", "is_public": True},
-    {"title": "Periodic Table Guide", "description": "Complete periodic table with properties", "subject_id": 3, "created_by_id": 1, "file_path": "/materials/periodic_table.pdf", "file_type": "PDF", "is_public": True},
-    {"title": "Cell Structure", "description": "Plant and animal cell diagrams", "subject_id": 4, "created_by_id": 1, "file_path": "/materials/cell_structure.pptx", "file_type": "PPTX", "is_public": True},
-    {"title": "Grammar Rules", "description": "Essential English grammar rules", "subject_id": 5, "created_by_id": 1, "file_path": "/materials/grammar_rules.docx", "file_type": "DOCX", "is_public": True},
-    {"title": "Calculus Introduction", "description": "Introduction to differential and integral calculus", "subject_id": 16, "created_by_id": 1, "file_path": "/materials/calculus_intro.pdf", "file_type": "PDF", "is_public": True},
-    {"title": "Quantum Mechanics Basics", "description": "Basic concepts of quantum mechanics", "subject_id": 17, "created_by_id": 1, "file_path": "/materials/quantum_basics.pdf", "file_type": "PDF", "is_public": True}
+    {"title": "Sample Image", "description": "A sample uploaded image", "subject_id": 1, "created_by_id": 1, "file_path": "study_materials/20251008_052514_1_1.jpg", "file_type": "image/jpeg", "file_size": 53754, "is_public": True}
 ]
 
 MOCK_NOTICES = [

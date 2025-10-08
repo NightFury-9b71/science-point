@@ -181,13 +181,19 @@ export const adminAPI = {
   seedData: () => api.post('/admin/seed-data'),
   resetData: (confirm = false) => api.post(`/admin/reset-data?confirm=${confirm}`),
   recreateTables: () => api.post('/admin/recreate-tables'),
-  getDataStats: () => api.get('/admin/data-stats')
+  getDataStats: () => api.get('/admin/data-stats'),
+
+  // Admission Requests
+  getAdmissionRequests: () => api.get('/admin/admission-requests?status=pending'),
+  approveAdmissionRequest: (requestId) => api.post(`/admin/admission-requests/${requestId}/approve`).then(res => res.data),
+  rejectAdmissionRequest: (requestId) => api.post(`/admin/admission-requests/${requestId}/reject`).then(res => res.data)
 }
 
 // Public API functions (no authentication required)
 export const publicAPI = {
   submitAdmission: (admissionData) => api.post('/public/admission', admissionData),
-  getNotices: () => api.get('/public/notices')
+  getNotices: () => api.get('/public/notices'),
+  getClasses: () => api.get('/public/classes')
 }
 
 // Teacher-specific API functions

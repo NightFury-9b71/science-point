@@ -17,7 +17,8 @@ export const queryKeys = {
   teacherClasses: ['teacherClasses'],
   classSchedules: ['classSchedules'],
   teacherSchedule: ['teacherSchedule'],
-  studentSchedule: ['studentSchedule']
+  studentSchedule: ['studentSchedule'],
+  admissionRequests: ['admissionRequests']
 }
 
 // Admin Hooks
@@ -60,6 +61,13 @@ export const useNotices = (params = {}) => {
   return useQuery({
     queryKey: [...queryKeys.notices, params],
     queryFn: () => adminAPI.getNotices(params).then(res => res.data),
+  })
+}
+
+export const useAdmissionRequests = () => {
+  return useQuery({
+    queryKey: queryKeys.admissionRequests,
+    queryFn: () => adminAPI.getAdmissionRequests().then(res => res.data),
   })
 }
 
@@ -361,6 +369,31 @@ export const useDeleteNotice = () => {
   })
 }
 
+export const useApproveAdmissionRequest = () => {
+  const queryClient = useQueryClient()
+  
+  return useMutation({
+    mutationFn: (requestId) => adminAPI.approveAdmissionRequest(requestId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.admissionRequests })
+      queryClient.invalidateQueries({ queryKey: queryKeys.students })
+      queryClient.invalidateQueries({ queryKey: queryKeys.dashboard })
+    },
+  })
+}
+
+export const useRejectAdmissionRequest = () => {
+  const queryClient = useQueryClient()
+  
+  return useMutation({
+    mutationFn: (requestId) => adminAPI.rejectAdmissionRequest(requestId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.admissionRequests })
+      queryClient.invalidateQueries({ queryKey: queryKeys.dashboard })
+    },
+  })
+}
+
 export const useMarkAttendance = () => {
   const queryClient = useQueryClient()
   
@@ -436,6 +469,30 @@ export const useUploadStudyMaterial = () => {
   
   return useMutation({
     mutationFn: ({ formData, teacherId }) => teacherAPI.uploadStudyMaterial(formData, teacherId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.studyMaterials })
+      queryClient.invalidateQueries({ queryKey: ['teacherMaterials'] })
+    },
+  })
+}
+
+export const useUpdateStudyMaterial = () => {
+  const queryClient = useQueryClient()
+  
+  return useMutation({
+    mutationFn: ({ teacherId, materialId, materialData }) => teacherAPI.updateStudyMaterial(teacherId, materialId, materialData),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.studyMaterials })
+      queryClient.invalidateQueries({ queryKey: ['teacherMaterials'] })
+    },
+  })
+}
+
+export const useDeleteStudyMaterial = () => {
+  const queryClient = useQueryClient()
+  
+  return useMutation({
+    mutationFn: ({ teacherId, materialId }) => teacherAPI.deleteStudyMaterial(teacherId, materialId),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: queryKeys.studyMaterials })
       queryClient.invalidateQueries({ queryKey: ['teacherMaterials'] })
@@ -672,5 +729,13 @@ export const useStudentSchedule = (studentId, dayOfWeek) => {
 export const useSubmitAdmission = () => {
   return useMutation({
     mutationFn: (admissionData) => publicAPI.submitAdmission(admissionData),
+  })
+}
+
+// Public Classes Hook (no authentication required)
+export const usePublicClasses = () => {
+  return useQuery({
+    queryKey: ['public', 'classes'],
+    queryFn: () => publicAPI.getClasses().then(res => res.data),
   })
 }

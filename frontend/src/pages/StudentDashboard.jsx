@@ -18,6 +18,7 @@ import {
 import Card from '../components/Card'
 import Button from '../components/Button'
 import Table from '../components/Table'
+import config from '../config/index.js'
 import {
   useStudentProfile,
   useStudentAttendance,
@@ -501,20 +502,27 @@ const StudentDashboard = () => {
                         <p className="text-sm text-gray-700 mb-3">{material.description}</p>
                       )}
                       <div className="flex items-center justify-between">
-                        <span className="text-xs text-gray-500">
-                          {material.uploaded_at ? new Date(material.uploaded_at).toLocaleDateString() : 'N/A'}
-                        </span>
-                        {material.file_url && (
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={() => window.open(material.file_url, '_blank')}
-                            className="flex items-center gap-1"
-                          >
-                            <Download className="h-3 w-3" />
-                            Download
-                          </Button>
-                        )}
+                        <div className="flex flex-col space-y-1">
+                          <span className="text-xs text-gray-500">
+                            {material.file_type && <span className="bg-gray-100 px-2 py-1 rounded text-xs">{material.file_type}</span>}
+                          </span>
+                          <span className="text-xs text-gray-500">
+                            Uploaded: {new Date(material.created_at).toLocaleDateString()}
+                          </span>
+                        </div>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => {
+                            // Open the file in a new tab/window for download from frontend public folder
+                            const downloadUrl = `${config.frontend.baseURL}/uploads/${material.file_path}`
+                            window.open(downloadUrl, '_blank')
+                          }}
+                          className="flex items-center gap-1"
+                        >
+                          <Download className="h-3 w-3" />
+                          Download
+                        </Button>
                       </div>
                     </div>
                   ))}

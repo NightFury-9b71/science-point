@@ -1,14 +1,46 @@
-import { FileText, Download, Calendar, BookOpen } from 'lucide-react'
+import { FileText, Download, Calendar, BookOpen, X } from 'lucide-react'
 import Card from '../../components/Card'
 import Button from '../../components/Button'
-import { useStudyMaterials } from '../../services/queries'
+import { useStudentMaterials } from '../../services/queries'
+import { useAuth } from '../../contexts/AuthContext'
+import config from '../../config/index.js'
 
 function StudentMaterials() {
-  const { data: studyMaterials = [], isLoading, error } = useStudyMaterials()
+  const { user, isLoading: authLoading } = useAuth()
+  const studentId = user?.student_id || user?.studentId
+  
+  // Show loading while auth is being checked
+  if (authLoading) {
+    return (
+      <div className="flex justify-center items-center h-64">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+      </div>
+    )
+  }
+
+  // Show error if no student ID found
+  if (!studentId) {
+    return (
+      <div className="flex justify-center items-center h-64">
+        <div className="text-center p-6 bg-red-50 border border-red-200 rounded-lg">
+          <div className="text-red-600 mb-2">
+            <X className="h-8 w-8 mx-auto" />
+          </div>
+          <h3 className="text-lg font-medium text-red-900 mb-2">Student Profile Not Found</h3>
+          <p className="text-red-700">
+            Unable to load materials. Please contact the administrator to ensure your student profile is properly set up.
+          </p>
+        </div>
+      </div>
+    )
+  }
+
+  const { data: studyMaterials = [], isLoading, error } = useStudentMaterials(studentId)
 
   const handleDownload = (material) => {
-    // In a real app, this would download the file from the server
-    console.log('Downloading:', material.title)
+    // Open the file in a new tab/window for download from frontend public folder
+    const downloadUrl = `${config.frontend.baseURL}/uploads/${material.file_path}`
+    window.open(downloadUrl, '_blank')
   }
 
   if (isLoading) {

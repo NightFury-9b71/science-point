@@ -118,3 +118,22 @@ class AdminCreationRequest(BaseModel):
 
 class AdminCreationCodeUpdate(BaseModel):
     code: str
+
+# Admission schema (for public admission requests)
+class AdmissionRequestCreate(BaseModel):
+    # User data (minimal for admission)
+    full_name: str
+    email: Optional[str] = None
+    phone: str
+    # Student data
+    parent_name: Optional[str] = None
+    parent_phone: str  # Made required
+    address: Optional[str] = None
+    date_of_birth: Optional[datetime] = None
+    class_id: int
+
+class AdmissionRequestUpdate(BaseModel):
+    status: Optional[str] = None
+    reviewed_by_id: Optional[int] = None
+    reviewed_at: Optional[datetime] = None
+    review_notes: Optional[str] = None
