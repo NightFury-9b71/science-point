@@ -299,6 +299,8 @@ def login(login_data: LoginRequest, session: Session = Depends(get_session)):
         "username": user.username,
         "email": user.email,
         "full_name": user.full_name,
+        "phone": user.phone,
+        "photo_path": user.photo_path,
         "role": user.role,
         "is_active": user.is_active
     }
@@ -2155,6 +2157,11 @@ def get_student_profile(
     if student.user_id:
         user = session.get(User, student.user_id)
         student.user = user
+    
+    # Load class relationship
+    if student.class_id:
+        class_assigned = session.get(Class, student.class_id)
+        student.class_assigned = class_assigned
     
     return student
 

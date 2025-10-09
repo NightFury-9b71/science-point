@@ -234,7 +234,7 @@ const Layout = ({ children }) => {
                   <div className="w-8 h-8 rounded-full overflow-hidden bg-gray-200 flex items-center justify-center">
                     {user?.photo_path ? (
                       <img 
-                        src={`/uploads${user.photo_path}`} 
+                        src={`/uploads/${user.photo_path}`} 
                         alt={`${user?.full_name || 'User'} profile`}
                         className="w-full h-full object-cover"
                       />
@@ -243,7 +243,6 @@ const Layout = ({ children }) => {
                         {(user?.full_name || user?.username || 'U').charAt(0).toUpperCase()}
                       </span>
                     )}
-                    {console.log(user?.photo_path)}
                   </div>
                 </button>
                 {userMenuOpen && (

@@ -73,6 +73,7 @@ class StudentRead(StudentBase):
     class_id: int
     admission_date: datetime
     user: Optional[UserRead] = None
+    class_assigned: Optional["ClassRead"] = None
 
 class TeacherBase(SQLModel):
     employee_id: str = Field(max_length=20, unique=True)

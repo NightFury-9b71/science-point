@@ -224,7 +224,7 @@ function StudentProfile() {
                 </span>
                 <span className="text-gray-600 font-medium">Roll No: {profile.roll_number}</span>
                 <span className="text-gray-400">•</span>
-                <span className="text-gray-600">Class {profile.class_id}</span>
+                <span className="text-gray-600">{profile.class_assigned?.name || `Class ${profile.class_id}`}</span>
               </div>
               
               {/* Quick Stats */}
@@ -321,7 +321,7 @@ function StudentProfile() {
             <InfoItem 
               icon={BookOpen} 
               label="Current Class" 
-              value={`Class ${profile.class_id}`} 
+              value={profile.class_assigned?.name || `Class ${profile.class_id}`} 
             />
             <InfoItem 
               icon={Calendar} 
