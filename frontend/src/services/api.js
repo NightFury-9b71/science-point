@@ -196,7 +196,10 @@ export const adminAPI = {
       },
     })
   },
-  deleteUserPhoto: (userId) => api.delete(`/users/${userId}/photo`)
+  deleteUserPhoto: (userId) => api.delete(`/users/${userId}/photo`),
+
+  // Admin Profile
+  getMyProfile: (adminId) => api.get(`/admin/${adminId}/profile`)
 }
 
 // Public API functions (no authentication required)
@@ -208,6 +211,7 @@ export const publicAPI = {
 
 // Teacher-specific API functions
 export const teacherAPI = {
+  getMyProfile: (teacherId) => api.get(`/teacher/${teacherId}/profile`),
   getMyClasses: (teacherId) => api.get(`/teacher/${teacherId}/classes`),
   getMyStudents: (teacherId) => api.get(`/teacher/${teacherId}/students`),
   getMySubjects: (teacherId) => api.get(`/teacher/${teacherId}/subjects`),
@@ -225,7 +229,14 @@ export const teacherAPI = {
     })
   },
   getMyStudyMaterials: (teacherId) => api.get(`/teacher/${teacherId}/study-materials`),
-  updateStudyMaterial: (teacherId, materialId, materialData) => api.put(`/teacher/${teacherId}/study-materials/${materialId}`, materialData),
+  updateStudyMaterial: (teacherId, materialId, materialData) => {
+    const isFormData = materialData instanceof FormData
+    return api.put(`/teacher/${teacherId}/study-materials/${materialId}`, materialData, {
+      headers: isFormData ? {
+        'Content-Type': 'multipart/form-data',
+      } : undefined,
+    })
+  },
   deleteStudyMaterial: (teacherId, materialId) => api.delete(`/teacher/${teacherId}/study-materials/${materialId}`),
   getNotices: () => adminAPI.getNotices({ target_role: 'teacher' }),
   getMySchedule: (teacherId, dayOfWeek) => {

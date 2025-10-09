@@ -4,6 +4,7 @@
 from pydantic import BaseModel
 from typing import List, Optional
 from datetime import datetime
+from fastapi import UploadFile
 from models import UserRole, UserCreate
 
 # Login schema
@@ -96,6 +97,7 @@ class StudyMaterialUpdate(BaseModel):
     title: Optional[str] = None
     description: Optional[str] = None
     is_public: Optional[bool] = None
+    file: Optional[UploadFile] = None
 
 class NoticeUpdate(BaseModel):
     title: Optional[str] = None

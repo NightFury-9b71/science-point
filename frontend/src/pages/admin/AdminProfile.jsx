@@ -1,240 +1,254 @@
-import React, { useState } from 'react'
-import { useNavigate } from 'react-router-dom'
-import { Plus, Eye, ArrowLeft,User, Users, GraduationCap, Camera, X } from 'lucide-react'
-import { toast } from 'sonner'
+import { User, Mail, Phone, Calendar, Shield, Camera, X, Check, Upload, Users, GraduationCap, BookOpen, FileText, Settings } from 'lucide-react'
 import Card from '../../components/Card'
 import Button from '../../components/Button'
-import Modal from '../../components/Modal'
-import { Input } from '../../components/Form'
+import { useAuth } from '../../contexts/AuthContext'
+import { useAdminProfile, useAdminUploadPhoto, useAdminDeletePhoto } from '../../services/queries'
+import { useState } from 'react'
+import { toast } from 'sonner'
 
-const AdminProfile = () => {
-  const navigate = useNavigate()
-  const adminId = 1 // Mock admin ID
+function AdminProfile() {
+  const { user } = useAuth()
+  const adminId = user?.id
   
-  const [showEditModal, setShowEditModal] = useState(false)
-  const [showChangePasswordModal, setShowChangePasswordModal] = useState(false)
-  const [profileForm, setProfileForm] = useState({
-    full_name: 'Admin User',
-    username: 'admin',
-    email: 'admin@example.com',
-    phone: '+1234567890',
-    employee_id: 'ADM001',
-    department: 'Administration',
-    position: 'School Administrator',
-    address: '456 School Street, City, State',
-    date_of_birth: '1985-05-20',
-    emergency_contact: '+1987654321'
-  })
-  const [passwordForm, setPasswordForm] = useState({
-    current_password: '',
-    new_password: '',
-    confirm_password: ''
-  })
+  // API hooks
+  const { data: profile, isLoading, error } = useAdminProfile(adminId)
+  const uploadPhotoMutation = useAdminUploadPhoto()
+  const deletePhotoMutation = useAdminDeletePhoto()
+  
   const [selectedPhoto, setSelectedPhoto] = useState(null)
   const [photoPreview, setPhotoPreview] = useState(null)
-
-  // Mock admin data - in real app this would come from API
-  const adminData = {
-    id: 1,
-    user: {
-      full_name: 'Admin User',
-      username: 'admin',
-      email: 'admin@example.com',
-      phone: '+1234567890',
-      photo_path: null // Add photo_path field
-    },
-    employee_id: 'ADM001',
-    department: 'Administration',
-    position: 'School Administrator',
-    address: '456 School Street, City, State',
-    date_of_birth: '1985-05-20',
-    emergency_contact: '+1987654321',
-    joined_date: '2019-01-01',
-    permissions: ['manage_students', 'manage_teachers', 'manage_classes', 'manage_notices', 'system_admin'],
-    last_login: '2025-10-06T10:30:00Z'
-  }
-
-  const handleUpdateProfile = async (e) => {
-    e.preventDefault()
-    try {
-      // Mock API call - replace with actual API
-      // await updateAdminProfile(adminId, profileForm)
-      setShowEditModal(false)
-      toast.success('Profile updated successfully!')
-    } catch (error) {
-      toast.error('Failed to update profile')
-    }
-  }
-
-  const handleChangePassword = async (e) => {
-    e.preventDefault()
-    if (passwordForm.new_password !== passwordForm.confirm_password) {
-      toast.error('New passwords do not match')
-      return
-    }
-    try {
-      // await changePassword(adminId, passwordForm)
-      setShowChangePasswordModal(false)
-      setPasswordForm({
-        current_password: '',
-        new_password: '',
-        confirm_password: ''
-      })
-      toast.success('Password changed successfully!')
-    } catch (error) {
-      toast.error('Failed to change password')
-    }
-  }
+  const [isUploadingPhoto, setIsUploadingPhoto] = useState(false)
 
   const handlePhotoChange = (e) => {
-    const file = e.target.files[0]
-    if (file) {
-      // Validate file type
-      const allowedTypes = ['image/jpeg', 'image/png', 'image/jpg', 'image/gif']
-      if (!allowedTypes.includes(file.type)) {
-        toast.error('Please select a valid image file (JPEG, PNG, or GIF)')
-        return
-      }
-      
-      // Validate file size (5MB max)
-      if (file.size > 5 * 1024 * 1024) {
-        toast.error('File size must be less than 5MB')
-        return
-      }
-      
-      setSelectedPhoto(file)
-      const reader = new FileReader()
-      reader.onload = (e) => setPhotoPreview(e.target.result)
-      reader.readAsDataURL(file)
+    const file = e.target.files?.[0]
+    if (!file) return
+    
+    // Validate file type
+    const allowedTypes = ['image/jpeg', 'image/png', 'image/jpg', 'image/gif', 'image/webp']
+    if (!allowedTypes.includes(file.type)) {
+      toast.error('Please select a valid image file (JPEG, PNG, GIF, or WebP)')
+      return
     }
+    
+    // Validate file size (5MB max)
+    if (file.size > 5 * 1024 * 1024) {
+      toast.error('File size must be less than 5MB')
+      return
+    }
+    
+    setSelectedPhoto(file)
+    const reader = new FileReader()
+    reader.onload = (e) => setPhotoPreview(e.target.result)
+    reader.readAsDataURL(file)
   }
 
   const handlePhotoUpload = async () => {
-    if (!selectedPhoto) return
+    if (!selectedPhoto || !profile?.id) return
     
+    setIsUploadingPhoto(true)
     try {
       const formData = new FormData()
       formData.append('file', selectedPhoto)
       
-      // Mock API call - replace with actual API
-      // await uploadUserPhoto(adminId, formData)
+      await uploadPhotoMutation.mutateAsync({
+        userId: profile.id,
+        formData
+      })
       
       toast.success('Photo uploaded successfully!')
       setSelectedPhoto(null)
       setPhotoPreview(null)
-      // Refresh admin data to show new photo
-    } catch (error) {
+      // Profile will be automatically refreshed by the mutation's onSuccess callback
+    } catch (err) {
       toast.error('Failed to upload photo')
+      console.error('Photo upload error:', err)
+    } finally {
+      setIsUploadingPhoto(false)
     }
   }
 
   const handlePhotoDelete = async () => {
+    if (!profile?.id) return
+    
     try {
-      // Mock API call - replace with actual API
-      // await deleteUserPhoto(adminId)
+      await deletePhotoMutation.mutateAsync(profile.id)
       
       toast.success('Photo deleted successfully!')
-      // Refresh admin data to remove photo
-    } catch (error) {
+      // Profile will be automatically refreshed by the mutation's onSuccess callback
+    } catch (err) {
       toast.error('Failed to delete photo')
+      console.error('Photo delete error:', err)
     }
   }
 
-  return (
-    <div className="space-y-6">
-      {/* Profile Header/Hero Section */}
-      <Card className="bg-gradient-to-r from-blue-600 to-purple-600 text-white">
-        <Card.Content className="p-6 sm:p-8">
-          <div className="flex flex-col sm:flex-row items-center sm:items-start space-y-4 sm:space-y-0 sm:space-x-6">
-            {/* Profile Photo */}
-            <div className="relative">
-              <div className="w-24 h-24 sm:w-32 sm:h-32 rounded-full bg-white/20 backdrop-blur-sm border-4 border-white/30 flex items-center justify-center overflow-hidden shadow-lg">
-                {photoPreview ? (
-                  <img 
-                    src={photoPreview} 
-                    alt="Profile preview" 
-                    className="w-full h-full object-cover"
-                  />
-                ) : adminData.user.photo_path ? (
-                  <img 
-                    src={`/uploads/${adminData.user.photo_path}`} 
-                    alt="Profile" 
-                    className="w-full h-full object-cover"
-                  />
-                ) : (
-                  <Camera className="h-8 w-8 sm:h-12 sm:w-12 text-white/70" />
-                )}
+  const cancelPhotoSelection = () => {
+    setSelectedPhoto(null)
+    setPhotoPreview(null)
+  }
+
+  if (isLoading) {
+    return (
+      <div className="flex flex-col justify-center items-center min-h-[60vh]">
+        <div className="relative">
+          <div className="animate-spin rounded-full h-16 w-16 border-4 border-gray-200 border-t-blue-600"></div>
+          <Shield className="h-6 w-6 text-blue-600 absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2" />
+        </div>
+        <p className="mt-4 text-gray-600 font-medium">Loading profile...</p>
+      </div>
+    )
+  }
+
+  if (error) {
+    return (
+      <div className="flex items-center justify-center min-h-[60vh]">
+        <div className="max-w-md w-full mx-4">
+          <Card className="border-red-200 bg-red-50">
+            <Card.Content className="p-8 text-center">
+              <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                <X className="h-8 w-8 text-red-600" />
               </div>
-              {/* Photo Upload Controls */}
-              <div className="absolute -bottom-2 -right-2 flex space-x-1">
-                <input
-                  type="file"
-                  accept="image/*"
-                  onChange={handlePhotoChange}
-                  className="hidden"
-                  id="photo-upload"
-                />
-                <label htmlFor="photo-upload">
-                  <Button 
-                    size="sm" 
-                    className="h-8 w-8 p-0 rounded-full bg-white text-blue-600 hover:bg-blue-50 shadow-md"
-                    asChild
-                  >
-                    <span className="cursor-pointer">
-                      <Camera className="h-4 w-4" />
-                    </span>
-                  </Button>
-                </label>
-                {adminData.user.photo_path && !selectedPhoto && (
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    onClick={handlePhotoDelete}
-                    className="h-8 w-8 p-0 rounded-full bg-white text-red-600 hover:bg-red-50 shadow-md border-red-200"
-                  >
-                    <X className="h-4 w-4" />
-                  </Button>
-                )}
-                {selectedPhoto && (
-                  <>
-                    <Button
-                      size="sm"
-                      onClick={handlePhotoUpload}
-                      className="h-8 w-8 p-0 rounded-full bg-green-500 text-white hover:bg-green-600 shadow-md"
-                    >
-                      <Plus className="h-4 w-4" />
-                    </Button>
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={() => {
-                        setSelectedPhoto(null)
-                        setPhotoPreview(null)
-                      }}
-                      className="h-8 w-8 p-0 rounded-full bg-white text-gray-600 hover:bg-gray-50 shadow-md"
-                    >
-                      <X className="h-4 w-4" />
-                    </Button>
-                  </>
-                )}
+              <h3 className="text-xl font-semibold text-gray-900 mb-2">Failed to Load Profile</h3>
+              <p className="text-gray-600 mb-6">
+                We couldn't load your profile information. Please try refreshing the page.
+              </p>
+              <Button onClick={() => window.location.reload()} className="w-full bg-red-600 hover:bg-red-700">
+                Retry
+              </Button>
+            </Card.Content>
+          </Card>
+        </div>
+      </div>
+    )
+  }
+
+  if (!profile) {
+    return null
+  }
+
+  const hasPhoto = profile.photo_path || photoPreview
+  const displayPhoto = photoPreview || (profile.photo_path ? `/uploads/${profile.photo_path}` : null)
+
+  return (
+    <div className="space-y-6 pb-6">
+      {/* Profile Header with Cover */}
+      <Card className="overflow-hidden shadow-lg">
+        {/* Cover Image */}
+        <div className="h-32 sm:h-40 bg-gradient-to-br from-blue-600 via-indigo-600 to-purple-600 relative">
+          <div className="absolute inset-0 bg-black/10"></div>
+          <div className="absolute inset-0 opacity-20" style={{
+            backgroundImage: 'url("data:image/svg+xml,%3Csvg width="60" height="60" viewBox="0 0 60 60" xmlns="http://www.w3.org/2000/svg"%3E%3Cg fill="none" fill-rule="evenodd"%3E%3Cg fill="%23ffffff" fill-opacity="0.4"%3E%3Cpath d="M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z"/%3E%3C/g%3E%3C/g%3E%3C/svg%3E")'
+          }}></div>
+        </div>
+
+        <Card.Content className="px-4 sm:px-6 pb-6">
+          <div className="flex flex-col sm:flex-row items-center sm:items-end -mt-16 sm:-mt-20">
+            {/* Profile Photo Container */}
+            <div className="relative mb-4 sm:mb-0 sm:mr-6">
+              <div className="relative">
+                <div className="w-28 h-28 sm:w-36 sm:h-36 rounded-full bg-white border-4 border-white shadow-xl overflow-hidden">
+                  {displayPhoto ? (
+                    <img 
+                      src={displayPhoto} 
+                      alt="Profile" 
+                      className="w-full h-full object-cover"
+                    />
+                  ) : (
+                    <div className="w-full h-full bg-gradient-to-br from-blue-100 to-indigo-100 flex items-center justify-center">
+                      <Shield className="h-12 w-12 sm:h-16 sm:w-16 text-blue-600" />
+                    </div>
+                  )}
+                </div>
+
+                {/* Photo Upload Controls */}
+                <div className="absolute -bottom-1 -right-1 flex gap-1">
+                  <input
+                    type="file"
+                    accept="image/*"
+                    onChange={handlePhotoChange}
+                    className="hidden"
+                    id="photo-upload"
+                    disabled={isUploadingPhoto}
+                  />
+                  
+                  {!selectedPhoto ? (
+                    <>
+                      <label htmlFor="photo-upload">
+                        <div className="cursor-pointer h-10 w-10 rounded-full bg-blue-600 hover:bg-blue-700 text-white shadow-lg flex items-center justify-center transition-all duration-200 hover:scale-110">
+                          <Camera className="h-5 w-5" />
+                        </div>
+                      </label>
+                      {profile.photo_path && (
+                        <button
+                          onClick={handlePhotoDelete}
+                          className="h-10 w-10 rounded-full bg-red-600 hover:bg-red-700 text-white shadow-lg flex items-center justify-center transition-all duration-200 hover:scale-110"
+                        >
+                          <X className="h-5 w-5" />
+                        </button>
+                      )}
+                    </>
+                  ) : (
+                    <>
+                      <button
+                        onClick={handlePhotoUpload}
+                        disabled={isUploadingPhoto}
+                        className="h-10 w-10 rounded-full bg-green-600 hover:bg-green-700 text-white shadow-lg flex items-center justify-center transition-all duration-200 hover:scale-110 disabled:opacity-50 disabled:cursor-not-allowed"
+                      >
+                        {isUploadingPhoto ? (
+                          <div className="animate-spin rounded-full h-5 w-5 border-2 border-white border-t-transparent"></div>
+                        ) : (
+                          <Check className="h-5 w-5" />
+                        )}
+                      </button>
+                      <button
+                        onClick={cancelPhotoSelection}
+                        disabled={isUploadingPhoto}
+                        className="h-10 w-10 rounded-full bg-gray-600 hover:bg-gray-700 text-white shadow-lg flex items-center justify-center transition-all duration-200 hover:scale-110 disabled:opacity-50 disabled:cursor-not-allowed"
+                      >
+                        <X className="h-5 w-5" />
+                      </button>
+                    </>
+                  )}
+                </div>
               </div>
             </div>
 
             {/* Profile Info */}
             <div className="flex-1 text-center sm:text-left">
-              <h1 className="text-2xl sm:text-3xl font-bold mb-2">{adminData.user.full_name}</h1>
-              <p className="text-blue-100 mb-1">{adminData.position}</p>
-              <p className="text-blue-100 text-sm">{adminData.department} • Employee ID: {adminData.employee_id}</p>
+              <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-1">
+                {profile.full_name || 'Administrator'}
+              </h1>
+              <div className="flex flex-wrap items-center justify-center sm:justify-start gap-2 mb-3">
+                <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-blue-100 text-blue-800">
+                  <Shield className="h-3.5 w-3.5 mr-1.5" />
+                  Administrator
+                </span>
+                <span className="text-gray-600 font-medium">@{profile.username}</span>
+              </div>
               
               {/* Quick Stats */}
               <div className="flex flex-wrap justify-center sm:justify-start gap-4 mt-4">
-                <div className="bg-white/10 backdrop-blur-sm rounded-lg px-3 py-2">
-                  <div className="text-xs text-blue-100">Experience</div>
-                  <div className="text-lg font-semibold">{adminData.experience_years} years</div>
+                <div className="bg-gradient-to-br from-blue-50 to-blue-100 rounded-xl px-4 py-2.5 border border-blue-200">
+                  <div className="text-xs font-medium text-blue-600 mb-0.5">Join Date</div>
+                  <div className="text-sm font-bold text-blue-900">
+                    {new Date(profile.created_at).toLocaleDateString('en-US', { 
+                      month: 'short', 
+                      day: 'numeric', 
+                      year: 'numeric' 
+                    })}
+                  </div>
                 </div>
-                <div className="bg-white/10 backdrop-blur-sm rounded-lg px-3 py-2">
-                  <div className="text-xs text-blue-100">Join Date</div>
-                  <div className="text-sm font-semibold">{new Date(adminData.joined_date).toLocaleDateString()}</div>
+                <div className="bg-gradient-to-br from-indigo-50 to-indigo-100 rounded-xl px-4 py-2.5 border border-indigo-200">
+                  <div className="text-xs font-medium text-indigo-600 mb-0.5">Status</div>
+                  <div className="text-sm font-bold text-indigo-900 flex items-center">
+                    <span className="w-2 h-2 bg-green-500 rounded-full mr-2 animate-pulse"></span>
+                    {profile.is_active ? 'Active' : 'Inactive'}
+                  </div>
+                </div>
+                <div className="bg-gradient-to-br from-purple-50 to-purple-100 rounded-xl px-4 py-2.5 border border-purple-200">
+                  <div className="text-xs font-medium text-purple-600 mb-0.5">Role</div>
+                  <div className="text-sm font-bold text-purple-900 capitalize">
+                    {profile.role}
+                  </div>
                 </div>
               </div>
             </div>
@@ -242,309 +256,157 @@ const AdminProfile = () => {
         </Card.Content>
       </Card>
 
-      {/* Photo Upload Instructions */}
-      {(selectedPhoto || !adminData.user.photo_path) && (
-        <Card className="border-dashed border-2 border-gray-300 bg-gray-50">
-          <Card.Content className="p-4 text-center">
-            <Camera className="h-8 w-8 text-gray-400 mx-auto mb-2" />
-            <p className="text-sm text-gray-600">
-              {selectedPhoto ? 'Click the checkmark to upload your photo' : 'Upload a professional profile photo to personalize your account'}
-            </p>
-            <p className="text-xs text-gray-500 mt-1">
-              Max size: 5MB • Supported formats: JPEG, PNG, GIF
-            </p>
+      {/* Photo Upload Hint */}
+      {selectedPhoto && (
+        <Card className="border-green-200 bg-green-50">
+          <Card.Content className="p-4">
+            <div className="flex items-start gap-3">
+              <div className="flex-shrink-0 w-10 h-10 bg-green-100 rounded-full flex items-center justify-center">
+                <Upload className="h-5 w-5 text-green-600" />
+              </div>
+              <div className="flex-1">
+                <h4 className="text-sm font-semibold text-green-900 mb-1">New Photo Selected</h4>
+                <p className="text-sm text-green-700">
+                  Click the checkmark button to upload your new profile photo, or click the X to cancel.
+                </p>
+              </div>
+            </div>
           </Card.Content>
         </Card>
       )}
 
       {/* Main Content Grid */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Personal & Professional Information */}
-        <div className="lg:col-span-2 space-y-6">
-          {/* Personal Information */}
-          <Card>
-            <Card.Header className="pb-3">
-              <Card.Title className="text-lg flex items-center gap-2">
-                <User className="h-5 w-5 text-blue-600" />
-                Personal Information
-              </Card.Title>
-            </Card.Header>
-            <Card.Content className="space-y-4">
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div className="bg-gray-50 rounded-lg p-4">
-                  <label className="text-xs font-medium text-gray-500 uppercase tracking-wide">Full Name</label>
-                  <p className="text-gray-900 font-medium mt-1">{adminData.user.full_name}</p>
-                </div>
-                <div className="bg-gray-50 rounded-lg p-4">
-                  <label className="text-xs font-medium text-gray-500 uppercase tracking-wide">Username</label>
-                  <p className="text-gray-900 font-medium mt-1">{adminData.user.username}</p>
-                </div>
-                <div className="bg-gray-50 rounded-lg p-4">
-                  <label className="text-xs font-medium text-gray-500 uppercase tracking-wide">Email</label>
-                  <p className="text-gray-900 font-medium mt-1">{adminData.user.email}</p>
-                </div>
-                <div className="bg-gray-50 rounded-lg p-4">
-                  <label className="text-xs font-medium text-gray-500 uppercase tracking-wide">Phone</label>
-                  <p className="text-gray-900 font-medium mt-1">{adminData.user.phone}</p>
-                </div>
-                <div className="bg-gray-50 rounded-lg p-4">
-                  <label className="text-xs font-medium text-gray-500 uppercase tracking-wide">Date of Birth</label>
-                  <p className="text-gray-900 font-medium mt-1">{new Date(adminData.date_of_birth).toLocaleDateString()}</p>
-                </div>
-                <div className="bg-gray-50 rounded-lg p-4">
-                  <label className="text-xs font-medium text-gray-500 uppercase tracking-wide">Emergency Contact</label>
-                  <p className="text-gray-900 font-medium mt-1">{adminData.emergency_contact}</p>
-                </div>
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* Personal Information */}
+        <Card className="shadow-md hover:shadow-lg transition-shadow duration-200">
+          <Card.Header className="border-b border-gray-100 pb-4">
+            <Card.Title className="text-lg font-semibold flex items-center gap-2">
+              <div className="w-8 h-8 bg-blue-100 rounded-lg flex items-center justify-center">
+                <User className="h-4 w-4 text-blue-600" />
               </div>
-              <div className="bg-gray-50 rounded-lg p-4">
-                <label className="text-xs font-medium text-gray-500 uppercase tracking-wide">Address</label>
-                <p className="text-gray-900 font-medium mt-1">{adminData.address}</p>
-              </div>
-            </Card.Content>
-          </Card>
+              Personal Information
+            </Card.Title>
+          </Card.Header>
+          <Card.Content className="pt-6 space-y-3">
+            <InfoItem 
+              icon={User} 
+              label="Full Name" 
+              value={profile.full_name || 'N/A'} 
+            />
+            <InfoItem 
+              icon={Mail} 
+              label="Email Address" 
+              value={profile.email || 'N/A'} 
+            />
+            <InfoItem 
+              icon={Phone} 
+              label="Phone Number" 
+              value={profile.phone || 'N/A'} 
+            />
+            <InfoItem 
+              icon={Shield} 
+              label="Username" 
+              value={profile.username} 
+            />
+          </Card.Content>
+        </Card>
 
-          {/* Professional Information */}
-          <Card>
-            <Card.Header className="pb-3">
-              <Card.Title className="text-lg flex items-center gap-2">
-                <GraduationCap className="h-5 w-5 text-blue-600" />
-                Professional Information
-              </Card.Title>
-            </Card.Header>
-            <Card.Content className="space-y-4">
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div className="bg-gray-50 rounded-lg p-4">
-                  <label className="text-xs font-medium text-gray-500 uppercase tracking-wide">Employee ID</label>
-                  <p className="text-gray-900 font-medium mt-1">{adminData.employee_id}</p>
+        {/* Administrative Information */}
+        <Card className="shadow-md hover:shadow-lg transition-shadow duration-200">
+          <Card.Header className="border-b border-gray-100 pb-4">
+            <Card.Title className="text-lg font-semibold flex items-center gap-2">
+              <div className="w-8 h-8 bg-indigo-100 rounded-lg flex items-center justify-center">
+                <Settings className="h-4 w-4 text-indigo-600" />
+              </div>
+              Administrative Information
+            </Card.Title>
+          </Card.Header>
+          <Card.Content className="pt-6 space-y-3">
+            <InfoItem 
+              icon={Shield} 
+              label="Role" 
+              value={profile.role.charAt(0).toUpperCase() + profile.role.slice(1)} 
+            />
+            <InfoItem 
+              icon={Calendar} 
+              label="Account Created" 
+              value={new Date(profile.created_at).toLocaleDateString('en-US', { 
+                month: 'long', 
+                day: 'numeric', 
+                year: 'numeric' 
+              })} 
+            />
+            <div className="flex items-center justify-between py-3 px-4 bg-gradient-to-r from-green-50 to-emerald-50 rounded-lg border border-green-100">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 bg-green-100 rounded-lg flex items-center justify-center">
+                  <Shield className="h-5 w-5 text-green-600" />
                 </div>
-                <div className="bg-gray-50 rounded-lg p-4">
-                  <label className="text-xs font-medium text-gray-500 uppercase tracking-wide">Position</label>
-                  <p className="text-gray-900 font-medium mt-1">{adminData.position}</p>
-                </div>
-                <div className="bg-gray-50 rounded-lg p-4">
-                  <label className="text-xs font-medium text-gray-500 uppercase tracking-wide">Department</label>
-                  <p className="text-gray-900 font-medium mt-1">{adminData.department}</p>
-                </div>
-                <div className="bg-gray-50 rounded-lg p-4">
-                  <label className="text-xs font-medium text-gray-500 uppercase tracking-wide">Experience</label>
-                  <p className="text-gray-900 font-medium mt-1">{adminData.experience_years} years</p>
-                </div>
-                <div className="bg-gray-50 rounded-lg p-4">
-                  <label className="text-xs font-medium text-gray-500 uppercase tracking-wide">Joining Date</label>
-                  <p className="text-gray-900 font-medium mt-1">{new Date(adminData.joined_date).toLocaleDateString()}</p>
-                </div>
-                <div className="bg-gray-50 rounded-lg p-4">
-                  <label className="text-xs font-medium text-gray-500 uppercase tracking-wide">Last Login</label>
-                  <p className="text-gray-900 font-medium mt-1">{new Date(adminData.last_login).toLocaleString()}</p>
+                <div>
+                  <div className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-0.5">
+                    Account Status
+                  </div>
+                  <div className="font-semibold text-gray-900">
+                    {profile.is_active ? 'Active Administrator' : 'Inactive'}
+                  </div>
                 </div>
               </div>
-            </Card.Content>
-          </Card>
+              <div className={`w-3 h-3 rounded-full animate-pulse ${profile.is_active ? 'bg-green-500' : 'bg-red-500'}`}></div>
+            </div>
+          </Card.Content>
+        </Card>
+
+        {/* Quick Actions */}
+        <Card className="lg:col-span-2 shadow-md hover:shadow-lg transition-shadow duration-200">
+          <Card.Header className="border-b border-gray-100 pb-4">
+            <Card.Title className="text-lg font-semibold">Quick Actions</Card.Title>
+          </Card.Header>
+          <Card.Content className="pt-6">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+              <ActionButton icon={Users} label="Manage Students" color="blue" />
+              <ActionButton icon={GraduationCap} label="Manage Teachers" color="green" />
+              <ActionButton icon={BookOpen} label="Manage Subjects" color="purple" />
+              <ActionButton icon={FileText} label="View Reports" color="orange" />
+            </div>
+          </Card.Content>
+        </Card>
+      </div>
+    </div>
+  )
+}
+
+// Helper Component for Info Items
+function InfoItem({ icon: Icon, label, value }) {
+  return (
+    <div className="flex items-center justify-between py-3 px-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors duration-150">
+      <div className="flex items-center gap-3 flex-1 min-w-0">
+        <div className="flex-shrink-0 w-10 h-10 bg-white rounded-lg flex items-center justify-center shadow-sm">
+          <Icon className="h-5 w-5 text-gray-600" />
         </div>
-
-        {/* Sidebar */}
-        <div className="space-y-6">
-          {/* Quick Actions */}
-          <Card>
-            <Card.Header className="pb-3">
-              <Card.Title className="text-base">Quick Actions</Card.Title>
-            </Card.Header>
-            <Card.Content className="space-y-3">
-              <Button 
-                className="w-full justify-start" 
-                variant="outline"
-                onClick={() => setShowEditModal(true)}
-              >
-                <Plus className="h-4 w-4 mr-2" />
-                Edit Profile
-              </Button>
-              <Button 
-                className="w-full justify-start" 
-                variant="outline"
-                onClick={() => setShowChangePasswordModal(true)}
-              >
-                <Eye className="h-4 w-4 mr-2" />
-                Change Password
-              </Button>
-              <Button 
-                className="w-full justify-start" 
-                variant="outline"
-                onClick={() => navigate('/admin/students')}
-              >
-                <Users className="h-4 w-4 mr-2" />
-                Manage Students
-              </Button>
-              <Button 
-                className="w-full justify-start" 
-                variant="outline"
-                onClick={() => navigate('/admin/teachers')}
-              >
-                <GraduationCap className="h-4 w-4 mr-2" />
-                Manage Teachers
-              </Button>
-            </Card.Content>
-          </Card>
-
-          {/* Admin Permissions */}
-          <Card>
-            <Card.Header className="pb-3">
-              <Card.Title className="text-base">Admin Permissions</Card.Title>
-            </Card.Header>
-            <Card.Content>
-              <div className="flex flex-wrap gap-2">
-                {adminData.permissions.map((permission, index) => (
-                  <span key={index} className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
-                    {permission.replace(/_/g, ' ').toLowerCase()}
-                  </span>
-                ))}
-              </div>
-            </Card.Content>
-          </Card>
-
-          {/* Account Status */}
-          <Card>
-            <Card.Header className="pb-3">
-              <Card.Title className="text-base">Account Status</Card.Title>
-            </Card.Header>
-            <Card.Content>
-              <div className="space-y-3">
-                <div className="flex items-center justify-between">
-                  <span className="text-sm text-gray-600">Status</span>
-                  <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
-                    Active
-                  </span>
-                </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-sm text-gray-600">Role</span>
-                  <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-purple-100 text-purple-800">
-                    Administrator
-                  </span>
-                </div>
-              </div>
-            </Card.Content>
-          </Card>
+        <div className="min-w-0 flex-1">
+          <div className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-0.5">
+            {label}
+          </div>
+          <div className="font-semibold text-gray-900 truncate">{value}</div>
         </div>
       </div>
-
-      {/* Edit Profile Modal */}
-      <Modal 
-        isOpen={showEditModal} 
-        onClose={() => setShowEditModal(false)}
-        title="Edit Admin Profile"
-        className="sm:max-w-2xl"
-      >
-        <form onSubmit={handleUpdateProfile} className="space-y-4">
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <Input
-              label="Full Name"
-              value={profileForm.full_name}
-              onChange={(e) => setProfileForm({ ...profileForm, full_name: e.target.value })}
-              required
-            />
-            <Input
-              label="Username"
-              value={profileForm.username}
-              onChange={(e) => setProfileForm({ ...profileForm, username: e.target.value })}
-              required
-            />
-            <Input
-              label="Email"
-              type="email"
-              value={profileForm.email}
-              onChange={(e) => setProfileForm({ ...profileForm, email: e.target.value })}
-              required
-            />
-            <Input
-              label="Phone"
-              value={profileForm.phone}
-              onChange={(e) => setProfileForm({ ...profileForm, phone: e.target.value })}
-              required
-            />
-            <Input
-              label="Employee ID"
-              value={profileForm.employee_id}
-              onChange={(e) => setProfileForm({ ...profileForm, employee_id: e.target.value })}
-              required
-              readOnly
-            />
-            <Input
-              label="Position"
-              value={profileForm.position}
-              onChange={(e) => setProfileForm({ ...profileForm, position: e.target.value })}
-            />
-            <Input
-              label="Department"
-              value={profileForm.department}
-              onChange={(e) => setProfileForm({ ...profileForm, department: e.target.value })}
-            />
-            <Input
-              label="Date of Birth"
-              type="date"
-              value={profileForm.date_of_birth}
-              onChange={(e) => setProfileForm({ ...profileForm, date_of_birth: e.target.value })}
-            />
-            <Input
-              label="Emergency Contact"
-              value={profileForm.emergency_contact}
-              onChange={(e) => setProfileForm({ ...profileForm, emergency_contact: e.target.value })}
-            />
-          </div>
-          <Input
-            label="Address"
-            value={profileForm.address}
-            onChange={(e) => setProfileForm({ ...profileForm, address: e.target.value })}
-          />
-          <div className="flex flex-col-reverse sm:flex-row justify-end space-y-2 space-y-reverse sm:space-y-0 sm:space-x-3">
-            <Button type="button" variant="outline" onClick={() => setShowEditModal(false)}>
-              Cancel
-            </Button>
-            <Button type="submit">
-              Update Profile
-            </Button>
-          </div>
-        </form>
-      </Modal>
-
-      {/* Change Password Modal */}
-      <Modal 
-        isOpen={showChangePasswordModal} 
-        onClose={() => setShowChangePasswordModal(false)}
-        title="Change Password"
-        className="sm:max-w-md"
-      >
-        <form onSubmit={handleChangePassword} className="space-y-4">
-          <Input
-            label="Current Password"
-            type="password"
-            value={passwordForm.current_password}
-            onChange={(e) => setPasswordForm({ ...passwordForm, current_password: e.target.value })}
-            required
-          />
-          <Input
-            label="New Password"
-            type="password"
-            value={passwordForm.new_password}
-            onChange={(e) => setPasswordForm({ ...passwordForm, new_password: e.target.value })}
-            required
-          />
-          <Input
-            label="Confirm New Password"
-            type="password"
-            value={passwordForm.confirm_password}
-            onChange={(e) => setPasswordForm({ ...passwordForm, confirm_password: e.target.value })}
-            required
-          />
-          <div className="flex flex-col-reverse sm:flex-row justify-end space-y-2 space-y-reverse sm:space-y-0 sm:space-x-3">
-            <Button type="button" variant="outline" onClick={() => setShowChangePasswordModal(false)}>
-              Cancel
-            </Button>
-            <Button type="submit">
-              Change Password
-            </Button>
-          </div>
-        </form>
-      </Modal>
     </div>
+  )
+}
+
+// Helper Component for Action Buttons
+function ActionButton({ icon: Icon, label, color }) {
+  const colorClasses = {
+    blue: 'bg-blue-50 hover:bg-blue-100 text-blue-700 border-blue-200',
+    green: 'bg-green-50 hover:bg-green-100 text-green-700 border-green-200',
+    purple: 'bg-purple-50 hover:bg-purple-100 text-purple-700 border-purple-200',
+    orange: 'bg-orange-50 hover:bg-orange-100 text-orange-700 border-orange-200'
+  }
+
+  return (
+    <button className={`flex items-center justify-start gap-3 px-4 py-3 rounded-lg border-2 transition-all duration-200 hover:scale-105 hover:shadow-md ${colorClasses[color]}`}>
+      <Icon className="h-5 w-5 flex-shrink-0" />
+      <span className="font-medium">{label}</span>
+    </button>
   )
 }
 

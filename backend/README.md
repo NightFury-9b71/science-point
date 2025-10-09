@@ -25,17 +25,50 @@ A comprehensive FastAPI-based management system for coaching centers with minima
 ## Installation
 
 1. Clone or create the project directory
-2. Install dependencies:
+2. Create environment configuration:
+```bash
+# Copy the environment template
+cp .env.example .env
+
+# Edit the .env file with your configuration
+nano .env
+```
+
+3. Install dependencies:
 ```bash
 pip install -r requirements.txt
 ```
 
-3. Run the application:
+4. Run the application:
 ```bash
 python main.py
 ```
 
 The API will be available at `http://localhost:8000`
+
+## Environment Configuration
+
+The application uses environment variables for configuration. Copy `.env.example` to `.env` and configure the following variables:
+
+### Required Variables
+- `SECRET_KEY`: JWT secret key for authentication (change in production)
+- `DATABASE_URL`: Database connection string (SQLite by default)
+
+### Optional Variables
+- `APP_ENV`: Application environment (development/staging/production)
+- `HOST`: Server host (default: 0.0.0.0)
+- `PORT`: Server port (default: 8000)
+- `CORS_ORIGINS`: Allowed CORS origins (comma-separated)
+- `MAX_UPLOAD_SIZE`: Maximum file upload size in bytes (default: 5MB)
+- `ALLOWED_IMAGE_TYPES`: Allowed image MIME types for uploads
+- `LOG_LEVEL`: Logging level (DEBUG, INFO, WARNING, ERROR, CRITICAL)
+- `SQL_ECHO`: Enable SQL query logging (default: False)
+- `DEBUG`: Enable debug mode (default: True for development)
+
+### Security Notes
+- Never commit `.env` files to version control
+- Use strong, unique secret keys in production
+- Rotate keys regularly for security
 
 ## API Documentation
 

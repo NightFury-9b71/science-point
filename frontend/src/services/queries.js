@@ -123,6 +123,14 @@ export const useStudyMaterials = (subjectId) => {
 }
 
 // Teacher Hooks
+export const useTeacherProfile = (teacherId) => {
+  return useQuery({
+    queryKey: ['teacherProfile', teacherId],
+    queryFn: () => teacherAPI.getMyProfile(teacherId).then(res => res.data),
+    enabled: !!teacherId,
+  })
+}
+
 export const useTeacherClasses = (teacherId) => {
   return useQuery({
     queryKey: ['teacherClasses', teacherId],
@@ -770,5 +778,89 @@ export const useDeleteUserPhoto = () => {
       queryClient.invalidateQueries({ queryKey: ['teacherClasses'] })
       queryClient.invalidateQueries({ queryKey: ['teacherStudents'] })
     },
+  })
+}
+
+// Student-specific Photo Upload/Delete Mutations
+export const useStudentUploadPhoto = () => {
+  const queryClient = useQueryClient()
+  
+  return useMutation({
+    mutationFn: ({ userId, formData }) => studentAPI.uploadUserPhoto(userId, formData),
+    onSuccess: () => {
+      // Invalidate student profile to refresh photo
+      queryClient.invalidateQueries({ queryKey: ['studentProfile'] })
+    },
+  })
+}
+
+export const useStudentDeletePhoto = () => {
+  const queryClient = useQueryClient()
+  
+  return useMutation({
+    mutationFn: (userId) => studentAPI.deleteUserPhoto(userId),
+    onSuccess: () => {
+      // Invalidate student profile to refresh photo
+      queryClient.invalidateQueries({ queryKey: ['studentProfile'] })
+    },
+  })
+}
+
+// Teacher-specific Photo Upload/Delete Mutations
+export const useTeacherUploadPhoto = () => {
+  const queryClient = useQueryClient()
+  
+  return useMutation({
+    mutationFn: ({ userId, formData }) => teacherAPI.uploadUserPhoto(userId, formData),
+    onSuccess: () => {
+      // Invalidate teacher profile to refresh photo
+      queryClient.invalidateQueries({ queryKey: ['teacherProfile'] })
+    },
+  })
+}
+
+export const useTeacherDeletePhoto = () => {
+  const queryClient = useQueryClient()
+  
+  return useMutation({
+    mutationFn: (userId) => teacherAPI.deleteUserPhoto(userId),
+    onSuccess: () => {
+      // Invalidate teacher profile to refresh photo
+      queryClient.invalidateQueries({ queryKey: ['teacherProfile'] })
+    },
+  })
+}
+
+// Admin-specific Photo Upload/Delete Mutations
+export const useAdminUploadPhoto = () => {
+  const queryClient = useQueryClient()
+  
+  return useMutation({
+    mutationFn: ({ userId, formData }) => adminAPI.uploadUserPhoto(userId, formData),
+    onSuccess: () => {
+      // Invalidate admin profile to refresh photo
+      queryClient.invalidateQueries({ queryKey: ['adminProfile'] })
+    },
+  })
+}
+
+export const useAdminDeletePhoto = () => {
+  const queryClient = useQueryClient()
+  
+  return useMutation({
+    mutationFn: (userId) => adminAPI.deleteUserPhoto(userId),
+    onSuccess: () => {
+      // Invalidate admin profile to refresh photo
+      queryClient.invalidateQueries({ queryKey: ['adminProfile'] })
+    },
+  })
+}
+
+// Admin Profile Hook
+export const useAdminProfile = (adminId) => {
+  return useQuery({
+    queryKey: ['adminProfile', adminId],
+    queryFn: () => adminAPI.getMyProfile(adminId).then(res => res.data),
+    enabled: !!adminId,
   })
 }

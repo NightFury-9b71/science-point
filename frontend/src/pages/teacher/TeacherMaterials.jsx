@@ -27,7 +27,8 @@ const TeacherMaterials = () => {
   const [editForm, setEditForm] = useState({
     title: '',
     description: '',
-    is_public: true
+    is_public: true,
+    file: null
   })
 
   // Show loading while auth is being checked
@@ -104,7 +105,8 @@ const TeacherMaterials = () => {
     setEditForm({
       title: material.title,
       description: material.description || '',
-      is_public: material.is_public
+      is_public: material.is_public,
+      file: null
     })
     setShowEditForm(true)
   }
@@ -117,11 +119,20 @@ const TeacherMaterials = () => {
       return
     }
 
+    const formData = new FormData()
+    formData.append('title', editForm.title)
+    formData.append('description', editForm.description || '')
+    formData.append('is_public', editForm.is_public)
+    
+    if (editForm.file) {
+      formData.append('file', editForm.file)
+    }
+
     try {
       await updateMutation.mutateAsync({
         teacherId,
         materialId: editingMaterial.id,
-        materialData: editForm
+        materialData: formData
       })
       setShowEditForm(false)
       setEditingMaterial(null)
@@ -438,6 +449,29 @@ const TeacherMaterials = () => {
                   rows={3}
                   className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                 />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Replace File (Optional)
+                </label>
+                <input
+                  key={showEditForm ? 'edit-file-input' : 'edit-file-input-reset'}
+                  type="file"
+                  accept=".pdf,.jpg,.jpeg,.png,.doc,.docx,.txt"
+                  onChange={(e) => setEditForm(prev => ({ ...prev, file: e.target.files[0] }))}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+                {editForm.file && (
+                  <p className="text-xs text-gray-600 mt-1">
+                    New file selected: {editForm.file.name}
+                  </p>
+                )}
+                {!editForm.file && (
+                  <p className="text-xs text-gray-500 mt-1">
+                    Leave empty to keep current file. Supported formats: PDF, Images (JPG, PNG), Documents (DOC, DOCX, TXT)
+                  </p>
+                )}
               </div>
 
               <div className="flex items-center">

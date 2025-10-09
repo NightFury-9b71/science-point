@@ -35,7 +35,7 @@ from mock_data import *
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
 # JWT settings
-SECRET_KEY = "your-secret-key-here-change-in-production"  # In production, use environment variable
+SECRET_KEY = os.getenv("SECRET_KEY", "your-secret-key-here-change-in-production")
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 30
 
@@ -2230,6 +2230,30 @@ def get_student_notices(
     return notices
 
 # Teacher-specific endpoints
+@app.get("/teacher/{teacher_id}/profile", response_model=TeacherRead)
+def get_teacher_profile(
+    teacher_id: int, 
+    session: Session = Depends(get_session),
+    current_user: User = Depends(require_teacher_or_admin)
+):
+    """Get teacher profile with user information"""
+    # Validate access - teachers can only see their own profile, admins can see any
+    if current_user.role == UserRole.TEACHER:
+        teacher = session.get(Teacher, teacher_id)
+        if not teacher or teacher.user_id != current_user.id:
+            raise HTTPException(status_code=403, detail="Access denied. You can only view your own profile.")
+    
+    teacher = session.get(Teacher, teacher_id)
+    if not teacher:
+        raise HTTPException(status_code=404, detail="Teacher not found")
+    
+    # Load user relationship
+    if teacher.user_id:
+        user = session.get(User, teacher.user_id)
+        teacher.user = user
+    
+    return teacher
+
 @app.get("/teacher/{teacher_id}/exams", response_model=List[ExamRead])
 def get_teacher_exams(teacher_id: int, session: Session = Depends(get_session)):
     """Get all exams for subjects taught by a specific teacher"""
@@ -2366,7 +2390,9 @@ def upload_teacher_study_material(
         raise HTTPException(status_code=500, detail=f"Failed to save file: {str(e)}")
     
     # Copy file to frontend public folder for direct access
-    frontend_public_dir = "../frontend/public/uploads/study_materials"
+    # Use absolute path to avoid issues with working directory
+    script_dir = os.path.dirname(os.path.abspath(__file__))
+    frontend_public_dir = os.path.join(script_dir, "../frontend/public/uploads/study_materials")
     os.makedirs(frontend_public_dir, exist_ok=True)
     frontend_file_path = os.path.join(frontend_public_dir, unique_filename)
     
@@ -2398,7 +2424,10 @@ def upload_teacher_study_material(
 def update_teacher_study_material(
     teacher_id: int,
     material_id: int,
-    material_update: StudyMaterialUpdate,
+    title: Optional[str] = Form(None),
+    description: Optional[str] = Form(None),
+    is_public: Optional[bool] = Form(None),
+    file: Optional[UploadFile] = File(None),
     session: Session = Depends(get_session),
     current_user: User = Depends(require_teacher)
 ):
@@ -2417,10 +2446,71 @@ def update_teacher_study_material(
     if material.created_by_id != current_user.id:
         raise HTTPException(status_code=403, detail="Access denied. You can only update your own materials.")
     
-    # Update the material
-    update_data = material_update.dict(exclude_unset=True)
-    for field, value in update_data.items():
-        setattr(material, field, value)
+    # Update metadata fields if provided
+    if title is not None:
+        material.title = title
+    if description is not None:
+        material.description = description
+    if is_public is not None:
+        material.is_public = is_public
+    
+    # Handle file replacement if a new file is provided
+    if file:
+        # Delete old file if it exists
+        if material.file_path:
+            # Delete from backend uploads folder
+            backend_file_path = os.path.join("uploads", material.file_path)
+            if os.path.exists(backend_file_path):
+                try:
+                    os.remove(backend_file_path)
+                except Exception as e:
+                    print(f"Warning: Failed to delete old file from backend: {e}")
+            
+            # Delete from frontend public folder
+            script_dir = os.path.dirname(os.path.abspath(__file__))
+            frontend_file_path = os.path.join(script_dir, "../frontend/public/uploads", material.file_path)
+            if os.path.exists(frontend_file_path):
+                try:
+                    os.remove(frontend_file_path)
+                except Exception as e:
+                    print(f"Warning: Failed to delete old file from frontend: {e}")
+        
+        # Save new file
+        upload_dir = "uploads/study_materials"
+        os.makedirs(upload_dir, exist_ok=True)
+        
+        # Generate unique filename
+        file_extension = os.path.splitext(file.filename)[1]
+        unique_filename = f"{datetime.utcnow().strftime('%Y%m%d_%H%M%S')}_{teacher_id}_{material.subject_id}{file_extension}"
+        file_path = os.path.join(upload_dir, unique_filename)
+        
+        # Save the file
+        try:
+            with open(file_path, "wb") as buffer:
+                shutil.copyfileobj(file.file, buffer)
+            
+            # Get file size
+            file_size = os.path.getsize(file_path)
+        except Exception as e:
+            raise HTTPException(status_code=500, detail=f"Failed to save new file: {str(e)}")
+        
+        # Copy file to frontend public folder for direct access
+        # Use absolute path to avoid issues with working directory
+        script_dir = os.path.dirname(os.path.abspath(__file__))
+        frontend_public_dir = os.path.join(script_dir, "../frontend/public/uploads/study_materials")
+        os.makedirs(frontend_public_dir, exist_ok=True)
+        frontend_file_path = os.path.join(frontend_public_dir, unique_filename)
+        
+        try:
+            shutil.copy2(file_path, frontend_file_path)
+        except Exception as e:
+            print(f"Warning: Failed to copy file to frontend public folder: {e}")
+        
+        # Update database record with new file info
+        relative_file_path = f"study_materials/{unique_filename}"
+        material.file_path = relative_file_path
+        material.file_type = file.content_type
+        material.file_size = file_size
     
     session.add(material)
     session.commit()
@@ -2461,7 +2551,8 @@ def delete_teacher_study_material(
                 print(f"Warning: Failed to delete file from backend: {e}")
         
         # Delete from frontend public folder
-        frontend_file_path = os.path.join("../frontend/public/uploads", material.file_path)
+        script_dir = os.path.dirname(os.path.abspath(__file__))
+        frontend_file_path = os.path.join(script_dir, "../frontend/public/uploads", material.file_path)
         if os.path.exists(frontend_file_path):
             try:
                 os.remove(frontend_file_path)
@@ -2473,6 +2564,25 @@ def delete_teacher_study_material(
     session.commit()
     
     return {"message": "Study material deleted successfully"}
+
+# Admin-specific endpoints
+@app.get("/admin/{admin_id}/profile", response_model=UserRead)
+def get_admin_profile(
+    admin_id: int, 
+    session: Session = Depends(get_session),
+    current_user: User = Depends(require_admin)
+):
+    """Get admin profile information"""
+    # Validate access - admins can only see their own profile
+    if current_user.id != admin_id:
+        raise HTTPException(status_code=403, detail="Access denied. You can only view your own profile.")
+    
+    # Get the admin user
+    admin = session.get(User, admin_id)
+    if not admin or admin.role != UserRole.ADMIN:
+        raise HTTPException(status_code=404, detail="Admin not found")
+    
+    return admin
 
 if __name__ == "__main__":
     uvicorn.run("main:app", host="0.0.0.0", port=8000, reload=True)
