@@ -1143,7 +1143,23 @@ def create_exam_result(result: ExamResultCreate, session: Session = Depends(get_
             detail="Marks obtained cannot exceed maximum marks"
         )
     
-    db_result = ExamResult(**result.dict())
+    # Auto-calculate grade based on percentage if not provided
+    grade = getattr(result, 'grade', None)
+    if grade is None:
+        percentage = (result.marks_obtained / exam.max_marks) * 100
+        if percentage >= 90:
+            grade = "A+"
+        elif percentage >= 80:
+            grade = "A"
+        elif percentage >= 70:
+            grade = "B+"
+        else:
+            grade = "B"
+    
+    db_result = ExamResult(
+        **result.dict(),
+        grade=grade
+    )
     session.add(db_result)
     session.commit()
     session.refresh(db_result)
@@ -1179,6 +1195,18 @@ def update_exam_result(result_id: int, result_update: ExamResultUpdate, session:
                 status_code=400,
                 detail="Marks obtained cannot exceed maximum marks"
             )
+        
+        # Auto-calculate grade based on new marks if grade not explicitly provided
+        if result_update.grade is None:
+            percentage = (result_update.marks_obtained / exam.max_marks) * 100
+            if percentage >= 90:
+                result_update.grade = "A+"
+            elif percentage >= 80:
+                result_update.grade = "A"
+            elif percentage >= 70:
+                result_update.grade = "B+"
+            else:
+                result_update.grade = "B"
     
     # Update the result
     result_data = result_update.dict(exclude_unset=True)
