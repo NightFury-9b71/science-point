@@ -176,20 +176,35 @@ const TeacherStudents = () => {
         {filteredStudents && filteredStudents.length > 0 ? (
           filteredStudents.map((student) => (
           <Card key={student.id} className="p-4">
-            <div className="space-y-2">
-              <div className="flex justify-between items-start">
-                <div>
-                  <h3 className="font-medium text-gray-900">{student.user?.full_name || 'N/A'}</h3>
-                  <p className="text-sm text-gray-600">Roll: {student.roll_number}</p>
-                </div>
-                <Button size="sm" variant="outline" onClick={() => handleViewStudent(student)}>
-                  <Eye className="h-4 w-4" />
-                </Button>
+            <div className="flex items-start space-x-3">
+              <div className="w-12 h-12 rounded-full overflow-hidden bg-gray-200 flex items-center justify-center flex-shrink-0">
+                {student.user?.photo_path ? (
+                  <img 
+                    src={`/uploads/${student.user.photo_path}`} 
+                    alt={`${student.user?.full_name || 'Student'} profile`}
+                    className="w-full h-full object-cover"
+                  />
+                ) : (
+                  <span className="text-gray-600 font-medium">
+                    {(student.user?.full_name || 'S').charAt(0).toUpperCase()}
+                  </span>
+                )}
               </div>
-              <div className="text-xs text-gray-500 space-y-1">
-                <p>Email: {student.user?.email || 'N/A'}</p>
-                <p>Class: {myClasses.find(cls => cls.id === student.class_id)?.name || `Class ${student.class_id}`}</p>
-                <p>Parent: {student.parent_name || 'N/A'}</p>
+              <div className="flex-1 min-w-0">
+                <div className="flex justify-between items-start">
+                  <div className="min-w-0 flex-1">
+                    <h3 className="font-medium text-gray-900 truncate">{student.user?.full_name || 'N/A'}</h3>
+                    <p className="text-sm text-gray-600">Roll: {student.roll_number}</p>
+                  </div>
+                  <Button size="sm" variant="outline" onClick={() => handleViewStudent(student)}>
+                    <Eye className="h-4 w-4" />
+                  </Button>
+                </div>
+                <div className="text-xs text-gray-500 space-y-1 mt-2">
+                  <p>Email: {student.user?.email || 'N/A'}</p>
+                  <p>Class: {myClasses.find(cls => cls.id === student.class_id)?.name || `Class ${student.class_id}`}</p>
+                  <p>Parent: {student.parent_name || 'N/A'}</p>
+                </div>
               </div>
             </div>
           </Card>
@@ -208,6 +223,7 @@ const TeacherStudents = () => {
               <Table>
                 <Table.Header>
                   <Table.Row>
+                    <Table.Head>Photo</Table.Head>
                     <Table.Head>Roll Number</Table.Head>
                     <Table.Head>Full Name</Table.Head>
                     <Table.Head className="hidden md:table-cell">Email</Table.Head>
@@ -219,6 +235,21 @@ const TeacherStudents = () => {
                 <Table.Body>
                   {filteredStudents.map((student) => (
                     <Table.Row key={student.id}>
+                      <Table.Cell>
+                        <div className="w-10 h-10 rounded-full overflow-hidden bg-gray-200 flex items-center justify-center">
+                          {student.user?.photo_path ? (
+                            <img 
+                              src={`/uploads/${student.user.photo_path}`} 
+                              alt={`${student.user?.full_name || 'Student'} profile`}
+                              className="w-full h-full object-cover"
+                            />
+                          ) : (
+                            <span className="text-gray-600 font-medium text-sm">
+                              {(student.user?.full_name || 'S').charAt(0).toUpperCase()}
+                            </span>
+                          )}
+                        </div>
+                      </Table.Cell>
                       <Table.Cell>{student.roll_number}</Table.Cell>
                       <Table.Cell>{student.user?.full_name || 'N/A'}</Table.Cell>
                       <Table.Cell className="hidden md:table-cell">{student.user?.email || 'N/A'}</Table.Cell>

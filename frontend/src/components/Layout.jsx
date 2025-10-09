@@ -234,7 +234,7 @@ const Layout = ({ children }) => {
                   <div className="w-8 h-8 rounded-full overflow-hidden bg-gray-200 flex items-center justify-center">
                     {user?.photo_path ? (
                       <img 
-                        src={`/uploads/${user.photo_path}`} 
+                        src={`/uploads${user.photo_path}`} 
                         alt={`${user?.full_name || 'User'} profile`}
                         className="w-full h-full object-cover"
                       />
@@ -243,9 +243,9 @@ const Layout = ({ children }) => {
                         {(user?.full_name || user?.username || 'U').charAt(0).toUpperCase()}
                       </span>
                     )}
+                    {console.log(user?.photo_path)}
                   </div>
                 </button>
-
                 {userMenuOpen && (
                   <div className="absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg border border-gray-200 py-1 z-50">
                     <div className="px-4 py-2 border-b border-gray-100 sm:hidden">

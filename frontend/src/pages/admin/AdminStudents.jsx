@@ -968,65 +968,102 @@ Please keep these credentials safe and change the password after first login.`
       </Modal>
 
       {/* View Student Modal */}
-      <Modal 
-        isOpen={showViewModal} 
+      <Modal
+        isOpen={showViewModal}
         onClose={() => setShowViewModal(false)}
         title=""
-        className="sm:max-w-2xl"
+        className="sm:max-w-xl"
       >
         {selectedStudent ? (
-          <div className="max-h-[80vh] overflow-y-auto">
-            {/* Header Section */}
-            <div className="bg-gradient-to-r from-blue-600 to-blue-700 text-white p-6 -m-6 mb-6 rounded-t-lg">
-              <div className="flex items-center space-x-4">
-                <div className="bg-white bg-opacity-20 rounded-full p-3">
-                  <Users className="h-8 w-8 text-white" />
+          <div>
+            {/* Compact Header */}
+            <div className="bg-gradient-to-br from-blue-600 via-blue-700 to-indigo-800 text-white p-4 -m-6 mb-3 rounded-t-lg relative overflow-hidden">
+              <div className="relative flex items-center space-x-3">
+                {/* Small Profile Photo */}
+                <div className="flex-shrink-0">
+                  <div className="w-16 h-16 rounded-full overflow-hidden border-2 border-white shadow-lg bg-white">
+                    {selectedStudent.user?.photo_path ? (
+                      <img
+                        src={`/uploads/${selectedStudent.user.photo_path}`}
+                        alt={`${selectedStudent.user?.full_name || 'Student'} profile`}
+                        className="w-full h-full object-cover"
+                      />
+                    ) : (
+                      <div className="w-full h-full bg-gradient-to-br from-gray-200 to-gray-300 flex items-center justify-center">
+                        <span className="text-xl font-bold text-gray-600">
+                          {(selectedStudent.user?.full_name || 'S').charAt(0).toUpperCase()}
+                        </span>
+                      </div>
+                    )}
+                  </div>
                 </div>
-                <div>
-                  <h2 className="text-2xl font-bold">{selectedStudent.user?.full_name || 'Student Details'}</h2>
-                  <p className="text-blue-100">Roll Number: {selectedStudent.roll_number}</p>
+
+                {/* Student Info */}
+                <div className="flex-1 min-w-0">
+                  <h2 className="text-xl font-bold truncate">{selectedStudent.user?.full_name || 'Student Details'}</h2>
+                  <p className="text-sm text-blue-100">Roll: {selectedStudent.roll_number}</p>
+                  <p className="text-sm text-blue-200 truncate">
+                    {classes?.find(cls => cls.id === selectedStudent?.class_id)?.name || `Class ${selectedStudent?.class_id}` || 'N/A'}
+                  </p>
+                  <div className="flex gap-2 mt-2">
+                    <span className="text-xs bg-white/20 px-2 py-1 rounded">Active</span>
+                    <span className="text-xs bg-white/20 px-2 py-1 rounded">#{selectedStudent.id}</span>
+                    {selectedStudent.date_of_birth && (
+                      <span className="text-xs bg-white/20 px-2 py-1 rounded">
+                        {new Date().getFullYear() - new Date(selectedStudent.date_of_birth).getFullYear()} yrs
+                      </span>
+                    )}
+                  </div>
                 </div>
               </div>
             </div>
 
-            {/* Content Sections */}
-            <div className="space-y-6">
-              {/* Basic Information */}
-              <div className="bg-gray-50 rounded-lg p-4">
-                <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
-                  <Users className="h-5 w-5 text-blue-600 mr-2" />
-                  Basic Information
-                </h3>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="space-y-1">
-                    <label className="text-sm font-medium text-gray-500">Full Name</label>
-                    <p className="text-gray-900 font-medium">{selectedStudent.user?.full_name || 'N/A'}</p>
+            {/* Compact Content */}
+            <div className="space-y-3 px-2">
+              {/* Personal Information */}
+              <div className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-lg p-3 border border-blue-100">
+                <div className="flex items-center mb-2">
+                  <Users className="h-4 w-4 text-blue-600 mr-2" />
+                  <h3 className="text-sm font-bold text-gray-800">Personal Info</h3>
+                </div>
+                <div className="grid grid-cols-2 gap-2 text-sm">
+                  <div>
+                    <label className="text-xs text-blue-600 font-semibold">Name</label>
+                    <p className="text-gray-900 font-medium truncate">{selectedStudent.user?.full_name || 'N/A'}</p>
                   </div>
-                  <div className="space-y-1">
-                    <label className="text-sm font-medium text-gray-500">Username</label>
-                    <p className="text-gray-900 font-mono bg-gray-100 px-2 py-1 rounded text-sm">
+                  <div>
+                    <label className="text-xs text-blue-600 font-semibold">Username</label>
+                    <p className="text-gray-900 font-mono text-xs bg-gray-50 px-1 py-0.5 rounded inline-block">
                       {selectedStudent.user?.username || 'N/A'}
                     </p>
                   </div>
-                  <div className="space-y-1">
-                    <label className="text-sm font-medium text-gray-500">Roll Number</label>
-                    <p className="text-gray-900 font-medium">{selectedStudent.roll_number || 'N/A'}</p>
+                  <div>
+                    <label className="text-xs text-blue-600 font-semibold">Roll Number</label>
+                    <p className="text-gray-900 font-bold">{selectedStudent.roll_number || 'N/A'}</p>
                   </div>
-                  <div className="space-y-1">
-                    <label className="text-sm font-medium text-gray-500">Class</label>
-                    <p className="text-gray-900 font-medium">
+                  <div>
+                    <label className="text-xs text-blue-600 font-semibold">Class</label>
+                    <p className="text-gray-900 font-medium truncate">
                       {classes?.find(cls => cls.id === selectedStudent?.class_id)?.name || `Class ${selectedStudent?.class_id}` || 'N/A'}
                     </p>
                   </div>
-                  <div className="space-y-1">
-                    <label className="text-sm font-medium text-gray-500">Date of Birth</label>
-                    <p className="text-gray-900">
-                      {selectedStudent.date_of_birth 
-                        ? new Date(selectedStudent.date_of_birth).toLocaleDateString('en-US', { 
-                            year: 'numeric', 
-                            month: 'long', 
-                            day: 'numeric' 
-                          }) 
+                  <div>
+                    <label className="text-xs text-blue-600 font-semibold">DOB</label>
+                    <p className="text-gray-900 text-xs">
+                      {selectedStudent.date_of_birth
+                        ? new Date(selectedStudent.date_of_birth).toLocaleDateString('en-US', {
+                            year: 'numeric',
+                            month: 'short',
+                            day: 'numeric'
+                          })
+                        : 'N/A'}
+                    </p>
+                  </div>
+                  <div>
+                    <label className="text-xs text-blue-600 font-semibold">Age</label>
+                    <p className="text-gray-900 font-medium">
+                      {selectedStudent.date_of_birth
+                        ? `${new Date().getFullYear() - new Date(selectedStudent.date_of_birth).getFullYear()} yrs`
                         : 'N/A'}
                     </p>
                   </div>
@@ -1034,29 +1071,23 @@ Please keep these credentials safe and change the password after first login.`
               </div>
 
               {/* Contact Information */}
-              <div className="bg-green-50 rounded-lg p-4">
-                <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
-                  <Phone className="h-5 w-5 text-green-600 mr-2" />
-                  Contact Information
-                </h3>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="space-y-1">
-                    <label className="text-sm font-medium text-gray-500">Email Address</label>
-                    <p className="text-gray-900 break-all">{selectedStudent.user?.email || 'N/A'}</p>
+              <div className="bg-gradient-to-r from-green-50 to-emerald-50 rounded-lg p-3 border border-green-100">
+                <div className="flex items-center mb-2">
+                  <Phone className="h-4 w-4 text-green-600 mr-2" />
+                  <h3 className="text-sm font-bold text-gray-800">Contact Info</h3>
+                </div>
+                <div className="grid grid-cols-1 gap-2 text-sm">
+                  <div>
+                    <label className="text-xs text-green-600 font-semibold">Email</label>
+                    <p className="text-gray-900 text-xs break-all">{selectedStudent.user?.email || 'N/A'}</p>
                   </div>
-                  <div className="space-y-1">
-                    <label className="text-sm font-medium text-gray-500">Username</label>
-                    <p className="text-gray-900 font-mono bg-gray-100 px-2 py-1 rounded text-sm">
-                      {selectedStudent.user?.username || 'N/A'}
-                    </p>
+                  <div>
+                    <label className="text-xs text-green-600 font-semibold">Phone</label>
+                    <p className="text-gray-900 font-medium">{selectedStudent.user?.phone || 'N/A'}</p>
                   </div>
-                  <div className="space-y-1">
-                    <label className="text-sm font-medium text-gray-500">Phone Number</label>
-                    <p className="text-gray-900">{selectedStudent.user?.phone || 'N/A'}</p>
-                  </div>
-                  <div className="md:col-span-2 space-y-1">
-                    <label className="text-sm font-medium text-gray-500">Address</label>
-                    <p className="text-gray-900 bg-white p-3 rounded border">
+                  <div>
+                    <label className="text-xs text-green-600 font-semibold">Address</label>
+                    <p className="text-gray-900 text-xs bg-gray-50 p-2 rounded border leading-relaxed">
                       {selectedStudent.address || 'N/A'}
                     </p>
                   </div>
@@ -1064,77 +1095,78 @@ Please keep these credentials safe and change the password after first login.`
               </div>
 
               {/* Parent Information */}
-              <div className="bg-purple-50 rounded-lg p-4">
-                <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
-                  <Users className="h-5 w-5 text-purple-600 mr-2" />
-                  Parent Information
-                </h3>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="space-y-1">
-                    <label className="text-sm font-medium text-gray-500">Parent Name</label>
-                    <p className="text-gray-900 font-medium">{selectedStudent.parent_name || 'N/A'}</p>
+              <div className="bg-gradient-to-r from-purple-50 to-pink-50 rounded-lg p-3 border border-purple-100">
+                <div className="flex items-center mb-2">
+                  <Users className="h-4 w-4 text-purple-600 mr-2" />
+                  <h3 className="text-sm font-bold text-gray-800">Parent Info</h3>
+                </div>
+                <div className="grid grid-cols-2 gap-2 text-sm">
+                  <div>
+                    <label className="text-xs text-purple-600 font-semibold">Parent Name</label>
+                    <p className="text-gray-900 font-medium truncate">{selectedStudent.parent_name || 'N/A'}</p>
                   </div>
-                  <div className="space-y-1">
-                    <label className="text-sm font-medium text-gray-500">Parent Phone</label>
-                    <p className="text-gray-900">{selectedStudent.parent_phone || 'N/A'}</p>
+                  <div>
+                    <label className="text-xs text-purple-600 font-semibold">Parent Phone</label>
+                    <p className="text-gray-900 font-medium">{selectedStudent.parent_phone || 'N/A'}</p>
                   </div>
                 </div>
               </div>
 
               {/* Account Status */}
-              <div className="bg-blue-50 rounded-lg p-4">
-                <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
-                  <CheckCircle className="h-5 w-5 text-blue-600 mr-2" />
-                  Account Status
-                </h3>
+              <div className="bg-gradient-to-r from-indigo-50 to-blue-50 rounded-lg p-3 border border-indigo-100">
+                <div className="flex items-center mb-2">
+                  <CheckCircle className="h-4 w-4 text-indigo-600 mr-2" />
+                  <h3 className="text-sm font-bold text-gray-800">Account Status</h3>
+                </div>
                 <div className="flex items-center justify-between">
                   <div className="flex items-center space-x-2">
-                    <div className="w-3 h-3 bg-green-500 rounded-full"></div>
-                    <span className="text-sm font-medium text-gray-900">Active Account</span>
+                    <div className="w-2 h-2 rounded-full bg-green-500"></div>
+                    <span className="text-sm font-semibold text-gray-900">Active</span>
                   </div>
-                  <div className="text-sm text-gray-600">
-                    Student ID: #{selectedStudent.id}
-                  </div>
+                  <span className="text-xs text-gray-500">#{selectedStudent.id}</span>
                 </div>
               </div>
             </div>
 
-            {/* Action Buttons */}
-            <div className="flex flex-col sm:flex-row gap-3 justify-end pt-6 mt-6 border-t">
+            {/* Compact Action Buttons */}
+            <div className="flex flex-wrap gap-2 justify-end pt-4 mt-4 border-t border-gray-200 px-2">
               <Button
                 variant="outline"
+                size="sm"
                 onClick={() => {
                   setShowViewModal(false)
                   handleEditStudent(selectedStudent)
                 }}
-                className="flex items-center gap-2"
+                className="text-xs"
               >
-                <Edit className="h-4 w-4" />
-                Edit Student
+                <Edit className="h-3 w-3 mr-1" />
+                Edit
               </Button>
               <Button
                 variant="outline"
+                size="sm"
                 onClick={() => {
                   setShowViewModal(false)
                   handleResetPassword(selectedStudent)
                 }}
-                className="flex items-center gap-2 text-orange-600 hover:bg-orange-50"
+                className="text-xs text-orange-600 hover:bg-orange-50"
               >
-                <KeyRound className="h-4 w-4" />
+                <KeyRound className="h-3 w-3 mr-1" />
                 Reset Password
               </Button>
               <Button
+                size="sm"
                 onClick={() => setShowViewModal(false)}
-                className="flex items-center gap-2"
+                className="text-xs bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800"
               >
-                <CheckCircle className="h-4 w-4" />
+                <CheckCircle className="h-3 w-3 mr-1" />
                 Close
               </Button>
             </div>
           </div>
         ) : (
-          <div className="flex justify-center items-center py-8">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+          <div className="flex justify-center items-center py-12">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
           </div>
         )}
       </Modal>

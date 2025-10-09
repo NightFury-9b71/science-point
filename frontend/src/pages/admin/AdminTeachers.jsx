@@ -1,6 +1,6 @@
 import React, { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Plus, Eye, ArrowLeft, Search, KeyRound, CheckCircle, Download, FileText, Copy, AlertCircle } from 'lucide-react'
+import { Plus,Users,Edit, Eye, ArrowLeft, Search, KeyRound, CheckCircle, Download, FileText, Copy, AlertCircle, Briefcase } from 'lucide-react'
 import { toast } from 'sonner'
 import Card from '../../components/Card'
 import Button from '../../components/Button'
@@ -813,105 +813,173 @@ Please keep these credentials secure and share them with the teacher.`
       </Modal>
 
       {/* View Teacher Modal */}
-      <Modal 
-        isOpen={showViewModal} 
+      <Modal
+        isOpen={showViewModal}
         onClose={() => setShowViewModal(false)}
-        title="Teacher Details"
-        className="sm:max-w-2xl"
+        title=""
+        className="sm:max-w-xl"
       >
         {selectedTeacher ? (
-          <div className="overflow-hidden">
-            {/* Header with gradient */}
-            <div className="bg-gradient-to-r from-blue-500 to-purple-600 text-white p-6 -m-6 mb-6">
-              <div className="flex items-center space-x-4">
-                <div className="w-16 h-16 bg-white/20 rounded-full flex items-center justify-center">
-                  <span className="text-2xl font-bold">
-                    {selectedTeacher.user?.full_name?.charAt(0)?.toUpperCase() || 'T'}
-                  </span>
+          <div>
+            {/* Compact Header */}
+            <div className="bg-gradient-to-br from-emerald-600 via-teal-700 to-cyan-800 text-white p-4 -m-6 mb-3 rounded-t-lg relative overflow-hidden">
+              <div className="relative flex items-center space-x-3">
+                {/* Small Profile Photo */}
+                <div className="flex-shrink-0">
+                  <div className="w-16 h-16 rounded-full overflow-hidden border-2 border-white shadow-lg bg-white">
+                    {selectedTeacher.user?.photo_path ? (
+                      <img
+                        src={`/uploads/${selectedTeacher.user.photo_path}`}
+                        alt={`${selectedTeacher.user?.full_name || 'Teacher'} profile`}
+                        className="w-full h-full object-cover"
+                      />
+                    ) : (
+                      <div className="w-full h-full bg-gradient-to-br from-gray-200 to-gray-300 flex items-center justify-center">
+                        <span className="text-xl font-bold text-gray-600">
+                          {(selectedTeacher.user?.full_name || 'T').charAt(0).toUpperCase()}
+                        </span>
+                      </div>
+                    )}
+                  </div>
                 </div>
-                <div>
-                  <h3 className="text-xl font-bold">{selectedTeacher.user?.full_name || 'N/A'}</h3>
-                  <p className="text-blue-100">Employee ID: {selectedTeacher.employee_id}</p>
-                  <p className="text-blue-100">{selectedTeacher.qualification || 'No qualification specified'}</p>
-                </div>
-              </div>
-            </div>
 
-            {/* Teacher Information */}
-            <div className="space-y-6">
-              <div>
-                <h4 className="text-lg font-semibold text-gray-800 mb-3 flex items-center">
-                  <span className="w-2 h-2 bg-blue-500 rounded-full mr-2"></span>
-                  Personal Information
-                </h4>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="flex justify-between py-2 border-b border-gray-100">
-                    <span className="font-medium text-gray-600">Username:</span>
-                    <span className="text-gray-900">{selectedTeacher.user?.username || 'N/A'}</span>
-                  </div>
-                  <div className="flex justify-between py-2 border-b border-gray-100">
-                    <span className="font-medium text-gray-600">Email:</span>
-                    <span className="text-gray-900">{selectedTeacher.user?.email || 'N/A'}</span>
-                  </div>
-                  <div className="flex justify-between py-2 border-b border-gray-100">
-                    <span className="font-medium text-gray-600">Phone:</span>
-                    <span className="text-gray-900">{selectedTeacher.user?.phone || 'N/A'}</span>
-                  </div>
-                  <div className="flex justify-between py-2 border-b border-gray-100">
-                    <span className="font-medium text-gray-600">Status:</span>
-                    <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
-                      selectedTeacher.user?.is_active 
-                        ? 'bg-green-100 text-green-800' 
-                        : 'bg-red-100 text-red-800'
+                {/* Teacher Info */}
+                <div className="flex-1 min-w-0">
+                  <h2 className="text-xl font-bold truncate">{selectedTeacher.user?.full_name || 'Teacher Details'}</h2>
+                  <p className="text-sm text-emerald-100">ID: {selectedTeacher.employee_id}</p>
+                  <p className="text-sm text-emerald-200 truncate">{selectedTeacher.qualification || 'Not specified'}</p>
+                  <div className="flex gap-2 mt-2">
+                    <span className="text-xs bg-white/20 px-2 py-1 rounded">{selectedTeacher.experience_years || 0} yrs</span>
+                    <span className="text-xs bg-white/20 px-2 py-1 rounded">${selectedTeacher.salary || 0}</span>
+                    <span className={`text-xs px-2 py-1 rounded ${
+                      selectedTeacher.user?.is_active ? 'bg-green-500/20 text-green-100' : 'bg-red-500/20 text-red-100'
                     }`}>
                       {selectedTeacher.user?.is_active ? 'Active' : 'Inactive'}
                     </span>
                   </div>
                 </div>
               </div>
+            </div>
 
-              <div>
-                <h4 className="text-lg font-semibold text-gray-800 mb-3 flex items-center">
-                  <span className="w-2 h-2 bg-green-500 rounded-full mr-2"></span>
-                  Professional Information
-                </h4>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="flex justify-between py-2 border-b border-gray-100">
-                    <span className="font-medium text-gray-600">Experience:</span>
-                    <span className="text-gray-900">{selectedTeacher.experience_years || 0} years</span>
+            {/* Compact Content */}
+            <div className="space-y-3 px-2">
+              {/* Personal Information */}
+              <div className="bg-gradient-to-r from-emerald-50 to-teal-50 rounded-lg p-3 border border-emerald-100">
+                <div className="flex items-center mb-2">
+                  <Users className="h-4 w-4 text-emerald-600 mr-2" />
+                  <h3 className="text-sm font-bold text-gray-800">Personal Info</h3>
+                </div>
+                <div className="grid grid-cols-2 gap-2 text-sm">
+                  <div>
+                    <label className="text-xs text-emerald-600 font-semibold">Name</label>
+                    <p className="text-gray-900 font-medium truncate">{selectedTeacher.user?.full_name || 'N/A'}</p>
                   </div>
-                  <div className="flex justify-between py-2 border-b border-gray-100">
-                    <span className="font-medium text-gray-600">Salary:</span>
-                    <span className="text-gray-900">${selectedTeacher.salary || 0}</span>
+                  <div>
+                    <label className="text-xs text-emerald-600 font-semibold">Username</label>
+                    <p className="text-gray-900 font-mono text-xs bg-gray-50 px-1 py-0.5 rounded inline-block">
+                      {selectedTeacher.user?.username || 'N/A'}
+                    </p>
                   </div>
-                  <div className="flex justify-between py-2 border-b border-gray-100">
-                    <span className="font-medium text-gray-600">Joining Date:</span>
-                    <span className="text-gray-900">
-                      {selectedTeacher.joining_date 
-                        ? new Date(selectedTeacher.joining_date).toLocaleDateString() 
-                        : 'N/A'
-                      }
+                  <div>
+                    <label className="text-xs text-emerald-600 font-semibold">Employee ID</label>
+                    <p className="text-gray-900 font-bold">{selectedTeacher.employee_id || 'N/A'}</p>
+                  </div>
+                  <div>
+                    <label className="text-xs text-emerald-600 font-semibold">Phone</label>
+                    <p className="text-gray-900 truncate">{selectedTeacher.user?.phone || 'N/A'}</p>
+                  </div>
+                  <div className="col-span-2">
+                    <label className="text-xs text-emerald-600 font-semibold">Email</label>
+                    <p className="text-gray-900 text-xs break-all">{selectedTeacher.user?.email || 'N/A'}</p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Professional Information */}
+              <div className="bg-gradient-to-r from-teal-50 to-cyan-50 rounded-lg p-3 border border-teal-100">
+                <div className="flex items-center mb-2">
+                  <Briefcase className="h-4 w-4 text-teal-600 mr-2" />
+                  <h3 className="text-sm font-bold text-gray-800">Professional Info</h3>
+                </div>
+                <div className="grid grid-cols-2 gap-2 text-sm">
+                  <div>
+                    <label className="text-xs text-teal-600 font-semibold">Qualification</label>
+                    <p className="text-gray-900 font-medium truncate">{selectedTeacher.qualification || 'N/A'}</p>
+                  </div>
+                  <div>
+                    <label className="text-xs text-teal-600 font-semibold">Experience</label>
+                    <p className="text-gray-900 font-bold">{selectedTeacher.experience_years || 0} years</p>
+                  </div>
+                  <div>
+                    <label className="text-xs text-teal-600 font-semibold">Monthly</label>
+                    <p className="text-gray-900 font-bold text-green-600">${selectedTeacher.salary || 0}</p>
+                  </div>
+                  <div>
+                    <label className="text-xs text-teal-600 font-semibold">Annual</label>
+                    <p className="text-gray-900 font-bold text-green-600">${(selectedTeacher.salary || 0) * 12}</p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Account Status */}
+              <div className="bg-gradient-to-r from-cyan-50 to-blue-50 rounded-lg p-3 border border-cyan-100">
+                <div className="flex items-center mb-2">
+                  <CheckCircle className="h-4 w-4 text-cyan-600 mr-2" />
+                  <h3 className="text-sm font-bold text-gray-800">Account Status</h3>
+                </div>
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center space-x-2">
+                    <div className={`w-2 h-2 rounded-full ${
+                      selectedTeacher.user?.is_active ? 'bg-green-500' : 'bg-red-500'
+                    }`}></div>
+                    <span className="text-sm font-semibold text-gray-900">
+                      {selectedTeacher.user?.is_active ? 'Active' : 'Inactive'}
                     </span>
                   </div>
+                  <span className="text-xs text-gray-500">#{selectedTeacher.employee_id}</span>
                 </div>
               </div>
             </div>
 
-            <div className="flex justify-end space-x-3 pt-6">
-              <Button variant="outline" onClick={() => setShowViewModal(false)}>
-                Close
+            {/* Compact Action Buttons */}
+            <div className="flex flex-wrap gap-2 justify-end pt-4 mt-4 border-t border-gray-200 px-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => {
+                  setShowViewModal(false)
+                  handleEditTeacher(selectedTeacher)
+                }}
+                className="text-xs"
+              >
+                <Edit className="h-3 w-3 mr-1" />
+                Edit
               </Button>
-              <Button onClick={() => {
-                setShowViewModal(false)
-                handleEditTeacher(selectedTeacher)
-              }}>
-                Edit Teacher
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => {
+                  setShowViewModal(false)
+                  setShowPasswordModal(true)
+                }}
+                className="text-xs text-orange-600 hover:bg-orange-50"
+              >
+                <KeyRound className="h-3 w-3 mr-1" />
+                Reset Password
+              </Button>
+              <Button
+                size="sm"
+                onClick={() => setShowViewModal(false)}
+                className="text-xs bg-gradient-to-r from-emerald-600 to-teal-700 hover:from-emerald-700 hover:to-teal-800"
+              >
+                <CheckCircle className="h-3 w-3 mr-1" />
+                Close
               </Button>
             </div>
           </div>
         ) : (
-          <div className="flex justify-center items-center py-8">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+          <div className="flex justify-center items-center py-12">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-emerald-600"></div>
           </div>
         )}
       </Modal>

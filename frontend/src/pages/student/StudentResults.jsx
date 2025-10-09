@@ -62,7 +62,7 @@ function StudentResults() {
   // Calculate stats
   const totalExams = examResults.length
   const totalMarks = examResults.reduce((sum, result) => sum + result.marks_obtained, 0)
-  const totalPossible = examResults.reduce((sum, result) => sum + result.total_marks, 0)
+  const totalPossible = examResults.reduce((sum, result) => sum + (result.exam?.max_marks || result.total_marks), 0)
   const averagePercentage = totalPossible > 0 ? Math.round((totalMarks / totalPossible) * 100) : 0
 
   return (
@@ -129,10 +129,10 @@ function StudentResults() {
                   <div className="flex justify-between items-start mb-2">
                     <div className="flex-1">
                       <h4 className="font-medium text-sm">Exam #{result.exam_id}</h4>
-                      <p className="text-xs text-gray-600">Subject #{result.subject_id}</p>
+                      <p className="text-xs text-gray-600">{result.exam?.subject?.name || `Subject ${result.subject_id}`}</p>
                     </div>
                     <div className="text-right">
-                      <p className="text-sm font-bold">{result.marks_obtained}/{result.total_marks}</p>
+                      <p className="text-sm font-bold">{result.marks_obtained}/{result.exam?.max_marks || result.total_marks}</p>
                       {result.grade && (
                         <span className={`px-2 py-1 rounded-full text-xs font-medium ${getGradeColor(result.grade)}`}>
                           {result.grade}
@@ -166,14 +166,14 @@ function StudentResults() {
                 {examResults.map((result) => (
                   <Table.Row key={result.id}>
                     <Table.Cell>Exam #{result.exam_id}</Table.Cell>
-                    <Table.Cell>Subject #{result.subject_id}</Table.Cell>
+                    <Table.Cell>{result.exam?.subject?.name || `Subject ${result.subject_id}`}</Table.Cell>
                     <Table.Cell>
                       <span className="font-medium">{result.marks_obtained}</span>
                     </Table.Cell>
-                    <Table.Cell>{result.total_marks}</Table.Cell>
+                    <Table.Cell>{result.exam?.max_marks || result.total_marks}</Table.Cell>
                     <Table.Cell>
                       <span className="font-medium">
-                        {Math.round((result.marks_obtained / result.total_marks) * 100)}%
+                        {result.exam?.max_marks ? Math.round((result.marks_obtained / result.exam.max_marks) * 100) : Math.round((result.marks_obtained / result.total_marks) * 100)}%
                       </span>
                     </Table.Cell>
                     <Table.Cell>
