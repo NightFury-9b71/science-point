@@ -5,8 +5,8 @@ import { toast } from 'sonner'
 import Card from '../../components/Card'
 import Button from '../../components/Button'
 import Table from '../../components/Table'
-import Modal from '../../components/Modal'
-import { Input } from '../../components/Form'
+import { Input, Select } from '../../components/Form'
+import { ConfirmationModal, CredentialsModal, FormModal, ViewModal } from '../../components/modals'
 import { useTeachers, useCreateTeacher, useUpdateTeacher, useDeleteTeacher, useUpdateTeacherPassword, useStudents } from '../../services/queries'
 
 const AdminTeachers = () => {
@@ -607,21 +607,21 @@ Please keep these credentials secure and share them with the teacher.`
         </Card.Content>
       </Card>
 
-      {/* Modal */}
-      <Modal 
-        isOpen={showModal} 
+      {/* Add New Teacher Modal */}
+      <FormModal
+        isOpen={showModal}
         onClose={() => setShowModal(false)}
         title="Add New Teacher"
-        className="sm:max-w-md"
-      >
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <Input
-            label="Full Name"
-            type="text"
-            placeholder="Enter teacher's full name"
-            value={form.user.full_name}
-            onChange={(e) => {
-              const fullName = e.target.value
+        fields={[
+          {
+            name: 'full_name',
+            label: 'Full Name',
+            type: 'text',
+            placeholder: 'Enter teacher\'s full name',
+            required: true,
+            value: form.user.full_name,
+            onChange: (value) => {
+              const fullName = value
               
               // Immediate state update for responsive UI
               setForm(prev => ({
@@ -651,177 +651,213 @@ Please keep these credentials secure and share them with the teacher.`
                   }
                 }, 300)
               }
-            }}
-            required
-          />
-          <div className="space-y-2">
-            <div className="flex gap-2">
-              <Input
-                label="Username"
-                type="text"
-                value={form.user.username}
-                onChange={(e) => setForm({
-                  ...form,
-                  user: { ...form.user, username: e.target.value }
-                })}
-                required
-                className="flex-1"
-                placeholder="Auto-generated from full name"
-              />
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                onClick={() => {
-                  const username = generateUsername(form.user.full_name)
-                  setForm({
+            }
+          },
+          {
+            name: 'username',
+            label: 'Username',
+            type: 'text',
+            required: true,
+            value: form.user.username,
+            onChange: (value) => setForm({
+              ...form,
+              user: { ...form.user, username: value }
+            }),
+            placeholder: 'Auto-generated from full name',
+            customRender: (field, onChange) => (
+              <div className="space-y-2">
+                <div className="flex gap-2">
+                  <Input
+                    label="Username"
+                    type="text"
+                    value={form.user.username}
+                    onChange={(e) => setForm({
+                      ...form,
+                      user: { ...form.user, username: e.target.value }
+                    })}
+                    required
+                    className="flex-1"
+                    placeholder="Auto-generated from full name"
+                  />
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => {
+                      const username = generateUsername(form.user.full_name)
+                      setForm({
+                        ...form,
+                        user: { ...form.user, username }
+                      })
+                    }}
+                    className="mt-6 px-3"
+                    disabled={!form.user.full_name}
+                    title="Generate unique username from full name"
+                  >
+                    {!form.user.full_name ? 'Name?' : 'Auto'}
+                  </Button>
+                </div>
+              </div>
+            )
+          },
+          {
+            name: 'email',
+            label: 'Email',
+            type: 'email',
+            required: true,
+            value: form.user.email,
+            onChange: (value) => setForm({
+              ...form,
+              user: { ...form.user, email: value }
+            })
+          },
+          {
+            name: 'phone',
+            label: 'Phone',
+            type: 'tel',
+            placeholder: 'Enter phone number',
+            value: form.user.phone,
+            onChange: (value) => setForm({
+              ...form,
+              user: { ...form.user, phone: value }
+            })
+          },
+          {
+            name: 'password',
+            label: 'Password',
+            type: 'password',
+            required: true,
+            value: form.user.password,
+            onChange: (value) => setForm({
+              ...form,
+              user: { ...form.user, password: value }
+            }),
+            placeholder: 'Enter password or generate one',
+            customRender: (field, onChange) => (
+              <div className="space-y-2">
+                <Input
+                  label="Password"
+                  type="password"
+                  value={form.user.password}
+                  onChange={(e) => setForm({
                     ...form,
-                    user: { ...form.user, username }
-                  })
-                }}
-                className="mt-6 px-3"
-                disabled={!form.user.full_name}
-                title="Generate unique username from full name"
-              >
-                {!form.user.full_name ? 'Name?' : 'Auto'}
-              </Button>
-            </div>
-          </div>
-          <Input
-            label="Email"
-            type="email"
-            value={form.user.email}
-            onChange={(e) => setForm({
-              ...form,
-              user: { ...form.user, email: e.target.value }
-            })}
-            required
-          />
-          <Input
-            label="Phone"
-            type="tel"
-            placeholder="Enter phone number"
-            value={form.user.phone}
-            onChange={(e) => setForm({
-              ...form,
-              user: { ...form.user, phone: e.target.value }
-            })}
-          />
-          <div className="space-y-2">
-            <Input
-              label="Password"
-              type="password"
-              value={form.user.password}
-              onChange={(e) => setForm({
-                ...form,
-                user: { ...form.user, password: e.target.value }
-              })}
-              required
-              placeholder="Enter password or generate one"
-            />
-            <div className="flex gap-2">
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                onClick={() => setForm({
-                  ...form,
-                  user: { ...form.user, password: generatePassword() }
-                })}
-                className="text-xs"
-              >
-                Generate Secure Password
-              </Button>
-              {form.user.password && (
+                    user: { ...form.user, password: e.target.value }
+                  })}
+                  required
+                  placeholder="Enter password or generate one"
+                />
+                <div className="flex gap-2">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setForm({
+                      ...form,
+                      user: { ...form.user, password: generatePassword() }
+                    })}
+                    className="text-xs"
+                  >
+                    Generate Secure Password
+                  </Button>
+                  {form.user.password && (
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => {
+                        navigator.clipboard.writeText(form.user.password)
+                        toast.success('Password copied!')
+                      }}
+                      className="text-xs"
+                    >
+                      Copy Password
+                    </Button>
+                  )}
+                </div>
+                {form.user.password && (
+                  <div className="text-xs text-gray-600 bg-gray-50 p-2 rounded border">
+                    <strong>Password:</strong> {form.user.password}
+                  </div>
+                )}
+              </div>
+            )
+          },
+          {
+            name: 'employee_id',
+            label: 'Employee ID',
+            type: 'text',
+            required: true,
+            value: form.employee_id,
+            onChange: (value) => setForm({ ...form, employee_id: value }),
+            placeholder: 'e.g., T001, T002 (auto-generated)',
+            customRender: (field, onChange) => (
+              <div className="space-y-2">
+                <Input
+                  label="Employee ID"
+                  type="text"
+                  value={form.employee_id}
+                  onChange={(e) => setForm({ ...form, employee_id: e.target.value })}
+                  required
+                  placeholder="e.g., T001, T002 (auto-generated)"
+                />
+                {!/^T\d{3,}$/.test(form.employee_id) && form.employee_id && (
+                  <div className="text-xs text-orange-600">
+                    Employee ID format: T + 3-digit number (e.g., T001, T002)
+                  </div>
+                )}
                 <Button
                   type="button"
-                  variant="ghost"
+                  variant="outline"
                   size="sm"
-                  onClick={() => {
-                    navigator.clipboard.writeText(form.user.password)
-                    toast.success('Password copied!')
-                  }}
+                  onClick={() => setForm({
+                    ...form,
+                    employee_id: generateEmployeeId()
+                  })}
                   className="text-xs"
                 >
-                  Copy Password
+                  Generate next employee ID
                 </Button>
-              )}
-            </div>
-            {form.user.password && (
-              <div className="text-xs text-gray-600 bg-gray-50 p-2 rounded border">
-                <strong>Password:</strong> {form.user.password}
               </div>
-            )}
-          </div>
-          
-          <div className="space-y-2">
-            <Input
-              label="Employee ID"
-              type="text"
-              value={form.employee_id}
-              onChange={(e) => setForm({ ...form, employee_id: e.target.value })}
-              required
-              placeholder="e.g., T001, T002 (auto-generated)"
-            />
-            {!/^T\d{3,}$/.test(form.employee_id) && form.employee_id && (
-              <div className="text-xs text-orange-600">
-                Employee ID format: T + 3-digit number (e.g., T001, T002)
-              </div>
-            )}
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              onClick={() => setForm({
-                ...form,
-                employee_id: generateEmployeeId()
-              })}
-              className="text-xs"
-            >
-              Generate next employee ID
-            </Button>
-          </div>
-          
-          <Input
-            label="Qualification"
-            type="text"
-            placeholder="e.g., M.Sc Mathematics, B.Ed"
-            value={form.qualification}
-            onChange={(e) => setForm({ ...form, qualification: e.target.value })}
-          />
-          <Input
-            label="Experience (years)"
-            type="number"
-            value={form.experience_years}
-            onChange={(e) => setForm({ ...form, experience_years: parseInt(e.target.value) || 0 })}
-          />
-          <Input
-            label="Salary"
-            type="number"
-            value={form.salary}
-            onChange={(e) => setForm({ ...form, salary: parseFloat(e.target.value) || 0 })}
-          />
-          <div className="flex flex-col-reverse sm:flex-row justify-end space-y-2 space-y-reverse sm:space-y-0 sm:space-x-3">
-            <Button type="button" variant="outline" onClick={() => setShowModal(false)}>
-              Cancel
-            </Button>
-            <Button type="submit" loading={createTeacher.isPending}>
-              Create Teacher
-            </Button>
-          </div>
-        </form>
-      </Modal>
+            )
+          },
+          {
+            name: 'qualification',
+            label: 'Qualification',
+            type: 'text',
+            placeholder: 'e.g., M.Sc Mathematics, B.Ed',
+            value: form.qualification,
+            onChange: (value) => setForm({ ...form, qualification: value })
+          },
+          {
+            name: 'experience_years',
+            label: 'Experience (years)',
+            type: 'number',
+            value: form.experience_years,
+            onChange: (value) => setForm({ ...form, experience_years: parseInt(value) || 0 })
+          },
+          {
+            name: 'salary',
+            label: 'Salary',
+            type: 'number',
+            value: form.salary,
+            onChange: (value) => setForm({ ...form, salary: parseFloat(value) || 0 })
+          }
+        ]}
+        onSubmit={handleSubmit}
+        submitButtonText="Create Teacher"
+        isLoading={createTeacher.isPending}
+        className="sm:max-w-md"
+      />
 
       {/* View Teacher Modal */}
-      <Modal
+      <ViewModal
         isOpen={showViewModal}
         onClose={() => setShowViewModal(false)}
         title=""
+        data={selectedTeacher}
         className="sm:max-w-xl"
-      >
-        {selectedTeacher ? (
-          <div>
-            {/* Compact Header */}
+        customHeader={
+          selectedTeacher ? (
             <div className="bg-gradient-to-br from-emerald-600 via-teal-700 to-cyan-800 text-white p-4 -m-6 mb-3 rounded-t-lg relative overflow-hidden">
               <div className="relative flex items-center space-x-3">
                 {/* Small Profile Photo */}
@@ -860,397 +896,233 @@ Please keep these credentials secure and share them with the teacher.`
                 </div>
               </div>
             </div>
-
-            {/* Compact Content */}
-            <div className="space-y-3 px-2">
-              {/* Personal Information */}
-              <div className="bg-gradient-to-r from-emerald-50 to-teal-50 rounded-lg p-3 border border-emerald-100">
-                <div className="flex items-center mb-2">
-                  <Users className="h-4 w-4 text-emerald-600 mr-2" />
-                  <h3 className="text-sm font-bold text-gray-800">Personal Info</h3>
-                </div>
-                <div className="grid grid-cols-2 gap-2 text-sm">
-                  <div>
-                    <label className="text-xs text-emerald-600 font-semibold">Name</label>
-                    <p className="text-gray-900 font-medium truncate">{selectedTeacher.user?.full_name || 'N/A'}</p>
-                  </div>
-                  <div>
-                    <label className="text-xs text-emerald-600 font-semibold">Username</label>
-                    <p className="text-gray-900 font-mono text-xs bg-gray-50 px-1 py-0.5 rounded inline-block">
-                      {selectedTeacher.user?.username || 'N/A'}
-                    </p>
-                  </div>
-                  <div>
-                    <label className="text-xs text-emerald-600 font-semibold">Employee ID</label>
-                    <p className="text-gray-900 font-bold">{selectedTeacher.employee_id || 'N/A'}</p>
-                  </div>
-                  <div>
-                    <label className="text-xs text-emerald-600 font-semibold">Phone</label>
-                    <p className="text-gray-900 truncate">{selectedTeacher.user?.phone || 'N/A'}</p>
-                  </div>
-                  <div className="col-span-2">
-                    <label className="text-xs text-emerald-600 font-semibold">Email</label>
-                    <p className="text-gray-900 text-xs break-all">{selectedTeacher.user?.email || 'N/A'}</p>
-                  </div>
-                </div>
-              </div>
-
-              {/* Professional Information */}
-              <div className="bg-gradient-to-r from-teal-50 to-cyan-50 rounded-lg p-3 border border-teal-100">
-                <div className="flex items-center mb-2">
-                  <Briefcase className="h-4 w-4 text-teal-600 mr-2" />
-                  <h3 className="text-sm font-bold text-gray-800">Professional Info</h3>
-                </div>
-                <div className="grid grid-cols-2 gap-2 text-sm">
-                  <div>
-                    <label className="text-xs text-teal-600 font-semibold">Qualification</label>
-                    <p className="text-gray-900 font-medium truncate">{selectedTeacher.qualification || 'N/A'}</p>
-                  </div>
-                  <div>
-                    <label className="text-xs text-teal-600 font-semibold">Experience</label>
-                    <p className="text-gray-900 font-bold">{selectedTeacher.experience_years || 0} years</p>
-                  </div>
-                  <div>
-                    <label className="text-xs text-teal-600 font-semibold">Monthly</label>
-                    <p className="text-gray-900 font-bold text-green-600">${selectedTeacher.salary || 0}</p>
-                  </div>
-                  <div>
-                    <label className="text-xs text-teal-600 font-semibold">Annual</label>
-                    <p className="text-gray-900 font-bold text-green-600">${(selectedTeacher.salary || 0) * 12}</p>
-                  </div>
-                </div>
-              </div>
-
-              {/* Account Status */}
-              <div className="bg-gradient-to-r from-cyan-50 to-blue-50 rounded-lg p-3 border border-cyan-100">
-                <div className="flex items-center mb-2">
-                  <CheckCircle className="h-4 w-4 text-cyan-600 mr-2" />
-                  <h3 className="text-sm font-bold text-gray-800">Account Status</h3>
-                </div>
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center space-x-2">
-                    <div className={`w-2 h-2 rounded-full ${
-                      selectedTeacher.user?.is_active ? 'bg-green-500' : 'bg-red-500'
-                    }`}></div>
-                    <span className="text-sm font-semibold text-gray-900">
-                      {selectedTeacher.user?.is_active ? 'Active' : 'Inactive'}
-                    </span>
-                  </div>
-                  <span className="text-xs text-gray-500">#{selectedTeacher.employee_id}</span>
-                </div>
-              </div>
-            </div>
-
-            {/* Compact Action Buttons */}
-            <div className="flex flex-wrap gap-2 justify-end pt-4 mt-4 border-t border-gray-200 px-2">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => {
-                  setShowViewModal(false)
-                  handleEditTeacher(selectedTeacher)
-                }}
-                className="text-xs"
-              >
-                <Edit className="h-3 w-3 mr-1" />
-                Edit
-              </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => {
-                  setShowViewModal(false)
-                  setShowPasswordModal(true)
-                }}
-                className="text-xs text-orange-600 hover:bg-orange-50"
-              >
-                <KeyRound className="h-3 w-3 mr-1" />
-                Reset Password
-              </Button>
-              <Button
-                size="sm"
-                onClick={() => setShowViewModal(false)}
-                className="text-xs bg-gradient-to-r from-emerald-600 to-teal-700 hover:from-emerald-700 hover:to-teal-800"
-              >
-                <CheckCircle className="h-3 w-3 mr-1" />
-                Close
-              </Button>
-            </div>
-          </div>
-        ) : (
-          <div className="flex justify-center items-center py-12">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-emerald-600"></div>
-          </div>
-        )}
-      </Modal>
+          ) : null
+        }
+        sections={[
+          {
+            title: 'Personal Info',
+            icon: Users,
+            iconColor: 'text-emerald-600',
+            bgColor: 'from-emerald-50 to-teal-50',
+            borderColor: 'border-emerald-100',
+            fields: [
+              { label: 'Name', value: selectedTeacher?.user?.full_name || 'N/A', type: 'text' },
+              { label: 'Username', value: selectedTeacher?.user?.username || 'N/A', type: 'mono' },
+              { label: 'Employee ID', value: selectedTeacher?.employee_id || 'N/A', type: 'bold' },
+              { label: 'Phone', value: selectedTeacher?.user?.phone || 'N/A', type: 'text' },
+              { label: 'Email', value: selectedTeacher?.user?.email || 'N/A', type: 'email' }
+            ]
+          },
+          {
+            title: 'Professional Info',
+            icon: Briefcase,
+            iconColor: 'text-teal-600',
+            bgColor: 'from-teal-50 to-cyan-50',
+            borderColor: 'border-teal-100',
+            fields: [
+              { label: 'Qualification', value: selectedTeacher?.qualification || 'N/A', type: 'text' },
+              { label: 'Experience', value: `${selectedTeacher?.experience_years || 0} years`, type: 'bold' },
+              { label: 'Monthly', value: `$${selectedTeacher?.salary || 0}`, type: 'green' },
+              { label: 'Annual', value: `$${(selectedTeacher?.salary || 0) * 12}`, type: 'green' }
+            ]
+          },
+          {
+            title: 'Account Status',
+            icon: CheckCircle,
+            iconColor: 'text-cyan-600',
+            bgColor: 'from-cyan-50 to-blue-50',
+            borderColor: 'border-cyan-100',
+            fields: [
+              {
+                label: 'Status',
+                value: selectedTeacher?.user?.is_active ? 'Active' : 'Inactive',
+                type: 'status',
+                statusColor: selectedTeacher?.user?.is_active ? 'bg-green-500' : 'bg-red-500'
+              }
+            ]
+          }
+        ]}
+        actions={[
+          {
+            label: 'Edit',
+            icon: Edit,
+            variant: 'outline',
+            size: 'sm',
+            onClick: () => {
+              setShowViewModal(false)
+              handleEditTeacher(selectedTeacher)
+            },
+            className: 'text-xs'
+          },
+          {
+            label: 'Reset Password',
+            icon: KeyRound,
+            variant: 'outline',
+            size: 'sm',
+            onClick: () => {
+              setShowViewModal(false)
+              setShowPasswordModal(true)
+            },
+            className: 'text-xs text-orange-600 hover:bg-orange-50'
+          },
+          {
+            label: 'Close',
+            icon: CheckCircle,
+            variant: 'default',
+            size: 'sm',
+            onClick: () => setShowViewModal(false),
+            className: 'text-xs bg-gradient-to-r from-emerald-600 to-teal-700 hover:from-emerald-700 hover:to-teal-800'
+          }
+        ]}
+      />
 
       {/* Edit Teacher Modal */}
-      <Modal 
-        isOpen={showEditModal} 
+      <FormModal
+        isOpen={showEditModal}
         onClose={() => setShowEditModal(false)}
         title="Edit Teacher"
+        fields={[
+          {
+            name: 'full_name',
+            label: 'Full Name',
+            type: 'text',
+            required: true,
+            value: editForm.user.full_name,
+            onChange: (value) => setEditForm({
+              ...editForm,
+              user: { ...editForm.user, full_name: value }
+            })
+          },
+          {
+            name: 'username',
+            label: 'Username',
+            type: 'text',
+            required: true,
+            value: editForm.user.username,
+            onChange: (value) => setEditForm({
+              ...editForm,
+              user: { ...editForm.user, username: value }
+            })
+          },
+          {
+            name: 'email',
+            label: 'Email',
+            type: 'email',
+            required: true,
+            value: editForm.user.email,
+            onChange: (value) => setEditForm({
+              ...editForm,
+              user: { ...editForm.user, email: value }
+            })
+          },
+          {
+            name: 'phone',
+            label: 'Phone',
+            type: 'tel',
+            value: editForm.user.phone,
+            onChange: (value) => setEditForm({
+              ...editForm,
+              user: { ...editForm.user, phone: value }
+            })
+          },
+          {
+            name: 'qualification',
+            label: 'Qualification',
+            type: 'text',
+            value: editForm.qualification,
+            onChange: (value) => setEditForm({ ...editForm, qualification: value })
+          },
+          {
+            name: 'experience_years',
+            label: 'Experience (years)',
+            type: 'number',
+            value: editForm.experience_years,
+            onChange: (value) => setEditForm({ ...editForm, experience_years: parseInt(value) || 0 })
+          },
+          {
+            name: 'salary',
+            label: 'Salary',
+            type: 'number',
+            value: editForm.salary,
+            onChange: (value) => setEditForm({ ...editForm, salary: parseFloat(value) || 0 })
+          }
+        ]}
+        onSubmit={handleEditSubmit}
+        submitButtonText="Update Teacher"
+        isLoading={updateTeacher.isPending}
         className="sm:max-w-md"
-      >
-        <form onSubmit={handleEditSubmit} className="space-y-4">
-          <Input
-            label="Full Name"
-            type="text"
-            value={editForm.user.full_name}
-            onChange={(e) => setEditForm({
-              ...editForm,
-              user: { ...editForm.user, full_name: e.target.value }
-            })}
-            required
-          />
-          <Input
-            label="Username"
-            type="text"
-            value={editForm.user.username}
-            onChange={(e) => setEditForm({
-              ...editForm,
-              user: { ...editForm.user, username: e.target.value }
-            })}
-            required
-          />
-          <Input
-            label="Email"
-            type="email"
-            value={editForm.user.email}
-            onChange={(e) => setEditForm({
-              ...editForm,
-              user: { ...editForm.user, email: e.target.value }
-            })}
-            required
-          />
-          <Input
-            label="Phone"
-            type="tel"
-            value={editForm.user.phone}
-            onChange={(e) => setEditForm({
-              ...editForm,
-              user: { ...editForm.user, phone: e.target.value }
-            })}
-          />
-          <Input
-            label="Qualification"
-            type="text"
-            value={editForm.qualification}
-            onChange={(e) => setEditForm({ ...editForm, qualification: e.target.value })}
-          />
-          <Input
-            label="Experience (years)"
-            type="number"
-            value={editForm.experience_years}
-            onChange={(e) => setEditForm({ ...editForm, experience_years: parseInt(e.target.value) || 0 })}
-          />
-          <Input
-            label="Salary"
-            type="number"
-            value={editForm.salary}
-            onChange={(e) => setEditForm({ ...editForm, salary: parseFloat(e.target.value) || 0 })}
-          />
-          
-          <div className="flex flex-col-reverse sm:flex-row justify-end space-y-2 space-y-reverse sm:space-y-0 sm:space-x-3">
-            <Button type="button" variant="outline" onClick={() => setShowEditModal(false)}>
-              Cancel
-            </Button>
-            <Button type="submit" loading={updateTeacher.isPending}>
-              Update Teacher
-            </Button>
-          </div>
-        </form>
-      </Modal>
+      />
 
       {/* Delete Confirmation Modal */}
-      <Modal 
-        isOpen={showDeleteModal} 
+      <ConfirmationModal
+        isOpen={showDeleteModal}
         onClose={() => setShowDeleteModal(false)}
+        onConfirm={confirmDelete}
         title="Confirm Delete"
-        className="sm:max-w-md"
+        confirmText="Delete Teacher"
+        isLoading={deleteTeacher.isPending}
+        icon={AlertCircle}
+        iconColor="text-red-600"
       >
-        <div className="space-y-4">
-          <div className="flex items-center space-x-3">
-            <div className="flex-shrink-0 w-10 h-10 mx-auto bg-red-100 rounded-full flex items-center justify-center">
-              <svg className="w-6 h-6 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z" />
-              </svg>
-            </div>
-            <div className="flex-1">
-              <h3 className="text-lg font-medium text-gray-900">Delete Teacher</h3>
-              <p className="text-sm text-gray-500">
-                Are you sure you want to delete <strong>{selectedTeacher?.user?.full_name}</strong>? 
-                This action cannot be undone.
-              </p>
-            </div>
-          </div>
-          
-          <div className="flex flex-col-reverse sm:flex-row justify-end space-y-2 space-y-reverse sm:space-y-0 sm:space-x-3">
-            <Button type="button" variant="outline" onClick={() => setShowDeleteModal(false)}>
-              Cancel
-            </Button>
-            <Button 
-              onClick={confirmDelete} 
-              loading={deleteTeacher.isPending}
-              className="bg-red-600 hover:bg-red-700 text-white"
-            >
-              Delete Teacher
-            </Button>
-          </div>
-        </div>
-      </Modal>
+        <p className="text-red-800 text-sm">
+          Are you sure you want to delete <strong>{selectedTeacher?.user?.full_name}</strong>?
+          This action cannot be undone.
+        </p>
+      </ConfirmationModal>
 
       {/* Reset Password Confirmation Modal */}
-      <Modal 
-        isOpen={showPasswordModal} 
+      <ConfirmationModal
+        isOpen={showPasswordModal}
         onClose={() => {
           setShowPasswordModal(false)
           setSelectedTeacher(null)
         }}
+        onConfirm={confirmResetPassword}
         title="Reset Teacher Password"
-        className="sm:max-w-md"
+        confirmText="Reset Password"
+        confirmVariant="default"
+        isLoading={updateTeacherPassword.isPending}
+        icon={AlertCircle}
+        iconColor="text-orange-600"
       >
         {selectedTeacher && (
-          <div className="space-y-4 p-2 sm:p-4">
-            <div className="bg-orange-50 border border-orange-200 rounded-lg p-4">
-              <div className="flex items-center mb-3">
-                <div className="flex-shrink-0">
-                  <AlertCircle className="h-5 w-5 text-orange-600" />
-                </div>
-                <div className="ml-3">
-                  <h3 className="text-lg font-medium text-orange-900">Reset Password</h3>
-                </div>
-              </div>
-              <p className="text-orange-800 text-sm">
-                Are you sure you want to reset the password for <strong>{selectedTeacher.user?.full_name}</strong>?
-              </p>
-              <div className="mt-3 text-orange-800 text-sm">
-                <p><strong>What will happen:</strong></p>
-                <ul className="ml-4 list-disc mt-1">
-                  <li>A new secure password will be generated</li>
-                  <li>The teacher's current password will be invalidated</li>
-                  <li>New credentials will be displayed for sharing</li>
-                  <li>Teacher must use the new password for login</li>
-                </ul>
-              </div>
-            </div>
-
-            <div className="bg-gray-50 rounded-lg p-3">
-              <h4 className="font-medium text-gray-900 mb-2">Teacher Details:</h4>
-              <div className="text-sm text-gray-600 space-y-1">
-                <p><strong>Name:</strong> {selectedTeacher.user?.full_name}</p>
-                <p><strong>Username:</strong> {selectedTeacher.user?.username}</p>
-                <p><strong>Employee ID:</strong> {selectedTeacher.employee_id}</p>
-                <p><strong>Email:</strong> {selectedTeacher.user?.email}</p>
-              </div>
-            </div>
-
-            <div className="flex gap-3 justify-end pt-4">
-              <Button
-                variant="outline"
-                onClick={() => {
-                  setShowPasswordModal(false)
-                  setSelectedTeacher(null)
-                }}
-                disabled={updateTeacherPassword.isPending}
-              >
-                Cancel
-              </Button>
-              <Button
-                onClick={confirmResetPassword}
-                loading={updateTeacherPassword.isPending}
-                className="bg-orange-600 hover:bg-orange-700 text-white"
-              >
-                Reset Password
-              </Button>
+          <div className="bg-gray-50 rounded-lg p-3">
+            <h4 className="font-medium text-gray-900 mb-2">Teacher Details:</h4>
+            <div className="text-sm text-gray-600 space-y-1">
+              <p><strong>Name:</strong> {selectedTeacher.user?.full_name}</p>
+              <p><strong>Username:</strong> {selectedTeacher.user?.username}</p>
+              <p><strong>Employee ID:</strong> {selectedTeacher.employee_id}</p>
+              <p><strong>Email:</strong> {selectedTeacher.user?.email}</p>
             </div>
           </div>
         )}
-      </Modal>
+        <p className="text-orange-800 text-sm">
+          Are you sure you want to reset the password for <strong>{selectedTeacher?.user?.full_name}</strong>?
+        </p>
+        <div className="mt-3 text-orange-800 text-sm">
+          <p><strong>What will happen:</strong></p>
+          <ul className="ml-4 list-disc mt-1">
+            <li>A new secure password will be generated</li>
+            <li>The teacher's current password will be invalidated</li>
+            <li>New credentials will be displayed for sharing</li>
+            <li>Teacher must use the new password for login</li>
+          </ul>
+        </div>
+      </ConfirmationModal>
 
       {/* Credentials Display Modal */}
-      <Modal 
-        isOpen={showCredentialsModal} 
+      <CredentialsModal
+        isOpen={showCredentialsModal}
         onClose={() => {
           setShowCredentialsModal(false)
           setNewTeacherCredentials(null)
+          toast.success('Teacher account ready for use!')
         }}
-        title="Teacher Account Created Successfully!"
-        className="sm:max-w-lg"
-      >
-        {newTeacherCredentials && (
-          <div className="space-y-6 p-2 sm:p-4">
-            <div className="bg-green-50 border border-green-200 rounded-lg p-4">
-              <div className="flex items-center mb-3">
-                <CheckCircle className="h-5 w-5 text-green-600 mr-2" />
-                <h3 className="text-lg font-medium text-green-900">Account Created</h3>
-              </div>
-              <p className="text-green-800 text-sm">
-                Teacher account has been created successfully. Please share these login credentials with the teacher.
-              </p>
-            </div>
-
-            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-              <h4 className="font-medium text-blue-900 mb-3">Login Credentials</h4>
-              <div className="space-y-3 text-sm">
-                <div className="flex justify-between items-center">
-                  <span className="font-medium text-gray-700">Teacher Name:</span>
-                  <span className="text-gray-900">{newTeacherCredentials.fullName}</span>
-                </div>
-                <div className="flex justify-between items-center">
-                  <span className="font-medium text-gray-700">Employee ID:</span>
-                  <span className="text-gray-900">{newTeacherCredentials.employeeId}</span>
-                </div>
-                <div className="flex justify-between items-center">
-                  <span className="font-medium text-gray-700">Username:</span>
-                  <span className="text-gray-900 font-mono">{newTeacherCredentials.username}</span>
-                </div>
-                <div className="flex justify-between items-center bg-yellow-50 p-2 rounded border">
-                  <span className="font-medium text-gray-700">Password:</span>
-                  <span className="text-gray-900 font-mono">{newTeacherCredentials.password}</span>
-                </div>
-              </div>
-            </div>
-
-            {/* <div className="bg-amber-50 border border-amber-200 rounded-lg p-4">
-              <h4 className="font-medium text-amber-900 mb-2">Important Instructions</h4>
-              <ul className="text-amber-800 text-sm space-y-1">
-                <li>• Share these credentials securely with the teacher</li>
-                <li>• Ask teacher to change password after first login</li>
-                <li>• Keep a secure copy for your records</li>
-                <li>• Teacher can login at: <span className="font-mono">your-school-portal.com</span></li>
-              </ul>
-            </div> */}
-
-            <div className="flex gap-3 justify-end pt-4">
-              <Button
-                variant="outline"
-                onClick={copyCredentials}
-                className="flex items-center gap-2"
-              >
-                <Copy className="h-4 w-4" />
-                Copy Credentials
-              </Button>
-              <Button
-                variant="outline"
-                onClick={printCredentials}
-                className="flex items-center gap-2"
-              >
-                <FileText className="h-4 w-4" />
-                Print Credentials
-              </Button>
-              <Button
-                onClick={() => {
-                  setShowCredentialsModal(false)
-                  setNewTeacherCredentials(null)
-                  toast.success('Teacher account ready for use!')
-                }}
-              >
-                Done
-              </Button>
-            </div>
-          </div>
-        )}
-      </Modal>
+        credentials={newTeacherCredentials}
+        entityType="Teacher"
+        onCopy={copyCredentials}
+        onPrint={printCredentials}
+      />
     </div>
   )
 }

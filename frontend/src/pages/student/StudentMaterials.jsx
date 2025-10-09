@@ -43,6 +43,14 @@ function StudentMaterials() {
     window.open(downloadUrl, '_blank')
   }
 
+  const getFileSize = (bytes) => {
+    if (!bytes) return 'Unknown'
+    const sizes = ['Bytes', 'KB', 'MB', 'GB', 'TB']
+    if (bytes === 0) return '0 Bytes'
+    const i = Math.floor(Math.log(bytes) / Math.log(1024))
+    return Math.round(bytes / Math.pow(1024, i) * 100) / 100 + ' ' + sizes[i]
+  }
+
   if (isLoading) {
     return (
       <div className="flex justify-center items-center h-64">
@@ -94,6 +102,14 @@ function StudentMaterials() {
                         Subject {material.subject_id}
                       </div>
                     </div>
+                    
+                    {material.file_size && (
+                      <div className="flex items-center text-xs text-gray-500">
+                        <span className="bg-blue-100 text-blue-800 px-2 py-1 rounded">
+                          {getFileSize(material.file_size)}
+                        </span>
+                      </div>
+                    )}
                     
                     <Button 
                       size="sm" 

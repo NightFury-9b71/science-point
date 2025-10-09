@@ -49,6 +49,9 @@ app = FastAPI(
     version="1.0.0"
 )
 
+# Configure for large file uploads
+from fastapi.middleware.trustedhost import TrustedHostMiddleware
+
 # Add CORS middleware
 app.add_middleware(
     CORSMiddleware,
@@ -2398,6 +2401,20 @@ def upload_teacher_study_material(
     if subject_id not in subject_ids:
         raise HTTPException(status_code=403, detail="Access denied. You can only upload materials for subjects you teach.")
     
+    # Validate file size (max 100MB)
+    MAX_FILE_SIZE = 100 * 1024 * 1024  # 100MB
+    file_content = file.file.read()
+    file_size = len(file_content)
+    
+    if file_size > MAX_FILE_SIZE:
+        raise HTTPException(
+            status_code=413, 
+            detail=f"File too large. Maximum file size is {MAX_FILE_SIZE // (1024 * 1024)}MB."
+        )
+    
+    # Reset file pointer for saving
+    file.file.seek(0)
+    
     # Create uploads directory if it doesn't exist
     upload_dir = "uploads/study_materials"
     os.makedirs(upload_dir, exist_ok=True)
@@ -2484,6 +2501,20 @@ def update_teacher_study_material(
     
     # Handle file replacement if a new file is provided
     if file:
+        # Validate file size (max 100MB)
+        MAX_FILE_SIZE = 100 * 1024 * 1024  # 100MB
+        file_content = file.file.read()
+        file_size_check = len(file_content)
+        
+        if file_size_check > MAX_FILE_SIZE:
+            raise HTTPException(
+                status_code=413, 
+                detail=f"File too large. Maximum file size is {MAX_FILE_SIZE // (1024 * 1024)}MB."
+            )
+        
+        # Reset file pointer for saving
+        file.file.seek(0)
+        
         # Delete old file if it exists
         if material.file_path:
             # Delete from backend uploads folder
@@ -2613,4 +2644,17 @@ def get_admin_profile(
     return admin
 
 if __name__ == "__main__":
-    uvicorn.run("main:app", host="0.0.0.0", port=8000, reload=True)
+    import uvicorn
+    uvicorn.run(
+        "main:app", 
+        host="0.0.0.0", 
+        port=8000, 
+        reload=True,
+        # Configure for large file uploads (100MB limit)
+        limit_concurrency=10,
+        limit_max_requests=100,
+        # File upload limits
+        http={
+            'max_request_size': 100 * 1024 * 1024,  # 100MB
+        }
+    )

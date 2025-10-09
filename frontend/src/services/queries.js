@@ -476,7 +476,7 @@ export const useUploadStudyMaterial = () => {
   const queryClient = useQueryClient()
   
   return useMutation({
-    mutationFn: ({ formData, teacherId }) => teacherAPI.uploadStudyMaterial(formData, teacherId),
+    mutationFn: ({ formData, teacherId, onProgress }) => teacherAPI.uploadStudyMaterial(formData, teacherId, onProgress),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: queryKeys.studyMaterials })
       queryClient.invalidateQueries({ queryKey: ['teacherMaterials'] })

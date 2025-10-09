@@ -220,11 +220,17 @@ export const teacherAPI = {
   createExam: (examData) => adminAPI.createExam(examData),
   getMyExams: (teacherId) => api.get(`/teacher/${teacherId}/exams`),
   recordExamResult: (resultData) => adminAPI.createExamResult(resultData),
-  uploadStudyMaterial: (formData, teacherId) => {
-    // For file uploads, we need to set the correct content type
+  uploadStudyMaterial: (formData, teacherId, onProgress) => {
+    // For file uploads, we need to set the correct content type and handle progress
     return api.post(`/teacher/${teacherId}/study-materials`, formData, {
       headers: {
         'Content-Type': 'multipart/form-data',
+      },
+      onUploadProgress: (progressEvent) => {
+        if (onProgress && progressEvent.total) {
+          const percentCompleted = Math.round((progressEvent.loaded * 100) / progressEvent.total)
+          onProgress(percentCompleted)
+        }
       },
     })
   },

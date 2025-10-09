@@ -30,6 +30,8 @@ const TeacherMaterials = () => {
     is_public: true,
     file: null
   })
+  const [uploadProgress, setUploadProgress] = useState(0)
+  const [isUploading, setIsUploading] = useState(false)
 
   // Show loading while auth is being checked
   if (authLoading) {
@@ -85,8 +87,15 @@ const TeacherMaterials = () => {
     formData.append('file', uploadForm.file)
     formData.append('is_public', uploadForm.is_public)
 
+    setIsUploading(true)
+    setUploadProgress(0)
+
     try {
-      await uploadMutation.mutateAsync({ formData, teacherId })
+      await uploadMutation.mutateAsync({ 
+        formData, 
+        teacherId,
+        onProgress: (progress) => setUploadProgress(progress)
+      })
       setUploadForm({
         title: '',
         description: '',
@@ -94,9 +103,13 @@ const TeacherMaterials = () => {
         is_public: true
       })
       setShowUploadForm(false)
+      setUploadProgress(0)
     } catch (error) {
       console.error('Upload failed:', error)
       alert('Failed to upload material. Please try again.')
+    } finally {
+      setIsUploading(false)
+      setUploadProgress(0)
     }
   }
 
@@ -172,7 +185,8 @@ const TeacherMaterials = () => {
 
   const getFileSize = (bytes) => {
     if (!bytes) return 'Unknown'
-    const sizes = ['Bytes', 'KB', 'MB', 'GB']
+    const sizes = ['Bytes', 'KB', 'MB', 'GB', 'TB']
+    if (bytes === 0) return '0 Bytes'
     const i = Math.floor(Math.log(bytes) / Math.log(1024))
     return Math.round(bytes / Math.pow(1024, i) * 100) / 100 + ' ' + sizes[i]
   }
@@ -260,6 +274,14 @@ const TeacherMaterials = () => {
                         Subject {material.subject_id}
                       </div>
                     </div>
+                    
+                    {material.file_size && (
+                      <div className="flex items-center text-xs text-gray-500">
+                        <span className="bg-blue-100 text-blue-800 px-2 py-1 rounded">
+                          {getFileSize(material.file_size)}
+                        </span>
+                      </div>
+                    )}
                     
                     <Button 
                       size="sm" 
@@ -397,12 +419,27 @@ const TeacherMaterials = () => {
                 </Button>
                 <Button
                   type="submit"
-                  disabled={uploadMutation.isLoading}
+                  disabled={uploadMutation.isLoading || isUploading}
                   className="flex-1"
                 >
-                  {uploadMutation.isLoading ? 'Uploading...' : 'Upload'}
+                  {isUploading ? 'Uploading...' : uploadMutation.isLoading ? 'Uploading...' : 'Upload'}
                 </Button>
               </div>
+              
+              {isUploading && (
+                <div className="mt-4">
+                  <div className="flex items-center justify-between text-sm text-gray-600 mb-2">
+                    <span>Uploading...</span>
+                    <span>{uploadProgress}%</span>
+                  </div>
+                  <div className="w-full bg-gray-200 rounded-full h-2">
+                    <div 
+                      className="bg-blue-600 h-2 rounded-full transition-all duration-300"
+                      style={{ width: `${uploadProgress}%` }}
+                    ></div>
+                  </div>
+                </div>
+              )}
             </form>
           </div>
         </div>

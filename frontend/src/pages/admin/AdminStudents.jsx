@@ -6,8 +6,8 @@ import Logger from '../../utils/logger.js'
 import Card from '../../components/Card'
 import Button from '../../components/Button'
 import Table from '../../components/Table'
-import Modal from '../../components/Modal'
 import { Input, Select } from '../../components/Form'
+import { ConfirmationModal, CredentialsModal, FormModal, ViewModal } from '../../components/modals'
 import { 
   useStudents, 
   useClasses, 
@@ -730,787 +730,448 @@ Please keep these credentials safe and change the password after first login.`
         </Card.Content>
       </Card>
 
-      {/* Modal */}
-      <Modal 
-        isOpen={showModal} 
+      {/* Add Student Modal */}
+      <FormModal
+        isOpen={showModal}
         onClose={() => setShowModal(false)}
+        onSubmit={handleSubmit}
         title="Add New Student"
+        initialData={form}
+        submitText="Create Student"
+        isLoading={createStudent.isPending}
         className="sm:max-w-md"
+        fields={[
+          {
+            name: 'user.full_name',
+            label: 'Full Name',
+            type: 'text',
+            required: true,
+            placeholder: "Enter student's full name (e.g., John Doe)",
+            props: {
+              autoComplete: 'name',
+              inputMode: 'text',
+              spellCheck: true
+            }
+          },
+          {
+            name: 'user.username',
+            label: 'Username',
+            type: 'text',
+            required: true,
+            placeholder: 'Auto-generated from full name'
+          },
+          {
+            name: 'user.email',
+            label: 'Email',
+            type: 'email'
+          },
+          {
+            name: 'user.phone',
+            label: 'Phone Number',
+            type: 'tel',
+            required: true,
+            placeholder: "Enter student's phone number"
+          },
+          {
+            name: 'user.password',
+            label: 'Password',
+            type: 'password',
+            required: true,
+            placeholder: 'Enter password or generate one'
+          },
+          {
+            name: 'class_id',
+            label: 'Class',
+            type: 'select',
+            required: true,
+            options: classes?.map(cls => ({ value: cls.id, label: cls.name })) || []
+          },
+          {
+            name: 'roll_number',
+            label: 'Roll Number',
+            type: 'text',
+            required: true,
+            placeholder: 'e.g., 10A01, 9B03 (auto-generated)'
+          },
+          {
+            name: 'parent_name',
+            label: 'Parent Name',
+            type: 'text',
+            placeholder: "Enter parent's full name"
+          },
+          {
+            name: 'parent_phone',
+            label: 'Parent Phone',
+            type: 'tel',
+            required: true,
+            placeholder: "Enter parent's phone number"
+          },
+          {
+            name: 'address',
+            label: 'Address',
+            type: 'text',
+            placeholder: 'Enter full address'
+          },
+          {
+            name: 'date_of_birth',
+            label: 'Date of Birth',
+            type: 'date'
+          }
+        ]}
       >
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <Input
-            label="Full Name"
-            type="text"
-            name="full_name"
-            id="student_full_name"
-            autoComplete="name"
-            inputMode="text"
-            spellCheck="true"
-            placeholder="Enter student's full name (e.g., John Doe)"
-            value={form.user.full_name || ''}
-            onChange={(e) => {
-              const fullName = e.target.value
-              
-              // Immediate state update for responsive UI
-              setForm(prev => ({
-                ...prev,
-                user: { 
-                  ...prev.user, 
-                  full_name: fullName
-                }
-              }))
-              
-              // Debounced username generation to avoid blocking input
-              if (fullName && fullName.trim().length > 1) {
-                setTimeout(() => {
-                  try {
-                    const username = generateUsername(fullName)
-                    if (username) {
-                      setForm(prev => ({
-                        ...prev,
-                        user: { 
-                          ...prev.user, 
-                          username: username
-                        }
-                      }))
-                    }
-                  } catch (err) {
-                    Logger.error('Username generation error:', err)
-                  }
-                }, 300)
-              }
-            }}
-            required
-          />
-          
-          <div className="space-y-2">
-            <Input
-              label="Username"
-              type="text"
-              value={form.user.username}
-              onChange={(e) => setForm({
-                ...form,
-                user: { ...form.user, username: e.target.value }
-              })}
-              required
-              placeholder="Auto-generated from full name"
-            />
+        {/* Custom content for username generation */}
+        <div className="space-y-2">
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={() => setForm({
+              ...form,
+              user: { ...form.user, username: generateUsername(form.user.full_name) }
+            })}
+            className="text-xs"
+            disabled={!form.user.full_name}
+          >
+            {!form.user.full_name ? 'Enter name first' : 'Generate unique username'}
+          </Button>
+        </div>
+
+        {/* Custom content for password generation */}
+        <div className="space-y-2">
+          <div className="flex gap-2">
             <Button
               type="button"
               variant="outline"
               size="sm"
               onClick={() => setForm({
                 ...form,
-                user: { ...form.user, username: generateUsername(form.user.full_name) }
+                user: { ...form.user, password: generatePassword() }
               })}
               className="text-xs"
-              disabled={!form.user.full_name}
             >
-              {!form.user.full_name ? 'Enter name first' : 'Generate unique username'}
+              Generate Secure Password
             </Button>
-          </div>
-
-          <Input
-            label="Email"
-            type="email"
-            value={form.user.email}
-            onChange={(e) => setForm({
-              ...form,
-              user: { ...form.user, email: e.target.value }
-            })}
-          />
-          
-          <Input
-            label="Phone Number"
-            type="tel"
-            value={form.user.phone}
-            onChange={(e) => setForm({
-              ...form,
-              user: { ...form.user, phone: e.target.value }
-            })}
-            required
-            placeholder="Enter student's phone number"
-          />
-          
-          <div className="space-y-2">
-            <Input
-              label="Password"
-              type="password"
-              value={form.user.password}
-              onChange={(e) => setForm({
-                ...form,
-                user: { ...form.user, password: e.target.value }
-              })}
-              required
-              placeholder="Enter password or generate one"
-            />
-            <div className="flex gap-2">
+            {form.user.password && (
               <Button
                 type="button"
-                variant="outline"
+                variant="ghost"
                 size="sm"
-                onClick={() => setForm({
-                  ...form,
-                  user: { ...form.user, password: generatePassword() }
-                })}
+                onClick={() => {
+                  navigator.clipboard.writeText(form.user.password)
+                  toast.success('Password copied!')
+                }}
                 className="text-xs"
               >
-                Generate Secure Password
+                Copy Password
               </Button>
-              {form.user.password && (
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => {
-                    navigator.clipboard.writeText(form.user.password)
-                    toast.success('Password copied!')
-                  }}
-                  className="text-xs"
-                >
-                  Copy Password
-                </Button>
-              )}
+            )}
+          </div>
+          {form.user.password && (
+            <div className="text-xs text-gray-600 bg-gray-50 p-2 rounded border">
+              <strong>Password:</strong> {form.user.password}
             </div>
-            {form.user.password && (
-              <div className="text-xs text-gray-600 bg-gray-50 p-2 rounded border">
-                <strong>Password:</strong> {form.user.password}
-              </div>
-            )}
-          </div>
+          )}
+        </div>
 
-                    <Select
-            label="Class"
-            value={form.class_id}
-            onChange={(e) => {
-              const classId = parseInt(e.target.value)
-              setForm({
-                ...form,
-                class_id: classId,
-                // Auto-generate roll number if it's empty
-                roll_number: !form.roll_number ? generateRollNumber(classId) : form.roll_number
-              })
-            }}
-            options={classes?.map(cls => ({ value: cls.id, label: cls.name })) || []}
-            required
-          />
-          
-          <div className="space-y-2">
-            <Input
-              label="Roll Number"
-              type="text"
-              value={form.roll_number}
-              onChange={(e) => setForm({ ...form, roll_number: e.target.value })}
-              required
-              placeholder="e.g., 10A01, 9B03 (auto-generated)"
-            />
-            {form.roll_number && !/^\d{1,2}[A-Z]{1,2}\d{1,2}$/.test(form.roll_number) && (
-              <div className="text-xs text-orange-600">
-                Roll number format: GradeSection + Number (e.g., 10A01, 9B03)
-              </div>
-            )}
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              onClick={() => setForm({
-                ...form,
-                roll_number: generateRollNumber(form.class_id)
-              })}
-              disabled={!form.class_id}
-              className="text-xs"
-            >
-              {!form.class_id ? 'Select class first' : 'Generate next roll number'}
-            </Button>
-          </div>
-          
-          <Input
-            label="Parent Name"
-            type="text"
-            placeholder="Enter parent's full name"
-            value={form.parent_name}
-            onChange={(e) => setForm({ ...form, parent_name: e.target.value })}
-          />
-          
-          <Input
-            label="Parent Phone"
-            type="tel"
-            placeholder="Enter parent's phone number"
-            value={form.parent_phone}
-            onChange={(e) => setForm({ ...form, parent_phone: e.target.value })}
-            required
-          />
-          
-          <Input
-            label="Address"
-            type="text"
-            placeholder="Enter full address"
-            value={form.address}
-            onChange={(e) => setForm({ ...form, address: e.target.value })}
-          />
-          
-          <Input
-            label="Date of Birth"
-            type="date"
-            value={form.date_of_birth}
-            onChange={(e) => setForm({ ...form, date_of_birth: e.target.value })}
-          />
-          
-          <div className="flex flex-col-reverse sm:flex-row justify-end space-y-2 space-y-reverse sm:space-y-0 sm:space-x-3">
-            <Button type="button" variant="outline" onClick={() => setShowModal(false)}>
-              Cancel
-            </Button>
-            <Button type="submit" loading={createStudent.isPending}>
-              Create Student
-            </Button>
-          </div>
-        </form>
-      </Modal>
+        {/* Custom content for roll number generation */}
+        <div className="space-y-2">
+          {form.roll_number && !/^\d{1,2}[A-Z]{1,2}\d{1,2}$/.test(form.roll_number) && (
+            <div className="text-xs text-orange-600">
+              Roll number format: GradeSection + Number (e.g., 10A01, 9B03)
+            </div>
+          )}
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={() => setForm({
+              ...form,
+              roll_number: generateRollNumber(form.class_id)
+            })}
+            disabled={!form.class_id}
+            className="text-xs"
+          >
+            {!form.class_id ? 'Select class first' : 'Generate next roll number'}
+          </Button>
+        </div>
+      </FormModal>
 
       {/* View Student Modal */}
-      <Modal
+      <ViewModal
         isOpen={showViewModal}
         onClose={() => setShowViewModal(false)}
-        title=""
-        className="sm:max-w-xl"
-      >
-        {selectedStudent ? (
-          <div>
-            {/* Compact Header */}
-            <div className="bg-gradient-to-br from-blue-600 via-blue-700 to-indigo-800 text-white p-4 -m-6 mb-3 rounded-t-lg relative overflow-hidden">
-              <div className="relative flex items-center space-x-3">
-                {/* Small Profile Photo */}
-                <div className="flex-shrink-0">
-                  <div className="w-16 h-16 rounded-full overflow-hidden border-2 border-white shadow-lg bg-white">
-                    {selectedStudent.user?.photo_path ? (
-                      <img
-                        src={`/uploads/${selectedStudent.user.photo_path}`}
-                        alt={`${selectedStudent.user?.full_name || 'Student'} profile`}
-                        className="w-full h-full object-cover"
-                      />
-                    ) : (
-                      <div className="w-full h-full bg-gradient-to-br from-gray-200 to-gray-300 flex items-center justify-center">
-                        <span className="text-xl font-bold text-gray-600">
-                          {(selectedStudent.user?.full_name || 'S').charAt(0).toUpperCase()}
-                        </span>
-                      </div>
-                    )}
+        data={selectedStudent ? {
+          ...selectedStudent,
+          photo_path: selectedStudent.user?.photo_path,
+          full_name: selectedStudent.user?.full_name || 'Student Details',
+          subtitle: `Roll: ${selectedStudent.roll_number}`,
+          details: classes?.find(cls => cls.id === selectedStudent?.class_id)?.name || `Class ${selectedStudent?.class_id}` || 'N/A',
+          badges: [
+            'Active',
+            `#${selectedStudent.id}`,
+            selectedStudent.date_of_birth ? `${new Date().getFullYear() - new Date(selectedStudent.date_of_birth).getFullYear()} yrs` : null
+          ].filter(Boolean)
+        } : null}
+        sections={[
+          {
+            key: 'personal',
+            title: 'Personal Info',
+            icon: Users,
+            iconColor: 'text-blue-600',
+            className: 'bg-gradient-to-r from-blue-50 to-indigo-50 border-blue-100',
+            fields: [
+              { key: 'name', label: 'Name', value: selectedStudent?.user?.full_name || 'N/A' },
+              { key: 'username', label: 'Username', value: selectedStudent?.user?.username || 'N/A', valueClass: 'font-mono text-xs bg-gray-50 px-1 py-0.5 rounded inline-block' },
+              { key: 'roll', label: 'Roll Number', value: selectedStudent?.roll_number || 'N/A', valueClass: 'font-bold' },
+              { key: 'class', label: 'Class', value: classes?.find(cls => cls.id === selectedStudent?.class_id)?.name || `Class ${selectedStudent?.class_id}` || 'N/A' },
+              {
+                key: 'dob',
+                label: 'DOB',
+                value: selectedStudent?.date_of_birth
+                  ? new Date(selectedStudent.date_of_birth).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' })
+                  : 'N/A'
+              },
+              {
+                key: 'age',
+                label: 'Age',
+                value: selectedStudent?.date_of_birth
+                  ? `${new Date().getFullYear() - new Date(selectedStudent.date_of_birth).getFullYear()} yrs`
+                  : 'N/A'
+              }
+            ]
+          },
+          {
+            key: 'contact',
+            title: 'Contact Info',
+            icon: Phone,
+            iconColor: 'text-green-600',
+            className: 'bg-gradient-to-r from-green-50 to-emerald-50 border-green-100',
+            gridClass: 'grid-cols-1',
+            fields: [
+              { key: 'email', label: 'Email', value: selectedStudent?.user?.email || 'N/A', valueClass: 'text-xs break-all' },
+              { key: 'phone', label: 'Phone', value: selectedStudent?.user?.phone || 'N/A', valueClass: 'font-medium' },
+              { key: 'address', label: 'Address', value: selectedStudent?.address || 'N/A', valueClass: 'text-xs bg-gray-50 p-2 rounded border leading-relaxed' }
+            ]
+          },
+          {
+            key: 'parent',
+            title: 'Parent Info',
+            icon: Users,
+            iconColor: 'text-purple-600',
+            className: 'bg-gradient-to-r from-purple-50 to-pink-50 border-purple-100',
+            fields: [
+              { key: 'parentName', label: 'Parent Name', value: selectedStudent?.parent_name || 'N/A' },
+              { key: 'parentPhone', label: 'Parent Phone', value: selectedStudent?.parent_phone || 'N/A' }
+            ]
+          },
+          {
+            key: 'status',
+            title: 'Account Status',
+            icon: CheckCircle,
+            iconColor: 'text-indigo-600',
+            className: 'bg-gradient-to-r from-indigo-50 to-blue-50 border-indigo-100',
+            fields: [
+              {
+                key: 'status',
+                label: '',
+                value: (
+                  <div className="flex items-center justify-between w-full">
+                    <div className="flex items-center space-x-2">
+                      <div className="w-2 h-2 rounded-full bg-green-500"></div>
+                      <span className="font-semibold text-gray-900">Active</span>
+                    </div>
+                    <span className="text-xs text-gray-500">#{selectedStudent?.id}</span>
                   </div>
-                </div>
-
-                {/* Student Info */}
-                <div className="flex-1 min-w-0">
-                  <h2 className="text-xl font-bold truncate">{selectedStudent.user?.full_name || 'Student Details'}</h2>
-                  <p className="text-sm text-blue-100">Roll: {selectedStudent.roll_number}</p>
-                  <p className="text-sm text-blue-200 truncate">
-                    {classes?.find(cls => cls.id === selectedStudent?.class_id)?.name || `Class ${selectedStudent?.class_id}` || 'N/A'}
-                  </p>
-                  <div className="flex gap-2 mt-2">
-                    <span className="text-xs bg-white/20 px-2 py-1 rounded">Active</span>
-                    <span className="text-xs bg-white/20 px-2 py-1 rounded">#{selectedStudent.id}</span>
-                    {selectedStudent.date_of_birth && (
-                      <span className="text-xs bg-white/20 px-2 py-1 rounded">
-                        {new Date().getFullYear() - new Date(selectedStudent.date_of_birth).getFullYear()} yrs
-                      </span>
-                    )}
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            {/* Compact Content */}
-            <div className="space-y-3 px-2">
-              {/* Personal Information */}
-              <div className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-lg p-3 border border-blue-100">
-                <div className="flex items-center mb-2">
-                  <Users className="h-4 w-4 text-blue-600 mr-2" />
-                  <h3 className="text-sm font-bold text-gray-800">Personal Info</h3>
-                </div>
-                <div className="grid grid-cols-2 gap-2 text-sm">
-                  <div>
-                    <label className="text-xs text-blue-600 font-semibold">Name</label>
-                    <p className="text-gray-900 font-medium truncate">{selectedStudent.user?.full_name || 'N/A'}</p>
-                  </div>
-                  <div>
-                    <label className="text-xs text-blue-600 font-semibold">Username</label>
-                    <p className="text-gray-900 font-mono text-xs bg-gray-50 px-1 py-0.5 rounded inline-block">
-                      {selectedStudent.user?.username || 'N/A'}
-                    </p>
-                  </div>
-                  <div>
-                    <label className="text-xs text-blue-600 font-semibold">Roll Number</label>
-                    <p className="text-gray-900 font-bold">{selectedStudent.roll_number || 'N/A'}</p>
-                  </div>
-                  <div>
-                    <label className="text-xs text-blue-600 font-semibold">Class</label>
-                    <p className="text-gray-900 font-medium truncate">
-                      {classes?.find(cls => cls.id === selectedStudent?.class_id)?.name || `Class ${selectedStudent?.class_id}` || 'N/A'}
-                    </p>
-                  </div>
-                  <div>
-                    <label className="text-xs text-blue-600 font-semibold">DOB</label>
-                    <p className="text-gray-900 text-xs">
-                      {selectedStudent.date_of_birth
-                        ? new Date(selectedStudent.date_of_birth).toLocaleDateString('en-US', {
-                            year: 'numeric',
-                            month: 'short',
-                            day: 'numeric'
-                          })
-                        : 'N/A'}
-                    </p>
-                  </div>
-                  <div>
-                    <label className="text-xs text-blue-600 font-semibold">Age</label>
-                    <p className="text-gray-900 font-medium">
-                      {selectedStudent.date_of_birth
-                        ? `${new Date().getFullYear() - new Date(selectedStudent.date_of_birth).getFullYear()} yrs`
-                        : 'N/A'}
-                    </p>
-                  </div>
-                </div>
-              </div>
-
-              {/* Contact Information */}
-              <div className="bg-gradient-to-r from-green-50 to-emerald-50 rounded-lg p-3 border border-green-100">
-                <div className="flex items-center mb-2">
-                  <Phone className="h-4 w-4 text-green-600 mr-2" />
-                  <h3 className="text-sm font-bold text-gray-800">Contact Info</h3>
-                </div>
-                <div className="grid grid-cols-1 gap-2 text-sm">
-                  <div>
-                    <label className="text-xs text-green-600 font-semibold">Email</label>
-                    <p className="text-gray-900 text-xs break-all">{selectedStudent.user?.email || 'N/A'}</p>
-                  </div>
-                  <div>
-                    <label className="text-xs text-green-600 font-semibold">Phone</label>
-                    <p className="text-gray-900 font-medium">{selectedStudent.user?.phone || 'N/A'}</p>
-                  </div>
-                  <div>
-                    <label className="text-xs text-green-600 font-semibold">Address</label>
-                    <p className="text-gray-900 text-xs bg-gray-50 p-2 rounded border leading-relaxed">
-                      {selectedStudent.address || 'N/A'}
-                    </p>
-                  </div>
-                </div>
-              </div>
-
-              {/* Parent Information */}
-              <div className="bg-gradient-to-r from-purple-50 to-pink-50 rounded-lg p-3 border border-purple-100">
-                <div className="flex items-center mb-2">
-                  <Users className="h-4 w-4 text-purple-600 mr-2" />
-                  <h3 className="text-sm font-bold text-gray-800">Parent Info</h3>
-                </div>
-                <div className="grid grid-cols-2 gap-2 text-sm">
-                  <div>
-                    <label className="text-xs text-purple-600 font-semibold">Parent Name</label>
-                    <p className="text-gray-900 font-medium truncate">{selectedStudent.parent_name || 'N/A'}</p>
-                  </div>
-                  <div>
-                    <label className="text-xs text-purple-600 font-semibold">Parent Phone</label>
-                    <p className="text-gray-900 font-medium">{selectedStudent.parent_phone || 'N/A'}</p>
-                  </div>
-                </div>
-              </div>
-
-              {/* Account Status */}
-              <div className="bg-gradient-to-r from-indigo-50 to-blue-50 rounded-lg p-3 border border-indigo-100">
-                <div className="flex items-center mb-2">
-                  <CheckCircle className="h-4 w-4 text-indigo-600 mr-2" />
-                  <h3 className="text-sm font-bold text-gray-800">Account Status</h3>
-                </div>
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center space-x-2">
-                    <div className="w-2 h-2 rounded-full bg-green-500"></div>
-                    <span className="text-sm font-semibold text-gray-900">Active</span>
-                  </div>
-                  <span className="text-xs text-gray-500">#{selectedStudent.id}</span>
-                </div>
-              </div>
-            </div>
-
-            {/* Compact Action Buttons */}
-            <div className="flex flex-wrap gap-2 justify-end pt-4 mt-4 border-t border-gray-200 px-2">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => {
-                  setShowViewModal(false)
-                  handleEditStudent(selectedStudent)
-                }}
-                className="text-xs"
-              >
-                <Edit className="h-3 w-3 mr-1" />
-                Edit
-              </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => {
-                  setShowViewModal(false)
-                  handleResetPassword(selectedStudent)
-                }}
-                className="text-xs text-orange-600 hover:bg-orange-50"
-              >
-                <KeyRound className="h-3 w-3 mr-1" />
-                Reset Password
-              </Button>
-              <Button
-                size="sm"
-                onClick={() => setShowViewModal(false)}
-                className="text-xs bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800"
-              >
-                <CheckCircle className="h-3 w-3 mr-1" />
-                Close
-              </Button>
-            </div>
-          </div>
-        ) : (
-          <div className="flex justify-center items-center py-12">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
-          </div>
-        )}
-      </Modal>
+                )
+              }
+            ]
+          }
+        ]}
+        actions={[
+          {
+            label: 'Edit',
+            icon: Edit,
+            onClick: () => {
+              setShowViewModal(false)
+              handleEditStudent(selectedStudent)
+            },
+            className: 'text-xs'
+          },
+          {
+            label: 'Reset Password',
+            icon: KeyRound,
+            onClick: () => {
+              setShowViewModal(false)
+              handleResetPassword(selectedStudent)
+            },
+            variant: 'outline',
+            className: 'text-xs text-orange-600 hover:bg-orange-50'
+          }
+        ]}
+      />
 
       {/* Edit Student Modal */}
-      <Modal 
-        isOpen={showEditModal} 
+      <FormModal
+        isOpen={showEditModal}
         onClose={() => {
           setShowEditModal(false)
           setEditForm(null)
         }}
+        onSubmit={handleUpdateStudent}
         title="Edit Student"
+        initialData={editForm}
+        submitText="Update Student"
+        isLoading={updateStudent.isPending}
         className="sm:max-w-md"
-      >
-        {editForm && (
-          <form onSubmit={handleUpdateStudent} className="space-y-4">
-            <Input
-              label="Full Name"
-              type="text"
-              value={editForm.user.full_name || ''}
-              onChange={(e) => setEditForm({
-                ...editForm,
-                user: { ...editForm.user, full_name: e.target.value }
-              })}
-              required
-            />
-            
-            <Input
-              label="Username"
-              type="text"
-              value={editForm.user.username || ''}
-              onChange={(e) => setEditForm({
-                ...editForm,
-                user: { ...editForm.user, username: e.target.value }
-              })}
-              required
-            />
-
-            <Input
-              label="Email"
-              type="email"
-              value={editForm.user.email || ''}
-              onChange={(e) => setEditForm({
-                ...editForm,
-                user: { ...editForm.user, email: e.target.value }
-              })}
-            />
-            
-            <Input
-              label="Phone"
-              type="tel"
-              value={editForm.user.phone || ''}
-              onChange={(e) => setEditForm({
-                ...editForm,
-                user: { ...editForm.user, phone: e.target.value }
-              })}
-              required
-            />
-            
-            <Input
-              label="Roll Number"
-              type="text"
-              value={editForm.roll_number || ''}
-              onChange={(e) => setEditForm({ ...editForm, roll_number: e.target.value })}
-              required
-            />
-            
-            <Select
-              label="Class"
-              value={editForm.class_id || ''}
-              onChange={(e) => setEditForm({ ...editForm, class_id: parseInt(e.target.value) })}
-              options={classes?.map(cls => ({ value: cls.id, label: cls.name })) || []}
-              required
-            />
-            
-            <Input
-              label="Parent Name"
-              type="text"
-              value={editForm.parent_name || ''}
-              onChange={(e) => setEditForm({ ...editForm, parent_name: e.target.value })}
-            />
-            
-            <Input
-              label="Parent Phone"
-              type="tel"
-              value={editForm.parent_phone || ''}
-              onChange={(e) => setEditForm({ ...editForm, parent_phone: e.target.value })}
-              required
-            />
-            
-            <Input
-              label="Address"
-              type="text"
-              value={editForm.address || ''}
-              onChange={(e) => setEditForm({ ...editForm, address: e.target.value })}
-            />
-            
-            <Input
-              label="Date of Birth"
-              type="date"
-              value={editForm.date_of_birth || ''}
-              onChange={(e) => setEditForm({ ...editForm, date_of_birth: e.target.value })}
-            />
-            
-            <div className="flex flex-col-reverse sm:flex-row justify-end space-y-2 space-y-reverse sm:space-y-0 sm:space-x-3">
-              <Button 
-                type="button" 
-                variant="outline" 
-                onClick={() => {
-                  setShowEditModal(false)
-                  setEditForm(null)
-                }}
-                disabled={updateStudent.isPending}
-              >
-                Cancel
-              </Button>
-              <Button 
-                type="submit" 
-                loading={updateStudent.isPending}
-              >
-                Update Student
-              </Button>
-            </div>
-          </form>
-        )}
-      </Modal>
+        fields={[
+          {
+            name: 'user.full_name',
+            label: 'Full Name',
+            type: 'text',
+            required: true
+          },
+          {
+            name: 'user.username',
+            label: 'Username',
+            type: 'text',
+            required: true
+          },
+          {
+            name: 'user.email',
+            label: 'Email',
+            type: 'email'
+          },
+          {
+            name: 'user.phone',
+            label: 'Phone',
+            type: 'tel',
+            required: true
+          },
+          {
+            name: 'roll_number',
+            label: 'Roll Number',
+            type: 'text',
+            required: true
+          },
+          {
+            name: 'class_id',
+            label: 'Class',
+            type: 'select',
+            required: true,
+            options: classes?.map(cls => ({ value: cls.id, label: cls.name })) || []
+          },
+          {
+            name: 'parent_name',
+            label: 'Parent Name',
+            type: 'text'
+          },
+          {
+            name: 'parent_phone',
+            label: 'Parent Phone',
+            type: 'tel',
+            required: true
+          },
+          {
+            name: 'address',
+            label: 'Address',
+            type: 'text'
+          },
+          {
+            name: 'date_of_birth',
+            label: 'Date of Birth',
+            type: 'date'
+          }
+        ]}
+      />
 
       {/* Credentials Display Modal */}
-      <Modal 
-        isOpen={showCredentialsModal} 
+      <CredentialsModal
+        isOpen={showCredentialsModal}
         onClose={() => {
           setShowCredentialsModal(false)
           setNewStudentCredentials(null)
+          toast.success('Student account ready for use!')
         }}
-        title="Student Account Created Successfully!"
-        className="sm:max-w-lg"
-      >
-        {newStudentCredentials && (
-          <div className="space-y-6 p-2 sm:p-4">
-            <div className="bg-green-50 border border-green-200 rounded-lg p-4">
-              <div className="flex items-center mb-3">
-                <CheckCircle className="h-5 w-5 text-green-600 mr-2" />
-                <h3 className="text-lg font-medium text-green-900">Account Created</h3>
-              </div>
-              <p className="text-green-800 text-sm">
-                Student account has been created successfully. Please share these login credentials with the student.
-              </p>
-            </div>
-
-            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-              <h4 className="font-medium text-blue-900 mb-3">Login Credentials</h4>
-              <div className="space-y-3 text-sm">
-                <div className="flex justify-between items-center">
-                  <span className="font-medium text-gray-700">Student Name:</span>
-                  <span className="text-gray-900">{newStudentCredentials.fullName}</span>
-                </div>
-                <div className="flex justify-between items-center">
-                  <span className="font-medium text-gray-700">Roll Number:</span>
-                  <span className="text-gray-900">{newStudentCredentials.rollNumber}</span>
-                </div>
-                <div className="flex justify-between items-center">
-                  <span className="font-medium text-gray-700">Username:</span>
-                  <span className="text-gray-900 font-mono">{newStudentCredentials.username}</span>
-                </div>
-                <div className="flex justify-between items-center bg-yellow-50 p-2 rounded border">
-                  <span className="font-medium text-gray-700">Password:</span>
-                  <span className="text-gray-900 font-mono">{newStudentCredentials.password}</span>
-                </div>
-              </div>
-            </div>
-
-            {/* <div className="bg-amber-50 border border-amber-200 rounded-lg p-4">
-              <h4 className="font-medium text-amber-900 mb-2">Important Instructions</h4>
-              <ul className="text-amber-800 text-sm space-y-1">
-                <li>• Share these credentials securely with the student</li>
-                <li>• Ask student to change password after first login</li>
-                <li>• Keep a secure copy for your records</li>
-                <li>• Student can login at: <span className="font-mono">your-school-portal.com</span></li>
-              </ul>
-            </div> */}
-
-            <div className="flex gap-3 justify-end pt-4">
-              <Button
-                variant="outline"
-                onClick={copyCredentials}
-                className="flex items-center gap-2"
-              >
-                <Download className="h-4 w-4" />
-                Copy Credentials
-              </Button>
-              <Button
-                variant="outline"
-                onClick={printCredentials}
-                className="flex items-center gap-2"
-              >
-                <FileText className="h-4 w-4" />
-                Print Credentials
-              </Button>
-              <Button
-                onClick={() => {
-                  setShowCredentialsModal(false)
-                  setNewStudentCredentials(null)
-                  toast.success('Student account ready for use!')
-                }}
-              >
-                Done
-              </Button>
-            </div>
-          </div>
-        )}
-      </Modal>
+        credentials={newStudentCredentials}
+        entityType="Student"
+        onCopy={copyCredentials}
+        onPrint={printCredentials}
+      />
 
       {/* Delete Confirmation Modal */}
-      <Modal 
-        isOpen={showDeleteModal} 
+      <ConfirmationModal
+        isOpen={showDeleteModal}
         onClose={() => {
           setShowDeleteModal(false)
           setSelectedStudent(null)
         }}
+        onConfirm={confirmDeleteStudent}
         title="Confirm Delete Student"
-        className="sm:max-w-md"
+        confirmText="Delete Student"
+        isLoading={deleteStudent.isPending}
+        icon={XCircle}
+        iconColor="text-red-600"
       >
         {selectedStudent && (
-          <div className="space-y-4 p-2 sm:p-4">
-            <div className="bg-red-50 border border-red-200 rounded-lg p-4">
-              <div className="flex items-center mb-3">
-                <div className="flex-shrink-0">
-                  <XCircle className="h-5 w-5 text-red-600" />
-                </div>
-                <div className="ml-3">
-                  <h3 className="text-lg font-medium text-red-900">Delete Student</h3>
-                </div>
-              </div>
-              <p className="text-red-800 text-sm">
-                Are you sure you want to delete <strong>{selectedStudent.user?.full_name}</strong>? 
-                This action cannot be undone and will permanently remove all student data including:
-              </p>
-              <ul className="text-red-800 text-sm mt-2 ml-4 list-disc">
-                <li>Student profile and account</li>
-                <li>Academic records and grades</li>
-                <li>Attendance history</li>
-                <li>Assignment submissions</li>
-              </ul>
-            </div>
-
-            <div className="bg-gray-50 rounded-lg p-3">
-              <h4 className="font-medium text-gray-900 mb-2">Student Details:</h4>
-              <div className="text-sm text-gray-600 space-y-1">
-                <p><strong>Name:</strong> {selectedStudent.user?.full_name}</p>
-                <p><strong>Roll Number:</strong> {selectedStudent.roll_number}</p>
-                <p><strong>Class:</strong> {selectedStudent.class_id}</p>
-              </div>
-            </div>
-
-            <div className="flex gap-3 justify-end pt-4">
-              <Button
-                variant="outline"
-                onClick={() => {
-                  setShowDeleteModal(false)
-                  setSelectedStudent(null)
-                }}
-                disabled={deleteStudent.isPending}
-              >
-                Cancel
-              </Button>
-              <Button
-                variant="destructive"
-                onClick={confirmDeleteStudent}
-                loading={deleteStudent.isPending}
-                className="bg-red-600 hover:bg-red-700 text-white"
-              >
-                Delete Student
-              </Button>
+          <div className="bg-gray-50 rounded-lg p-3">
+            <h4 className="font-medium text-gray-900 mb-2">Student Details:</h4>
+            <div className="text-sm text-gray-600 space-y-1">
+              <p><strong>Name:</strong> {selectedStudent.user?.full_name}</p>
+              <p><strong>Roll Number:</strong> {selectedStudent.roll_number}</p>
+              <p><strong>Class:</strong> {classes?.find(cls => cls.id === selectedStudent.class_id)?.name || `Class ${selectedStudent.class_id}`}</p>
             </div>
           </div>
         )}
-      </Modal>
+        <p className="text-red-800 text-sm">
+          Are you sure you want to delete <strong>{selectedStudent?.user?.full_name}</strong>?
+          This action cannot be undone and will permanently remove all student data including:
+        </p>
+        <ul className="text-red-800 text-sm mt-2 ml-4 list-disc">
+          <li>Student profile and account</li>
+          <li>Academic records and grades</li>
+          <li>Attendance history</li>
+          <li>Assignment submissions</li>
+        </ul>
+      </ConfirmationModal>
 
       {/* Reset Password Confirmation Modal */}
-      <Modal 
-        isOpen={showResetPasswordModal} 
+      <ConfirmationModal
+        isOpen={showResetPasswordModal}
         onClose={() => {
           setShowResetPasswordModal(false)
           setSelectedStudent(null)
         }}
+        onConfirm={confirmResetPassword}
         title="Reset Student Password"
-        className="sm:max-w-md"
+        confirmText="Reset Password"
+        confirmVariant="default"
+        isLoading={updateStudentPassword.isPending}
+        icon={AlertCircle}
+        iconColor="text-orange-600"
       >
         {selectedStudent && (
-          <div className="space-y-4 p-2 sm:p-4">
-            <div className="bg-orange-50 border border-orange-200 rounded-lg p-4">
-              <div className="flex items-center mb-3">
-                <div className="flex-shrink-0">
-                  <AlertCircle className="h-5 w-5 text-orange-600" />
-                </div>
-                <div className="ml-3">
-                  <h3 className="text-lg font-medium text-orange-900">Reset Password</h3>
-                </div>
-              </div>
-              <p className="text-orange-800 text-sm">
-                Are you sure you want to reset the password for <strong>{selectedStudent.user?.full_name}</strong>?
-              </p>
-              <div className="mt-3 text-orange-800 text-sm">
-                <p><strong>What will happen:</strong></p>
-                <ul className="ml-4 list-disc mt-1">
-                  <li>A new secure password will be generated</li>
-                  <li>The student's current password will be invalidated</li>
-                  <li>New credentials will be displayed for sharing</li>
-                  <li>Student must use the new password for login</li>
-                </ul>
-              </div>
-            </div>
-
-            <div className="bg-gray-50 rounded-lg p-3">
-              <h4 className="font-medium text-gray-900 mb-2">Student Details:</h4>
-              <div className="text-sm text-gray-600 space-y-1">
-                <p><strong>Name:</strong> {selectedStudent.user?.full_name}</p>
-                <p><strong>Username:</strong> {selectedStudent.user?.username}</p>
-                <p><strong>Roll Number:</strong> {selectedStudent.roll_number}</p>
-              </div>
-            </div>
-
-            <div className="flex gap-3 justify-end pt-4">
-              <Button
-                variant="outline"
-                onClick={() => {
-                  setShowResetPasswordModal(false)
-                  setSelectedStudent(null)
-                }}
-                disabled={updateStudentPassword.isPending}
-              >
-                Cancel
-              </Button>
-              <Button
-                onClick={confirmResetPassword}
-                loading={updateStudentPassword.isPending}
-                className="bg-orange-600 hover:bg-orange-700 text-white"
-              >
-                Reset Password
-              </Button>
+          <div className="bg-gray-50 rounded-lg p-3">
+            <h4 className="font-medium text-gray-900 mb-2">Student Details:</h4>
+            <div className="text-sm text-gray-600 space-y-1">
+              <p><strong>Name:</strong> {selectedStudent.user?.full_name}</p>
+              <p><strong>Username:</strong> {selectedStudent.user?.username}</p>
+              <p><strong>Roll Number:</strong> {selectedStudent.roll_number}</p>
             </div>
           </div>
         )}
-      </Modal>
+        <p className="text-orange-800 text-sm">
+          Are you sure you want to reset the password for <strong>{selectedStudent?.user?.full_name}</strong>?
+        </p>
+        <div className="mt-3 text-orange-800 text-sm">
+          <p><strong>What will happen:</strong></p>
+          <ul className="ml-4 list-disc mt-1">
+            <li>A new secure password will be generated</li>
+            <li>The student's current password will be invalidated</li>
+            <li>New credentials will be displayed for sharing</li>
+            <li>Student must use the new password for login</li>
+          </ul>
+        </div>
+      </ConfirmationModal>
     </div>
   )
 }

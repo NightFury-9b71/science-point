@@ -33,7 +33,7 @@ class Config {
   // Frontend configuration
   get frontend() {
     return {
-      baseURL: import.meta.env.VITE_FRONTEND_BASE_URL || 'http://localhost:5173',
+      baseURL: import.meta.env.VITE_FRONTEND_BASE_URL || 'http://localhost:3000',
     }
   }
 
