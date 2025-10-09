@@ -149,44 +149,6 @@ const StudentDashboardOverview = () => {
             )}
           </Card.Content>
         </Card>
-
-        {/* Recent Notices */}
-        <Card>
-          <Card.Header>
-            <Card.Title className="flex items-center gap-2">
-              <Bell className="h-5 w-5" />
-              Recent Notices
-            </Card.Title>
-          </Card.Header>
-          <Card.Content>
-            {notices.slice(0, 3).length > 0 ? (
-              <div className="space-y-3">
-                {notices.slice(0, 3).map((notice) => (
-                  <div key={notice.id} className="p-3 bg-gray-50 rounded-lg">
-                    <div className="flex items-start justify-between">
-                      <div className="flex-1">
-                        <p className="font-medium text-gray-900 text-sm">{notice.title}</p>
-                        <p className="text-xs text-gray-500 mt-1">
-                          {new Date(notice.created_at).toLocaleDateString()}
-                        </p>
-                      </div>
-                      {notice.is_urgent && (
-                        <span className="bg-red-100 text-red-800 px-2 py-1 rounded text-xs font-medium">
-                          Urgent
-                        </span>
-                      )}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <div className="text-center py-8">
-                <Bell className="h-12 w-12 text-gray-300 mx-auto mb-4" />
-                <p className="text-gray-500">No notices available</p>
-              </div>
-            )}
-          </Card.Content>
-        </Card>
       </div>
 
       {/* Quick Actions */}

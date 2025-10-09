@@ -248,32 +248,6 @@ const TeacherOverview = () => {
           )}
         </Card.Content>
       </Card>
-
-      {/* Recent Notices */}
-      <Card>
-        <Card.Header className="p-4 sm:p-6">
-          <Card.Title className="text-lg sm:text-xl">Recent Notices</Card.Title>
-        </Card.Header>
-        <Card.Content className="p-4 sm:p-6">
-          {notices.length > 0 ? (
-            <div className="space-y-3">
-              {notices.slice(0, 3).map((notice) => (
-                <div key={notice.id} className="border-l-4 border-blue-500 pl-3 sm:pl-4 py-2">
-                  <h4 className="font-medium text-gray-900 text-sm sm:text-base">{notice.title}</h4>
-                  <p className="text-xs sm:text-sm text-gray-600 mt-1">
-                    {notice.content.substring(0, 100)}...
-                  </p>
-                  <p className="text-xs text-gray-400 mt-2">
-                    {new Date(notice.created_at).toLocaleDateString()}
-                  </p>
-                </div>
-              ))}
-            </div>
-          ) : (
-            <p className="text-gray-500 text-sm">No recent notices</p>
-          )}
-        </Card.Content>
-      </Card>
     </div>
   )
 }

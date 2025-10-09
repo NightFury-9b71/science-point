@@ -1,7 +1,9 @@
 import { Bell, Calendar, AlertTriangle } from 'lucide-react'
+import { useEffect } from 'react'
 import Card from '../../components/Card'
 import { useAuth } from '../../contexts/AuthContext'
 import { useStudentNotices } from '../../services/queries'
+import { noticeUtils } from '../../utils/noticeUtils'
 
 function StudentNotices() {
   const { user } = useAuth()
@@ -27,6 +29,15 @@ function StudentNotices() {
   }
   
   const { data: notices = [], isLoading, error } = useStudentNotices(studentId)
+
+  // Mark all notices as read when the page is viewed
+  useEffect(() => {
+    if (notices.length > 0) {
+      notices.forEach(notice => {
+        noticeUtils.markAsRead(notice.id)
+      })
+    }
+  }, [notices])
 
   if (isLoading) {
     return (

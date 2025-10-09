@@ -2,6 +2,8 @@ import React, { useState, useEffect, useMemo } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
 import { Menu, X, LogOut, User, Settings, GraduationCap, BookOpen, Users, Calendar, Award, BarChart3, Home, Clock, Shield, UserCheck, Bell, FileText, Upload } from 'lucide-react'
 import { useAuth } from '../contexts/AuthContext'
+import { useTeacherNotices, useStudentNotices } from '../services/queries'
+import { noticeUtils } from '../utils/noticeUtils'
 import Button from './Button'
 
 const Layout = ({ children }) => {
@@ -10,6 +12,15 @@ const Layout = ({ children }) => {
   const navigate = useNavigate()
   const location = useLocation()
   const { user, logout } = useAuth()
+  
+  // Get notices count for notification bell
+  const teacherId = user?.teacher_id || user?.teacherId
+  const studentId = user?.student_id || user?.studentId
+  
+  const { data: teacherNotices = [] } = useTeacherNotices()
+  const { data: studentNotices = [] } = useStudentNotices(studentId)
+  
+  const noticesCount = user?.role === 'teacher' ? noticeUtils.getUnreadCount(teacherNotices) : user?.role === 'student' ? noticeUtils.getUnreadCount(studentNotices) : 0
   
   // Close menus when route changes
   useEffect(() => {
@@ -209,6 +220,27 @@ const Layout = ({ children }) => {
 
             {/* User Menu */}
             <div className="flex items-center space-x-4">
+              {/* Notifications Bell - For Teachers and Students */}
+              {(user?.role === 'teacher' || user?.role === 'student') && (
+                <button
+                  onClick={() => {
+                    if (user?.role === 'teacher') {
+                      navigate('/teacher/notices')
+                    } else if (user?.role === 'student') {
+                      navigate('/student/notices')
+                    }
+                  }}
+                  className="relative p-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-full transition-colors"
+                >
+                  <Bell className="h-5 w-5" />
+                  {noticesCount > 0 && (
+                    <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs font-bold rounded-full h-5 w-5 flex items-center justify-center min-w-[20px]">
+                      {noticesCount > 99 ? '99+' : noticesCount}
+                    </span>
+                  )}
+                </button>
+              )}
+
               {/* User Info */}
               <div className="hidden sm:flex items-center space-x-3">
                 <div className="text-right">
@@ -364,6 +396,36 @@ const Layout = ({ children }) => {
               })}
               
               {navigationItems.length > 0 && <div className="border-t border-gray-200 my-2"></div>}
+              
+              {/* Notifications - For Teachers and Students */}
+              {(user?.role === 'teacher' || user?.role === 'student') && (
+                <button
+                  className="w-full text-left px-3 py-2 text-sm text-gray-700 hover:bg-gray-100 rounded-md flex items-center space-x-2"
+                  onClick={() => {
+                    setMobileMenuOpen(false)
+                    if (user?.role === 'teacher') {
+                      navigate('/teacher/notices')
+                    } else if (user?.role === 'student') {
+                      navigate('/student/notices')
+                    }
+                  }}
+                >
+                  <div className="relative">
+                    <Bell className="h-4 w-4" />
+                    {noticesCount > 0 && (
+                      <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs font-bold rounded-full h-4 w-4 flex items-center justify-center min-w-[16px]">
+                        {noticesCount > 99 ? '99+' : noticesCount}
+                      </span>
+                    )}
+                  </div>
+                  <span>Notices</span>
+                  {noticesCount > 0 && (
+                    <span className="ml-auto text-xs text-gray-500">
+                      ({noticesCount})
+                    </span>
+                  )}
+                </button>
+              )}
               
               <button
                 className="w-full text-left px-3 py-2 text-sm text-gray-700 hover:bg-gray-100 rounded-md flex items-center space-x-2"
