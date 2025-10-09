@@ -4,7 +4,6 @@ import { useAuth } from '../contexts/AuthContext'
 import withAuthGuard from '../components/withAuthGuard'
 
 // Import student components
-import StudentProfile from './student/StudentProfile'
 import StudentAttendance from './student/StudentAttendance'
 import StudentResults from './student/StudentResults'
 import StudentMaterials from './student/StudentMaterials'
@@ -42,7 +41,6 @@ const StudentDashboard = () => {
       <Route path="/schedule" element={<StudentScheduleView />} />
       <Route path="/notices" element={<StudentNotices />} />
       <Route path="/materials" element={<StudentMaterials />} />
-      <Route path="/profile" element={<StudentProfile />} />
       <Route path="*" element={<NotFound />} />
     </Routes>
   )

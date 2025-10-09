@@ -136,7 +136,7 @@ const AdminSubjects = () => {
             variant="outline"
             size="sm"
             onClick={() => navigate('/admin-dashboard')}
-            className="lg:hidden"
+            className="hidden lg:block"
           >
             <ArrowLeft className="h-4 w-4" />
           </Button>

@@ -503,7 +503,7 @@ Please keep these credentials safe and change the password after first login.`
             variant="outline"
             size="sm"
             onClick={() => navigate('/admin')}
-            className="lg:hidden"
+            className="hidden lg:block"
           >
             <ArrowLeft className="h-4 w-4" />
           </Button>
@@ -588,9 +588,9 @@ Please keep these credentials safe and change the password after first login.`
         <div className="block sm:hidden space-y-3">
           {filteredStudents && filteredStudents.length > 0 ? (
             filteredStudents.map((student) => (
-            <Card key={student.id} className="p-4">
+            <Card key={student.id} className="p-4 hover:shadow-lg transition-shadow duration-200">
               <div className="flex items-start space-x-3">
-                <div className="w-12 h-12 rounded-full overflow-hidden bg-gray-200 flex items-center justify-center flex-shrink-0">
+                <div className="w-14 h-14 rounded-full overflow-hidden bg-gradient-to-br from-blue-100 to-blue-200 flex items-center justify-center flex-shrink-0 ring-2 ring-blue-100">
                   {student.user?.photo_path ? (
                     <img 
                       src={`/uploads/${student.user.photo_path}`} 
@@ -598,53 +598,75 @@ Please keep these credentials safe and change the password after first login.`
                       className="w-full h-full object-cover"
                     />
                   ) : (
-                    <span className="text-gray-600 font-medium">
+                    <span className="text-blue-600 font-bold text-lg">
                       {(student.user?.full_name || 'S').charAt(0).toUpperCase()}
                     </span>
                   )}
                 </div>
                 <div className="flex-1 min-w-0">
-                  <div className="flex justify-between items-start">
+                  <div className="flex justify-between items-start mb-3">
                     <div className="min-w-0 flex-1">
-                      <h3 className="font-medium text-gray-900 truncate">{student.user?.full_name || 'N/A'}</h3>
-                      <p className="text-sm text-gray-600">Roll: {student.roll_number}</p>
+                      <h3 className="font-semibold text-gray-900 text-base truncate">{student.user?.full_name || 'N/A'}</h3>
                     </div>
-                    <div className="flex gap-1 flex-wrap ml-2">
-                      <Button size="sm" variant="outline" onClick={() => handleViewStudent(student)}>
+                    <div className="flex gap-1 flex-shrink-0 ml-2">
+                      <Button size="sm" variant="outline" onClick={() => handleViewStudent(student)} className="p-1.5">
                         <Eye className="h-4 w-4" />
                       </Button>
-                      <Button size="sm" variant="outline" onClick={() => handleEditStudent(student)}>
-                        Edit
+                      <Button size="sm" variant="outline" onClick={() => handleEditStudent(student)} className="p-1.5">
+                        <Edit className="h-4 w-4" />
                       </Button>
                       <Button 
                         size="sm" 
                         variant="outline" 
                         onClick={() => handleResetPassword(student)}
-                        className="text-orange-600 hover:bg-orange-50"
+                        className="p-1.5 text-orange-600 hover:bg-orange-50 border-orange-200"
                         title="Reset Password"
                       >
-                        Reset PWD
+                        <KeyRound className="h-4 w-4" />
                       </Button>
-                      <Button size="sm" variant="outline" onClick={() => handleDeleteStudent(student)}>
-                        Delete
+                      <Button size="sm" variant="outline" onClick={() => handleDeleteStudent(student)} className="p-1.5 text-red-600 hover:bg-red-50 border-red-200">
+                        <XCircle className="h-4 w-4" />
                       </Button>
                     </div>
                   </div>
-                  <div className="text-xs text-gray-500 space-y-1 mt-2">
-                    <p>Email: {student.user?.email || 'N/A'}</p>
-                    <p>Username: {student.user?.username || 'N/A'}</p>
-                    <p>Phone: {student.user?.phone || 'N/A'}</p>
-                    <p>Parent Name: {student.parent_name || 'N/A'}</p>
-                    <p>Parent Phone: {student.parent_phone || 'N/A'}</p>
-                    <p>Address: {student.address || 'N/A'}</p>
-                    <p>Class: {classes?.find(cls => cls.id === student.class_id)?.name || `Class ${student.class_id}` || 'N/A'}</p>
+                  
+                  {/* Key Info Grid */}
+                  <div className="grid grid-cols-2 gap-2 mb-3">
+                    <div className="bg-gray-50 rounded-lg p-2">
+                      <div className="text-xs font-medium text-gray-500 uppercase tracking-wide">Roll & Class</div>
+                      <div className="text-sm text-gray-900 font-semibold">{student.roll_number}</div>
+                      <div className="text-xs text-purple-700 bg-purple-50 px-1.5 py-0.5 rounded-full inline-block mt-1">
+                        {classes?.find(cls => cls.id === student.class_id)?.name || `Class ${student.class_id}` || 'N/A'}
+                      </div>
+                    </div>
+                    <div className="bg-gray-50 rounded-lg p-2">
+                      <div className="text-xs font-medium text-gray-500 uppercase tracking-wide">Contact</div>
+                      <div className="text-sm text-gray-900 truncate">{student.user?.phone || 'N/A'}</div>
+                      <div className="text-xs text-gray-600 truncate">{student.user?.email || 'N/A'}</div>
+                    </div>
                   </div>
+                  
+                  {/* Parent Info Row */}
+                  <div className="bg-gray-50 rounded-lg p-2 mb-3">
+                    <div className="text-xs font-medium text-gray-500 uppercase tracking-wide">Parent</div>
+                    <div className="text-sm text-gray-900 truncate">{student.parent_name || 'N/A'}</div>
+                    <div className="text-xs text-gray-600 truncate">{student.parent_phone || 'N/A'}</div>
+                  </div>
+                  
+                  {/* Address */}
+                  {student.address && (
+                    <div className="text-xs text-gray-600 bg-gray-50 rounded p-2 leading-relaxed">
+                      <span className="font-medium">Address:</span> {student.address}
+                    </div>
+                  )}
                 </div>
               </div>
             </Card>
           ))) : (
             <Card className="p-8 text-center">
-              <p className="text-gray-500">No students found matching your filters.</p>
+              <Users className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+              <p className="text-gray-500 font-medium">No students found</p>
+              <p className="text-sm text-gray-400 mt-1">Try adjusting your search filters</p>
             </Card>
           )}
         </div>

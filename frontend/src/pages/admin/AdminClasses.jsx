@@ -204,7 +204,7 @@ const AdminClasses = () => {
             variant="outline"
             size="sm"
             onClick={() => navigate('/admin')}
-            className="lg:hidden"
+            className="hidden lg:block"
           >
             <ArrowLeft className="h-4 w-4" />
           </Button>

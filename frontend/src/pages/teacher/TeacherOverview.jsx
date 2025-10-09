@@ -4,7 +4,13 @@ import { BookOpen, Users, FileText, Award, Calendar, Upload, Bell } from 'lucide
 import Card from '../../components/Card'
 import Button from '../../components/Button'
 import { useAuth } from '../../contexts/AuthContext'
-import { useTeacherClasses, useTeacherStudents, useTeacherSubjects, useTeacherExams, useTeacherNotices } from '../../services/queries'
+import { useTeacherClasses, useTeacherStudents, useTeacherSubjects, useTeacherExams, useTeacherNotices, useTeacherSchedule } from '../../services/queries'
+
+// Utility function to get current day of week
+const getCurrentDayOfWeek = () => {
+  const days = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday']
+  return days[new Date().getDay()]
+}
 
 const TeacherOverview = () => {
   const { user } = useAuth()
@@ -34,6 +40,9 @@ const TeacherOverview = () => {
   const { data: mySubjects = [] } = useTeacherSubjects(teacherId)
   const { data: exams = [] } = useTeacherExams(teacherId)
   const { data: notices = [] } = useTeacherNotices()
+
+  // Get current day schedule
+  const { data: todaysSchedule = [] } = useTeacherSchedule(teacherId, getCurrentDayOfWeek())
 
   const navigate = useNavigate()
 
@@ -202,6 +211,41 @@ const TeacherOverview = () => {
               </Card>
             ))}
           </div>
+        </Card.Content>
+      </Card>
+
+      {/* Today's Schedule */}
+      <Card>
+        <Card.Header className="p-4 sm:p-6">
+          <Card.Title className="text-lg sm:text-xl flex items-center gap-2">
+            <Calendar className="h-5 w-5" />
+            Today's Schedule
+          </Card.Title>
+        </Card.Header>
+        <Card.Content className="p-4 sm:p-6">
+          {todaysSchedule.length > 0 ? (
+            <div className="space-y-3">
+              {todaysSchedule
+                .sort((a, b) => a.start_time.localeCompare(b.start_time))
+                .map((schedule) => (
+                  <div key={schedule.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                    <div>
+                      <p className="font-medium text-gray-900">{schedule.subject?.name}</p>
+                      <p className="text-sm text-gray-600">{schedule.start_time} - {schedule.end_time}</p>
+                    </div>
+                    <div className="text-right text-sm text-gray-600">
+                      <p>{schedule.class?.name}</p>
+                      {schedule.room_number && <p>Room {schedule.room_number}</p>}
+                    </div>
+                  </div>
+                ))}
+            </div>
+          ) : (
+            <div className="text-center py-8">
+              <Calendar className="h-12 w-12 text-gray-300 mx-auto mb-4" />
+              <p className="text-gray-500">No classes scheduled for today</p>
+            </div>
+          )}
         </Card.Content>
       </Card>
 

@@ -1,4 +1,5 @@
 import React from 'react'
+import { useNavigate } from 'react-router-dom'
 import {
   User,
   Award,
@@ -28,6 +29,7 @@ const getCurrentDayOfWeek = () => {
 const StudentDashboardOverview = () => {
   const { user } = useAuth()
   const studentId = user?.student_id || user?.studentId
+  const navigate = useNavigate()
   
   // Verify student authentication
   if (!studentId) {
@@ -58,53 +60,53 @@ const StudentDashboardOverview = () => {
   return (
     <div className="space-y-6">
       {/* Quick Stats */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        <Card className="p-6">
-          <div className="flex items-center">
-            <div className="flex-shrink-0">
-              <Calendar className="h-8 w-8 text-blue-600" />
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-6">
+        <Card className="p-4 sm:p-6">
+          <div className="flex flex-col sm:flex-row sm:items-center">
+            <div className="flex-shrink-0 mb-2 sm:mb-0">
+              <Calendar className="h-6 w-6 sm:h-8 sm:w-8 text-blue-600" />
             </div>
-            <div className="ml-4">
-              <p className="text-sm font-medium text-gray-500">Today's Classes</p>
-              <p className="text-2xl font-bold text-gray-900">
+            <div className="sm:ml-4">
+              <p className="text-lg sm:text-2xl font-bold text-gray-900">
                 {weeklySchedule.filter(s => s.day_of_week === getCurrentDayOfWeek()).length}
               </p>
+              <p className="text-xs sm:text-sm text-gray-500">Today's Classes</p>
             </div>
           </div>
         </Card>
 
-        <Card className="p-6">
-          <div className="flex items-center">
-            <div className="flex-shrink-0">
-              <FileText className="h-8 w-8 text-green-600" />
+        <Card className="p-4 sm:p-6">
+          <div className="flex flex-col sm:flex-row sm:items-center">
+            <div className="flex-shrink-0 mb-2 sm:mb-0">
+              <FileText className="h-6 w-6 sm:h-8 sm:w-8 text-green-600" />
             </div>
-            <div className="ml-4">
-              <p className="text-sm font-medium text-gray-500">Study Materials</p>
-              <p className="text-2xl font-bold text-gray-900">{studyMaterials.length}</p>
-            </div>
-          </div>
-        </Card>
-
-        <Card className="p-6">
-          <div className="flex items-center">
-            <div className="flex-shrink-0">
-              <Bell className="h-8 w-8 text-yellow-600" />
-            </div>
-            <div className="ml-4">
-              <p className="text-sm font-medium text-gray-500">New Notices</p>
-              <p className="text-2xl font-bold text-gray-900">{notices.length}</p>
+            <div className="sm:ml-4">
+              <p className="text-lg sm:text-2xl font-bold text-gray-900">{studyMaterials.length}</p>
+              <p className="text-xs sm:text-sm text-gray-500">Study Materials</p>
             </div>
           </div>
         </Card>
 
-        <Card className="p-6">
-          <div className="flex items-center">
-            <div className="flex-shrink-0">
-              <Award className="h-8 w-8 text-purple-600" />
+        <Card className="p-4 sm:p-6">
+          <div className="flex flex-col sm:flex-row sm:items-center">
+            <div className="flex-shrink-0 mb-2 sm:mb-0">
+              <Bell className="h-6 w-6 sm:h-8 sm:w-8 text-yellow-600" />
             </div>
-            <div className="ml-4">
-              <p className="text-sm font-medium text-gray-500">Exam Results</p>
-              <p className="text-2xl font-bold text-gray-900">{examResults.length}</p>
+            <div className="sm:ml-4">
+              <p className="text-lg sm:text-2xl font-bold text-gray-900">{notices.length}</p>
+              <p className="text-xs sm:text-sm text-gray-500">New Notices</p>
+            </div>
+          </div>
+        </Card>
+
+        <Card className="p-4 sm:p-6">
+          <div className="flex flex-col sm:flex-row sm:items-center">
+            <div className="flex-shrink-0 mb-2 sm:mb-0">
+              <Award className="h-6 w-6 sm:h-8 sm:w-8 text-purple-600" />
+            </div>
+            <div className="sm:ml-4">
+              <p className="text-lg sm:text-2xl font-bold text-gray-900">{examResults.length}</p>
+              <p className="text-xs sm:text-sm text-gray-500">Exam Results</p>
             </div>
           </div>
         </Card>
@@ -194,21 +196,37 @@ const StudentDashboardOverview = () => {
         </Card.Header>
         <Card.Content>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-            <Button variant="outline" className="flex flex-col items-center p-4 h-auto">
-              <User className="h-6 w-6 mb-2" />
-              <span className="text-sm">View Profile</span>
-            </Button>
-            <Button variant="outline" className="flex flex-col items-center p-4 h-auto">
+            <Button 
+              variant="outline" 
+              className="flex flex-col items-center p-4 h-auto"
+              onClick={() => navigate('/student/schedule')}
+            >
               <Calendar className="h-6 w-6 mb-2" />
               <span className="text-sm">Schedule</span>
             </Button>
-            <Button variant="outline" className="flex flex-col items-center p-4 h-auto">
+            <Button 
+              variant="outline" 
+              className="flex flex-col items-center p-4 h-auto"
+              onClick={() => navigate('/student/materials')}
+            >
               <FileText className="h-6 w-6 mb-2" />
               <span className="text-sm">Materials</span>
             </Button>
-            <Button variant="outline" className="flex flex-col items-center p-4 h-auto">
+            <Button 
+              variant="outline" 
+              className="flex flex-col items-center p-4 h-auto"
+              onClick={() => navigate('/student/results')}
+            >
               <Award className="h-6 w-6 mb-2" />
               <span className="text-sm">Results</span>
+            </Button>
+            <Button 
+              variant="outline" 
+              className="flex flex-col items-center p-4 h-auto"
+              onClick={() => navigate('/student/notices')}
+            >
+              <Bell className="h-6 w-6 mb-2" />
+              <span className="text-sm">Notices</span>
             </Button>
           </div>
         </Card.Content>

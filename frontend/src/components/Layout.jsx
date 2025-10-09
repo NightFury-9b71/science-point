@@ -186,12 +186,6 @@ const Layout = ({ children }) => {
           href: '/student/materials',
           icon: FileText,
           current: currentPath === '/student/materials'
-        },
-        {
-          name: 'Profile',
-          href: '/student/profile',
-          icon: User,
-          current: currentPath === '/student/profile'
         }
       ]
     }
@@ -217,12 +211,14 @@ const Layout = ({ children }) => {
             <div className="flex items-center space-x-4">
               {/* User Info */}
               <div className="hidden sm:flex items-center space-x-3">
-                <div className={`px-3 py-1 rounded-full text-sm font-medium border ${getRoleColor()}`}>
-                  {user?.role?.charAt(0).toUpperCase() + user?.role?.slice(1)}
+                <div className="text-right">
+                  <div className="text-sm font-semibold text-gray-900 leading-tight">
+                    {getUserDisplayName()}
+                  </div>
+                  <div className={`text-xs font-medium ${getRoleColor()} leading-tight`}>
+                    {user?.role?.charAt(0).toUpperCase() + user?.role?.slice(1)}
+                  </div>
                 </div>
-                <span className="text-gray-700 font-medium">
-                  {getUserDisplayName()}
-                </span>
               </div>
 
               {/* Desktop User Menu */}
@@ -247,18 +243,8 @@ const Layout = ({ children }) => {
                 </button>
                 {userMenuOpen && (
                   <div className="absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg border border-gray-200 py-1 z-50">
-                    <div className="px-4 py-2 border-b border-gray-100 sm:hidden">
-                      <p className="text-sm font-medium text-gray-900">{getUserDisplayName()}</p>
-                      <p className={`text-xs font-medium ${getRoleColor()}`}>
-                        {user?.role?.charAt(0).toUpperCase() + user?.role?.slice(1)}
-                      </p>
-                    </div>
-                    <div className="px-4 py-2 border-b border-gray-100 hidden sm:block">
-                      <p className="text-sm text-gray-600">Signed in as</p>
-                      <p className="text-sm font-medium text-gray-900">{user?.email}</p>
-                    </div>
                     <button
-                      className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center space-x-2"
+                      className="w-full text-left px-4 py-3 text-sm text-gray-700 hover:bg-gray-100 flex items-center space-x-2 border-b border-gray-100"
                       onClick={() => {
                         setUserMenuOpen(false)
                         // Navigate to profile based on user role
@@ -275,15 +261,8 @@ const Layout = ({ children }) => {
                       <span>Profile</span>
                     </button>
                     <button
-                      className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center space-x-2"
-                      onClick={() => setUserMenuOpen(false)}
-                    >
-                      <Settings className="h-4 w-4" />
-                      <span>Settings</span>
-                    </button>
-                    <button
                       onClick={handleLogout}
-                      className="w-full text-left px-4 py-2 text-sm text-red-700 hover:bg-red-50 flex items-center space-x-2"
+                      className="w-full text-left px-4 py-3 text-sm text-red-700 hover:bg-red-50 flex items-center space-x-2"
                     >
                       <LogOut className="h-4 w-4" />
                       <span>Sign Out</span>
@@ -309,14 +288,54 @@ const Layout = ({ children }) => {
         </div>
 
         {/* Mobile menu */}
-        {mobileMenuOpen && (
-          <div className="border-t border-gray-200 bg-white lg:hidden">
-            <div className="px-4 py-3 space-y-2">
-              <div className="pb-2 mb-2 border-b border-gray-200">
-                <p className="text-sm font-medium text-gray-900">{getUserDisplayName()}</p>
-                <p className={`text-xs font-medium ${getRoleColor()}`}>
-                  {user?.role?.charAt(0).toUpperCase() + user?.role?.slice(1)}
-                </p>
+        <>
+          {/* Backdrop */}
+          <div 
+            className={`fixed inset-0 bg-black/50 z-40 lg:hidden transition-opacity duration-300 ${
+              mobileMenuOpen ? 'opacity-100' : 'opacity-0 pointer-events-none'
+            }`}
+            onClick={() => setMobileMenuOpen(false)}
+          />
+          {/* Mobile Menu */}
+          <div className={`fixed top-0 left-0 bottom-0 w-80 max-w-[90vw] bg-white border-r border-gray-200 shadow-xl z-50 lg:hidden transform transition-transform duration-300 ease-in-out ${
+            mobileMenuOpen ? 'translate-x-0' : '-translate-x-full'
+          }`}>
+            <div className="px-4 py-3 space-y-2 max-h-screen overflow-y-auto">
+              {/* Close Button */}
+              <div className="flex justify-end mb-2">
+                <button
+                  onClick={() => setMobileMenuOpen(false)}
+                  className="p-2 rounded-md text-gray-500 hover:text-gray-700 hover:bg-gray-100 transition-colors"
+                >
+                  <X className="h-5 w-5" />
+                </button>
+              </div>
+              
+              {/* User Profile Section */}
+              <div className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-lg p-4 mb-4 border border-blue-100">
+                <div className="flex items-center space-x-3">
+                  <div className="w-12 h-12 rounded-full overflow-hidden bg-gradient-to-br from-blue-100 to-blue-200 flex items-center justify-center ring-2 ring-blue-200">
+                    {user?.photo_path ? (
+                      <img
+                        src={`/uploads/${user.photo_path}`}
+                        alt={`${user?.full_name || 'User'} profile`}
+                        className="w-full h-full object-cover"
+                      />
+                    ) : (
+                      <span className="text-blue-600 font-bold text-lg">
+                        {(user?.full_name || user?.username || 'U').charAt(0).toUpperCase()}
+                      </span>
+                    )}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <h3 className="text-base font-semibold text-gray-900 truncate">
+                      {getUserDisplayName()}
+                    </h3>
+                    <div className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium mt-1 ${getRoleColor()}`}>
+                      {user?.role?.charAt(0).toUpperCase() + user?.role?.slice(1)}
+                    </div>
+                  </div>
+                </div>
               </div>
               
               {/* Mobile Navigation */}
@@ -379,12 +398,12 @@ const Layout = ({ children }) => {
               </button>
             </div>
           </div>
-        )}
+        </>
       </header>
 
       {/* Navigation Tabs - Desktop */}
       {navigationItems.length > 0 && (
-        <nav className="bg-white shadow-sm border-b border-gray-200">
+        <nav className="bg-white shadow-sm border-b border-gray-200 hidden lg:block">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div className="flex space-x-8 overflow-x-auto">
               {navigationItems.map((item) => {
@@ -422,21 +441,23 @@ const Layout = ({ children }) => {
       </main>
 
       {/* Footer */}
-      <footer className="bg-white border-t border-gray-200 py-4">
+      <footer className="bg-white border-t border-gray-200 py-3 sm:py-4">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex flex-col sm:flex-row justify-between items-center gap-4">
-            <div className="text-sm text-gray-600">
+          <div className="flex flex-col sm:flex-row justify-between items-center gap-3 sm:gap-4">
+            <div className="text-xs sm:text-sm text-gray-600 text-center sm:text-left">
               © 2024 Science Point. All rights reserved.
             </div>
-            <div className="flex items-center gap-4 text-sm">
+            <div className="flex flex-col sm:flex-row items-center gap-2 sm:gap-4 text-xs sm:text-sm">
               <button
                 onClick={() => navigate('/developer')}
-                className="text-blue-600 hover:text-blue-800 transition-colors font-medium"
+                className="text-blue-600 hover:text-blue-800 transition-colors font-medium whitespace-nowrap"
               >
                 👨‍💻 About Developer
               </button>
-              <span className="text-gray-400">|</span>
-              <span className="text-gray-600">Made with ❤️ by Abdullah Al Noman</span>
+              <span className="text-gray-400 hidden sm:inline">|</span>
+              <span className="text-gray-600 text-center sm:text-left">
+                Made with ❤️ by Abdullah Al Noman
+              </span>
             </div>
           </div>
         </div>
