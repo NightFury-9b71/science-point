@@ -189,10 +189,10 @@ export const adminAPI = {
   rejectAdmissionRequest: (requestId) => api.post(`/admin/admission-requests/${requestId}/reject`).then(res => res.data),
 
   // User Photos
-  uploadUserPhoto: (userId, formData) => {
-    return api.post(`/users/${userId}/photo`, formData, {
+  uploadUserPhoto: (userId, photoData) => {
+    return api.post(`/users/${userId}/photo`, photoData, {
       headers: {
-        'Content-Type': 'multipart/form-data',
+        'Content-Type': 'application/json',
       },
     })
   },
@@ -235,10 +235,10 @@ export const teacherAPI = {
   },
 
   // User Photos
-  uploadUserPhoto: (userId, formData) => {
-    return api.post(`/users/${userId}/photo`, formData, {
+  uploadUserPhoto: (userId, photoData) => {
+    return api.post(`/users/${userId}/photo`, photoData, {
       headers: {
-        'Content-Type': 'multipart/form-data',
+        'Content-Type': 'application/json',
       },
     })
   },
@@ -259,10 +259,10 @@ export const studentAPI = {
   },
 
   // User Photos
-  uploadUserPhoto: (userId, formData) => {
-    return api.post(`/users/${userId}/photo`, formData, {
+  uploadUserPhoto: (userId, photoData) => {
+    return api.post(`/users/${userId}/photo`, photoData, {
       headers: {
-        'Content-Type': 'multipart/form-data',
+        'Content-Type': 'application/json',
       },
     })
   },

@@ -516,9 +516,9 @@ Please keep these credentials secure and share them with the teacher.`
           <Card key={teacher.id} className="p-4">
             <div className="flex items-start space-x-3">
               <div className="w-12 h-12 rounded-full overflow-hidden bg-gray-200 flex items-center justify-center flex-shrink-0">
-                {teacher.user?.photo_path ? (
+                {teacher.user?.photo_url || teacher.user?.photo_path ? (
                   <img 
-                    src={`/uploads/${teacher.user.photo_path}`} 
+                    src={teacher.user.photo_url || (teacher.user.photo_path.startsWith('http') ? teacher.user.photo_path : null)} 
                     alt={`${teacher.user?.full_name || 'Teacher'} profile`}
                     className="w-full h-full object-cover"
                   />
@@ -579,9 +579,9 @@ Please keep these credentials secure and share them with the teacher.`
                   <Table.Row key={teacher.id}>
                     <Table.Cell>
                       <div className="w-10 h-10 rounded-full overflow-hidden bg-gray-200 flex items-center justify-center">
-                        {teacher.user?.photo_path ? (
+                        {teacher.user?.photo_url || teacher.user?.photo_path ? (
                           <img 
-                            src={`/uploads/${teacher.user.photo_path}`} 
+                            src={teacher.user.photo_url || (teacher.user.photo_path.startsWith('http') ? teacher.user.photo_path : null)} 
                             alt={`${teacher.user?.full_name || 'Teacher'} profile`}
                             className="w-full h-full object-cover"
                           />
@@ -704,9 +704,9 @@ Please keep these credentials secure and share them with the teacher.`
                 {/* Small Profile Photo */}
                 <div className="flex-shrink-0">
                   <div className="w-16 h-16 rounded-full overflow-hidden border-2 border-white shadow-lg bg-white">
-                    {selectedTeacher.user?.photo_path ? (
+                    {selectedTeacher.user?.photo_url || selectedTeacher.user?.photo_path ? (
                       <img
-                        src={`/uploads/${selectedTeacher.user.photo_path}`}
+                        src={selectedTeacher.user.photo_url || (selectedTeacher.user.photo_path.startsWith('http') ? selectedTeacher.user.photo_path : null)}
                         alt={`${selectedTeacher.user?.full_name || 'Teacher'} profile`}
                         className="w-full h-full object-cover"
                       />

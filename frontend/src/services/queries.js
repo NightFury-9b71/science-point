@@ -786,7 +786,7 @@ export const useStudentUploadPhoto = () => {
   const queryClient = useQueryClient()
   
   return useMutation({
-    mutationFn: ({ userId, formData }) => studentAPI.uploadUserPhoto(userId, formData),
+    mutationFn: ({ userId, photoData }) => studentAPI.uploadUserPhoto(userId, photoData),
     onSuccess: () => {
       // Invalidate student profile to refresh photo
       queryClient.invalidateQueries({ queryKey: ['studentProfile'] })
@@ -811,7 +811,7 @@ export const useTeacherUploadPhoto = () => {
   const queryClient = useQueryClient()
   
   return useMutation({
-    mutationFn: ({ userId, formData }) => teacherAPI.uploadUserPhoto(userId, formData),
+    mutationFn: ({ userId, photoData }) => teacherAPI.uploadUserPhoto(userId, photoData),
     onSuccess: () => {
       // Invalidate teacher profile to refresh photo
       queryClient.invalidateQueries({ queryKey: ['teacherProfile'] })
@@ -836,7 +836,7 @@ export const useAdminUploadPhoto = () => {
   const queryClient = useQueryClient()
   
   return useMutation({
-    mutationFn: ({ userId, formData }) => adminAPI.uploadUserPhoto(userId, formData),
+    mutationFn: ({ userId, photoData }) => adminAPI.uploadUserPhoto(userId, photoData),
     onSuccess: () => {
       // Invalidate admin profile to refresh photo
       queryClient.invalidateQueries({ queryKey: ['adminProfile'] })

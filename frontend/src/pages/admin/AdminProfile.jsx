@@ -3,6 +3,7 @@ import Card from '../../components/Card'
 import Button from '../../components/Button'
 import { useAuth } from '../../contexts/AuthContext'
 import { useAdminProfile, useAdminUploadPhoto, useAdminDeletePhoto } from '../../services/queries'
+import cloudinaryService from '../../services/cloudinaryService.js'
 import { useState } from 'react'
 import { toast } from 'sonner'
 
@@ -47,12 +48,16 @@ function AdminProfile() {
     
     setIsUploadingPhoto(true)
     try {
-      const formData = new FormData()
-      formData.append('file', selectedPhoto)
+      // Upload to Cloudinary first
+      const cloudinaryResult = await cloudinaryService.uploadFile(selectedPhoto)
       
+      // Then send Cloudinary data to backend
       await uploadPhotoMutation.mutateAsync({
         userId: profile.id,
-        formData
+        photoData: {
+          file_url: cloudinaryResult.secure_url,
+          file_path: cloudinaryResult.public_id
+        }
       })
       
       toast.success('Photo uploaded successfully!')
@@ -71,6 +76,16 @@ function AdminProfile() {
     if (!profile?.id) return
     
     try {
+      // Delete from Cloudinary if it exists
+      if (profile.photo_path && profile.photo_path.startsWith('science-point/')) {
+        try {
+          await cloudinaryService.deleteFile(profile.photo_path)
+        } catch (deleteError) {
+          console.warn('Failed to delete photo from Cloudinary:', deleteError)
+        }
+      }
+      
+      // Delete from backend
       await deletePhotoMutation.mutateAsync(profile.id)
       
       toast.success('Photo deleted successfully!')
@@ -125,8 +140,8 @@ function AdminProfile() {
     return null
   }
 
-  const hasPhoto = profile.photo_path || photoPreview
-  const displayPhoto = photoPreview || (profile.photo_path ? `/uploads/${profile.photo_path}` : null)
+  const hasPhoto = profile.photo_url || profile.photo_path || photoPreview
+  const displayPhoto = photoPreview || profile.photo_url || (profile.photo_path && profile.photo_path.startsWith('http') ? profile.photo_path : null)
 
   return (
     <div className="space-y-6 pb-6">
