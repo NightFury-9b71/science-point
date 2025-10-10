@@ -281,7 +281,8 @@ class ExamResultRead(ExamResultBase):
 class StudyMaterialBase(SQLModel):
     title: str = Field(max_length=200)
     description: Optional[str] = Field(default=None)
-    file_path: Optional[str] = Field(default=None, max_length=500)
+    file_path: Optional[str] = Field(default=None, max_length=500)  # Cloudinary public ID
+    file_url: Optional[str] = Field(default=None, max_length=1000)  # Cloudinary URL
     file_type: Optional[str] = Field(default=None, max_length=50)
     file_size: Optional[int] = Field(default=None)
     is_public: bool = Field(default=True)

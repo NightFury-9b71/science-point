@@ -6,6 +6,7 @@ import Button from '../../components/Button'
 import { useAuth } from '../../contexts/AuthContext'
 import { useTeacherSubjects, useTeacherMaterials, useUploadStudyMaterial, useUpdateStudyMaterial, useDeleteStudyMaterial } from '../../services/queries'
 import config from '../../config/index.js'
+import cloudinaryService from '../../services/cloudinaryService'
 
 const TeacherMaterials = () => {
   const navigate = useNavigate()
@@ -74,28 +75,42 @@ const TeacherMaterials = () => {
 
   const handleUpload = async (e) => {
     e.preventDefault()
-    
+
     if (!uploadForm.file || !uploadForm.title || !selectedSubject) {
       alert('Please fill in all required fields')
       return
     }
 
-    const formData = new FormData()
-    formData.append('title', uploadForm.title)
-    formData.append('description', uploadForm.description || '')
-    formData.append('subject_id', selectedSubject.id)
-    formData.append('file', uploadForm.file)
-    formData.append('is_public', uploadForm.is_public)
-
     setIsUploading(true)
     setUploadProgress(0)
 
     try {
-      await uploadMutation.mutateAsync({ 
-        formData, 
-        teacherId,
-        onProgress: (progress) => setUploadProgress(progress)
+      // Upload file to Cloudinary first
+      const cloudinaryResult = await cloudinaryService.uploadFile(
+        uploadForm.file,
+        {
+          folder: `science-point/study-materials/teacher-${teacherId}`
+        },
+        (progress) => setUploadProgress(progress)
+      )
+
+      // Then send metadata to backend
+      const materialData = {
+        title: uploadForm.title,
+        description: uploadForm.description || '',
+        subject_id: selectedSubject.id,
+        file_url: cloudinaryResult.url,
+        file_path: cloudinaryResult.publicId, // Store public ID for deletion
+        file_type: uploadForm.file.type,
+        file_size: uploadForm.file.size,
+        is_public: uploadForm.is_public
+      }
+
+      await uploadMutation.mutateAsync({
+        formData: materialData,
+        teacherId
       })
+
       setUploadForm({
         title: '',
         description: '',
@@ -126,27 +141,51 @@ const TeacherMaterials = () => {
 
   const handleUpdate = async (e) => {
     e.preventDefault()
-    
+
     if (!editForm.title) {
       alert('Title is required')
       return
     }
 
-    const formData = new FormData()
-    formData.append('title', editForm.title)
-    formData.append('description', editForm.description || '')
-    formData.append('is_public', editForm.is_public)
-    
-    if (editForm.file) {
-      formData.append('file', editForm.file)
-    }
-
     try {
+      const materialData = {
+        title: editForm.title,
+        description: editForm.description || '',
+        is_public: editForm.is_public
+      }
+
+      // Handle file replacement if a new file is provided
+      if (editForm.file) {
+        // Upload new file to Cloudinary
+        const cloudinaryResult = await cloudinaryService.uploadFile(
+          editForm.file,
+          {
+            folder: `science-point/study-materials/teacher-${teacherId}`
+          }
+        )
+
+        // Delete old file from Cloudinary if it exists
+        if (editingMaterial.file_path && editingMaterial.file_path.startsWith('science-point/')) {
+          try {
+            await cloudinaryService.deleteFile(editingMaterial.file_path)
+          } catch (deleteError) {
+            console.warn('Failed to delete old file from Cloudinary:', deleteError)
+          }
+        }
+
+        // Add new file data
+        materialData.file_url = cloudinaryResult.url
+        materialData.file_path = cloudinaryResult.publicId
+        materialData.file_type = editForm.file.type
+        materialData.file_size = editForm.file.size
+      }
+
       await updateMutation.mutateAsync({
         teacherId,
         materialId: editingMaterial.id,
-        materialData: formData
+        materialData
       })
+
       setShowEditForm(false)
       setEditingMaterial(null)
     } catch (error) {
@@ -155,26 +194,39 @@ const TeacherMaterials = () => {
     }
   }
 
-  const handleDelete = (material) => {
-    setDeletingMaterial(material)
-    setShowDeleteConfirm(true)
-  }
-
   const handleDeleteConfirm = async () => {
-    try {
-      await deleteMutation.mutateAsync({ teacherId, materialId: deletingMaterial.id })
-      setShowDeleteConfirm(false)
-      setDeletingMaterial(null)
-    } catch (error) {
-      console.error('Delete failed:', error)
-      alert('Failed to delete material. Please try again.')
+    if (deletingMaterial) {
+      try {
+        // Delete from backend first
+        await deleteMutation.mutateAsync({ teacherId, materialId: deletingMaterial.id })
+
+        // Delete file from Cloudinary if it exists
+        if (deletingMaterial.file_path && deletingMaterial.file_path.startsWith('science-point/')) {
+          try {
+            await cloudinaryService.deleteFile(deletingMaterial.file_path)
+          } catch (deleteError) {
+            console.warn('Failed to delete file from Cloudinary:', deleteError)
+          }
+        }
+
+        setShowDeleteConfirm(false)
+        setDeletingMaterial(null)
+      } catch (error) {
+        console.error('Delete failed:', error)
+        alert('Failed to delete material. Please try again.')
+      }
     }
   }
 
   const handleDownload = (material) => {
-    // Open the file in a new tab/window for download from frontend public folder
-    const downloadUrl = `${config.frontend.baseURL}/uploads/${material.file_path}`
-    window.open(downloadUrl, '_blank')
+    // Use Cloudinary URL directly for download
+    if (material.file_url) {
+      window.open(material.file_url, '_blank')
+    } else {
+      // Fallback to old local path if Cloudinary URL not available
+      const downloadUrl = `${config.frontend.baseURL}/uploads/${material.file_path}`
+      window.open(downloadUrl, '_blank')
+    }
   }
 
   const getFileIcon = (fileType) => {
@@ -307,7 +359,10 @@ const TeacherMaterials = () => {
                         size="sm" 
                         variant="outline" 
                         className="flex-1 text-red-600 hover:text-red-700"
-                        onClick={() => handleDelete(material)}
+                        onClick={() => {
+                          setDeletingMaterial(material)
+                          setShowDeleteConfirm(true)
+                        }}
                       >
                         <Trash2 className="h-4 w-4 mr-1" />
                         Delete

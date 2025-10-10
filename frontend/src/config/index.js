@@ -69,21 +69,13 @@ class Config {
     }
   }
 
-  // External services configuration
-  get services() {
+  // Cloudinary configuration
+  get cloudinary() {
     return {
-      sentry: {
-        dsn: import.meta.env.VITE_SENTRY_DSN,
-        environment: this.env,
-        enabled: this.features.enableErrorReporting && !!import.meta.env.VITE_SENTRY_DSN
-      },
-      analytics: {
-        id: import.meta.env.VITE_ANALYTICS_ID,
-        enabled: !!import.meta.env.VITE_ANALYTICS_ID
-      },
-      cdn: {
-        baseURL: import.meta.env.VITE_CDN_BASE_URL || ''
-      }
+      apiKey: import.meta.env.VITE_CLOUDINARY_API_KEY,
+      cloudName: import.meta.env.VITE_CLOUDINARY_CLOUD_NAME,
+      uploadPreset: import.meta.env.VITE_CLOUDINARY_UPLOAD_PRESET,
+      uploadUrl: `https://api.cloudinary.com/v1_1/${import.meta.env.VITE_CLOUDINARY_CLOUD_NAME}/upload`
     }
   }
 

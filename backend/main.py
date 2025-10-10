@@ -2480,7 +2480,10 @@ def upload_teacher_study_material(
     title: str = Form(...),
     description: str = Form(""),
     subject_id: int = Form(...),
-    file: UploadFile = File(...),
+    file_url: str = Form(...),
+    file_path: str = Form(...),
+    file_type: str = Form(...),
+    file_size: int = Form(...),
     is_public: bool = Form(True),
     session: Session = Depends(get_session),
     current_user: User = Depends(require_teacher)
@@ -2498,62 +2501,17 @@ def upload_teacher_study_material(
     if subject_id not in subject_ids:
         raise HTTPException(status_code=403, detail="Access denied. You can only upload materials for subjects you teach.")
     
-    # Validate file size (max 100MB)
-    MAX_FILE_SIZE = 100 * 1024 * 1024  # 100MB
-    file_content = file.file.read()
-    file_size = len(file_content)
-    
-    if file_size > MAX_FILE_SIZE:
-        raise HTTPException(
-            status_code=413, 
-            detail=f"File too large. Maximum file size is {MAX_FILE_SIZE // (1024 * 1024)}MB."
-        )
-    
-    # Reset file pointer for saving
-    file.file.seek(0)
-    
-    # Create uploads directory if it doesn't exist
-    upload_dir = "uploads/study_materials"
-    os.makedirs(upload_dir, exist_ok=True)
-    
-    # Generate unique filename
-    file_extension = os.path.splitext(file.filename)[1]
-    unique_filename = f"{datetime.utcnow().strftime('%Y%m%d_%H%M%S')}_{teacher_id}_{subject_id}{file_extension}"
-    file_path = os.path.join(upload_dir, unique_filename)
-    
-    # Save the file
-    try:
-        with open(file_path, "wb") as buffer:
-            shutil.copyfileobj(file.file, buffer)
-        
-        # Get file size
-        file_size = os.path.getsize(file_path)
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Failed to save file: {str(e)}")
-    
-    # Copy file to frontend public folder for direct access
-    # Use absolute path to avoid issues with working directory
-    script_dir = os.path.dirname(os.path.abspath(__file__))
-    frontend_public_dir = os.path.join(script_dir, "../frontend/public/uploads/study_materials")
-    os.makedirs(frontend_public_dir, exist_ok=True)
-    frontend_file_path = os.path.join(frontend_public_dir, unique_filename)
-    
-    try:
-        shutil.copy2(file_path, frontend_file_path)
-    except Exception as e:
-        print(f"Warning: Failed to copy file to frontend public folder: {e}")
-    
-    # Create database record - store relative path for URL construction
-    relative_file_path = f"study_materials/{unique_filename}"
+    # Create database record with Cloudinary data
     db_material = StudyMaterial(
         title=title,
         description=description,
-        file_path=relative_file_path,
-        file_type=file.content_type,
+        file_path=file_path,  # Store Cloudinary public ID
+        file_type=file_type,
         file_size=file_size,
         subject_id=subject_id,
         created_by_id=current_user.id,
-        is_public=is_public
+        is_public=is_public,
+        file_url=file_url  # Store Cloudinary URL
     )
     
     session.add(db_material)
@@ -2568,8 +2526,11 @@ def update_teacher_study_material(
     material_id: int,
     title: Optional[str] = Form(None),
     description: Optional[str] = Form(None),
+    file_url: Optional[str] = Form(None),
+    file_path: Optional[str] = Form(None),
+    file_type: Optional[str] = Form(None),
+    file_size: Optional[int] = Form(None),
     is_public: Optional[bool] = Form(None),
-    file: Optional[UploadFile] = File(None),
     session: Session = Depends(get_session),
     current_user: User = Depends(require_teacher)
 ):
@@ -2596,76 +2557,11 @@ def update_teacher_study_material(
     if is_public is not None:
         material.is_public = is_public
     
-    # Handle file replacement if a new file is provided
-    if file:
-        # Validate file size (max 100MB)
-        MAX_FILE_SIZE = 100 * 1024 * 1024  # 100MB
-        file_content = file.file.read()
-        file_size_check = len(file_content)
-        
-        if file_size_check > MAX_FILE_SIZE:
-            raise HTTPException(
-                status_code=413, 
-                detail=f"File too large. Maximum file size is {MAX_FILE_SIZE // (1024 * 1024)}MB."
-            )
-        
-        # Reset file pointer for saving
-        file.file.seek(0)
-        
-        # Delete old file if it exists
-        if material.file_path:
-            # Delete from backend uploads folder
-            backend_file_path = os.path.join("uploads", material.file_path)
-            if os.path.exists(backend_file_path):
-                try:
-                    os.remove(backend_file_path)
-                except Exception as e:
-                    print(f"Warning: Failed to delete old file from backend: {e}")
-            
-            # Delete from frontend public folder
-            script_dir = os.path.dirname(os.path.abspath(__file__))
-            frontend_file_path = os.path.join(script_dir, "../frontend/public/uploads", material.file_path)
-            if os.path.exists(frontend_file_path):
-                try:
-                    os.remove(frontend_file_path)
-                except Exception as e:
-                    print(f"Warning: Failed to delete old file from frontend: {e}")
-        
-        # Save new file
-        upload_dir = "uploads/study_materials"
-        os.makedirs(upload_dir, exist_ok=True)
-        
-        # Generate unique filename
-        file_extension = os.path.splitext(file.filename)[1]
-        unique_filename = f"{datetime.utcnow().strftime('%Y%m%d_%H%M%S')}_{teacher_id}_{material.subject_id}{file_extension}"
-        file_path = os.path.join(upload_dir, unique_filename)
-        
-        # Save the file
-        try:
-            with open(file_path, "wb") as buffer:
-                shutil.copyfileobj(file.file, buffer)
-            
-            # Get file size
-            file_size = os.path.getsize(file_path)
-        except Exception as e:
-            raise HTTPException(status_code=500, detail=f"Failed to save new file: {str(e)}")
-        
-        # Copy file to frontend public folder for direct access
-        # Use absolute path to avoid issues with working directory
-        script_dir = os.path.dirname(os.path.abspath(__file__))
-        frontend_public_dir = os.path.join(script_dir, "../frontend/public/uploads/study_materials")
-        os.makedirs(frontend_public_dir, exist_ok=True)
-        frontend_file_path = os.path.join(frontend_public_dir, unique_filename)
-        
-        try:
-            shutil.copy2(file_path, frontend_file_path)
-        except Exception as e:
-            print(f"Warning: Failed to copy file to frontend public folder: {e}")
-        
-        # Update database record with new file info
-        relative_file_path = f"study_materials/{unique_filename}"
-        material.file_path = relative_file_path
-        material.file_type = file.content_type
+    # Handle file replacement if new file data is provided
+    if file_url and file_path and file_type and file_size is not None:
+        material.file_url = file_url
+        material.file_path = file_path
+        material.file_type = file_type
         material.file_size = file_size
     
     session.add(material)
@@ -2696,26 +2592,7 @@ def delete_teacher_study_material(
     if material.created_by_id != current_user.id:
         raise HTTPException(status_code=403, detail="Access denied. You can only delete your own materials.")
     
-    # Delete the file if it exists
-    if material.file_path:
-        # Delete from backend uploads folder
-        backend_file_path = os.path.join("uploads", material.file_path)
-        if os.path.exists(backend_file_path):
-            try:
-                os.remove(backend_file_path)
-            except Exception as e:
-                print(f"Warning: Failed to delete file from backend: {e}")
-        
-        # Delete from frontend public folder
-        script_dir = os.path.dirname(os.path.abspath(__file__))
-        frontend_file_path = os.path.join(script_dir, "../frontend/public/uploads", material.file_path)
-        if os.path.exists(frontend_file_path):
-            try:
-                os.remove(frontend_file_path)
-            except Exception as e:
-                print(f"Warning: Failed to delete file from frontend: {e}")
-    
-    # Delete the database record
+    # Delete the database record (Cloudinary files are deleted by frontend)
     session.delete(material)
     session.commit()
     
