@@ -1630,11 +1630,20 @@ def get_dashboard_stats(session: Session = Depends(get_session)):
 
 # Data management endpoints
 @app.post("/admin/seed-data")
-def seed_mock_data(session: Session = Depends(get_session)):
+def seed_mock_data(session: Session = Depends(get_session), current_user: Optional[User] = Depends(get_current_active_user)):
     """Seed the database with mock data for testing and development"""
+    # Check if database has users
+    existing_users = session.exec(select(User)).first()
+    
+    # If database has users, require admin authentication
+    if existing_users and (not current_user or current_user.role != UserRole.ADMIN):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Admin access required"
+        )
+    
     try:
         # Check if data already exists
-        existing_users = session.exec(select(User)).first()
         if existing_users:
             raise HTTPException(
                 status_code=400,
@@ -1780,8 +1789,18 @@ def seed_mock_data(session: Session = Depends(get_session)):
         raise HTTPException(status_code=500, detail=f"Error seeding data: {str(e)}")
 
 @app.post("/admin/reset-data")
-def reset_all_data(confirm: bool = False, session: Session = Depends(get_session)):
+def reset_all_data(confirm: bool = False, session: Session = Depends(get_session), current_user: Optional[User] = Depends(get_current_active_user)):
     """Reset/clear all data from the database"""
+    # Check if database has users
+    existing_users = session.exec(select(User)).first()
+    
+    # If database has users, require admin authentication
+    if existing_users and (not current_user or current_user.role != UserRole.ADMIN):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Admin access required"
+        )
+    
     if not confirm:
         raise HTTPException(
             status_code=400,
