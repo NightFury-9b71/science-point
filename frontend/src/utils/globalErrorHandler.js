@@ -102,7 +102,8 @@ class GlobalErrorHandler {
   }
 
   reportError(error) {
-    if (!config.services.sentry.enabled) return
+    // Sentry integration removed - error logging handled by Logger
+    // if (!config.services.sentry.enabled) return
 
     // TODO: Integrate with Sentry or other monitoring service
     const errorData = {

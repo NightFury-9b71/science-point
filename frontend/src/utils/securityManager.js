@@ -30,8 +30,9 @@ class SecurityManager {
         "'self'",
         ...(isProduction ? [] : ["'unsafe-eval'"]), // Allow eval in development for HMR
         `'nonce-${this.cspNonce}'`,
-        'https://cdn.jsdelivr.net', // For any CDN scripts
-        ...(config.services.analytics.enabled ? ['https://www.google-analytics.com'] : [])
+        'https://cdn.jsdelivr.net' // For any CDN scripts
+        // Analytics integration removed
+        // ...(config.services.analytics.enabled ? ['https://www.google-analytics.com'] : [])
       ],
       'style-src': [
         "'self'",
@@ -47,14 +48,16 @@ class SecurityManager {
         "'self'",
         'data:',
         'blob:',
-        apiBaseUrl,
-        ...(config.services.cdn.baseURL ? [config.services.cdn.baseURL] : [])
+        apiBaseUrl
+        // CDN integration removed
+        // ...(config.services.cdn.baseURL ? [config.services.cdn.baseURL] : [])
       ],
       'connect-src': [
         "'self'",
         apiBaseUrl,
-        ...(config.services.sentry.enabled ? ['https://sentry.io'] : []),
-        ...(config.services.analytics.enabled ? ['https://www.google-analytics.com'] : []),
+        // Sentry and analytics integration removed
+        // ...(config.services.sentry.enabled ? ['https://sentry.io'] : []),
+        // ...(config.services.analytics.enabled ? ['https://www.google-analytics.com'] : []),
         ...(isProduction ? [] : ['ws:', 'wss:']) // WebSocket for dev server
       ],
       'frame-src': ["'none'"],
@@ -187,10 +190,11 @@ class SecurityManager {
       Logger.error('CSP Violation detected:', violation)
 
       // Report to external service if configured
-      if (config.services.sentry.enabled) {
-        // TODO: Send to Sentry
-        // Sentry.captureException(new Error('CSP Violation'), { extra: violation })
-      }
+      // Sentry integration removed
+      // if (config.services.sentry.enabled) {
+      //   // TODO: Send to Sentry
+      //   // Sentry.captureException(new Error('CSP Violation'), { extra: violation })
+      // }
     })
 
     // Monitor for potential XSS attempts

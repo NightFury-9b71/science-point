@@ -46,9 +46,10 @@ class ErrorBoundary extends React.Component {
     })
 
     // Report to external service if enabled
-    if (config.services.sentry.enabled) {
-      this.reportToSentry(error, errorInfo, errorId)
-    }
+    // Sentry integration removed - error logging handled by Logger
+    // if (config.services.sentry.enabled) {
+    //   this.reportToSentry(error, errorInfo, errorId)
+    // }
 
     // Show user-friendly error notification
     toast.error('Something went wrong. We\'ve been notified and are looking into it.', {
@@ -287,10 +288,11 @@ export const useErrorReporting = () => {
       url: window.location.href
     })
 
-    if (config.services.sentry.enabled) {
-      // TODO: Report to Sentry
-      // Sentry.captureException(error, { extra: context, tags: { errorId } })
-    }
+    // Sentry integration removed - error logging handled by Logger
+    // if (config.services.sentry.enabled) {
+    //   // TODO: Report to Sentry
+    //   // Sentry.captureException(error, { extra: context, tags: { errorId } })
+    // }
 
     return errorId
   }

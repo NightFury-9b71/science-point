@@ -317,9 +317,10 @@ class MonitoringService {
     }
 
     // Send to external monitoring service if enabled
-    if (config.services.analytics.enabled) {
-      this.sendToExternalService(category, data)
-    }
+    // Analytics integration removed
+    // if (config.services.analytics.enabled) {
+    //   this.sendToExternalService(category, data)
+    // }
   }
 
   sendToExternalService(category, data) {
