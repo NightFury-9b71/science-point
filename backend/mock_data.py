@@ -741,3 +741,9 @@ MOCK_CLASS_SCHEDULES = [
         "room_number": "Room 101"
     }
 ]
+
+# Default admin creation code for bootstrapping the system
+MOCK_ADMIN_CREATION_CODE = {
+    "code": "ADMIN2024",
+    "is_active": True
+}

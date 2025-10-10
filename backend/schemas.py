@@ -9,7 +9,7 @@ from models import UserRole, UserCreate
 
 # Login schema
 class LoginRequest(BaseModel):
-    username: str
+    username: str  # Can be username or email
     password: str
 
 class Token(BaseModel):

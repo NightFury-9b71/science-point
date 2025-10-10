@@ -1630,20 +1630,11 @@ def get_dashboard_stats(session: Session = Depends(get_session)):
 
 # Data management endpoints
 @app.post("/admin/seed-data")
-def seed_mock_data(session: Session = Depends(get_session), current_user: Optional[User] = Depends(get_current_active_user)):
+def seed_mock_data(session: Session = Depends(get_session)):
     """Seed the database with mock data for testing and development"""
-    # Check if database has users
-    existing_users = session.exec(select(User)).first()
-    
-    # If database has users, require admin authentication
-    if existing_users and (not current_user or current_user.role != UserRole.ADMIN):
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Admin access required"
-        )
-    
     try:
         # Check if data already exists
+        existing_users = session.exec(select(User)).first()
         if existing_users:
             raise HTTPException(
                 status_code=400,
@@ -1764,6 +1755,10 @@ def seed_mock_data(session: Session = Depends(get_session), current_user: Option
             schedule = ClassSchedule(**schedule_data)
             session.add(schedule)
         
+        # Create default admin creation code for bootstrapping
+        admin_code = AdminCreationCode(**MOCK_ADMIN_CREATION_CODE)
+        session.add(admin_code)
+        
         session.commit()
         
         return {
@@ -1780,7 +1775,8 @@ def seed_mock_data(session: Session = Depends(get_session), current_user: Option
                 "study_materials": len(MOCK_STUDY_MATERIALS),
                 "notices": len(MOCK_NOTICES),
                 "teacher_reviews": len(MOCK_TEACHER_REVIEWS),
-                "class_schedules": len(MOCK_CLASS_SCHEDULES)
+                "class_schedules": len(MOCK_CLASS_SCHEDULES),
+                "admin_creation_code": MOCK_ADMIN_CREATION_CODE["code"]
             }
         }
         
@@ -1789,18 +1785,8 @@ def seed_mock_data(session: Session = Depends(get_session), current_user: Option
         raise HTTPException(status_code=500, detail=f"Error seeding data: {str(e)}")
 
 @app.post("/admin/reset-data")
-def reset_all_data(confirm: bool = False, session: Session = Depends(get_session), current_user: Optional[User] = Depends(get_current_active_user)):
+def reset_all_data(confirm: bool = False, session: Session = Depends(get_session)):
     """Reset/clear all data from the database"""
-    # Check if database has users
-    existing_users = session.exec(select(User)).first()
-    
-    # If database has users, require admin authentication
-    if existing_users and (not current_user or current_user.role != UserRole.ADMIN):
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Admin access required"
-        )
-    
     if not confirm:
         raise HTTPException(
             status_code=400,
@@ -1867,7 +1853,7 @@ def reset_all_data(confirm: bool = False, session: Session = Depends(get_session
         raise HTTPException(status_code=500, detail=f"Error resetting data: {str(e)}")
 
 @app.post("/admin/cleanup-duplicate-results")
-def cleanup_duplicate_exam_results(session: Session = Depends(get_session)):
+def cleanup_duplicate_exam_results(session: Session = Depends(get_session), current_user: User = Depends(require_admin)):
     """Clean up duplicate exam results, keeping only the first one for each student-exam combination"""
     try:
         # Find duplicate results
@@ -2593,8 +2579,14 @@ def get_admin_profile(
     return admin
 
 def authenticate_user(username: str, password: str, session: Session) -> User:
-    """Authenticate a user by username and password"""
+    """Authenticate a user by username/email and password"""
+    # Try to find user by username first
     user = session.exec(select(User).where(User.username == username)).first()
+    
+    # If not found by username, try by email
+    if not user:
+        user = session.exec(select(User).where(User.email == username)).first()
+    
     if not user:
         return None
     if not verify_password(password, user.password_hash):
