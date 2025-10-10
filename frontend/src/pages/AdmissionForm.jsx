@@ -15,7 +15,6 @@ const AdmissionForm = () => {
   const [formData, setFormData] = useState({
     // User data
     user: {
-      email: '',
       full_name: '',
       phone: ''
     },
@@ -66,10 +65,6 @@ const AdmissionForm = () => {
     const newErrors = {}
 
     // User validation
-    if (formData.user.email.trim() && !/\S+@\S+\.\S+/.test(formData.user.email)) {
-      newErrors['user.email'] = 'Please enter a valid email address'
-    }
-
     if (!formData.user.full_name.trim()) {
       newErrors['user.full_name'] = 'Full name is required'
     }
@@ -83,8 +78,8 @@ const AdmissionForm = () => {
       newErrors.class_id = 'Please select a class'
     }
 
-    if (!formData.date_of_birth) {
-      newErrors.date_of_birth = 'Date of birth is required'
+    if (!formData.parent_name.trim()) {
+      newErrors.parent_name = 'Parent/Guardian name is required'
     }
 
     if (!formData.parent_phone.trim()) {
@@ -107,9 +102,8 @@ const AdmissionForm = () => {
       // Prepare the data for submission
       const submissionData = {
         full_name: formData.user.full_name,
-        email: formData.user.email || null,
         phone: formData.user.phone,
-        parent_name: formData.parent_name || null,
+        parent_name: formData.parent_name,
         parent_phone: formData.parent_phone,
         address: formData.address || null,
         date_of_birth: formData.date_of_birth ? new Date(formData.date_of_birth).toISOString() : null,
@@ -191,13 +185,6 @@ const AdmissionForm = () => {
                   required
                 />
                 <Input
-                  label="Email Address"
-                  type="email"
-                  value={formData.user.email}
-                  onChange={(e) => handleInputChange('user.email', e.target.value)}
-                  error={errors['user.email']}
-                />
-                <Input
                   label="Phone Number"
                   value={formData.user.phone}
                   onChange={(e) => handleInputChange('user.phone', e.target.value)}
@@ -210,7 +197,6 @@ const AdmissionForm = () => {
                   value={formData.date_of_birth}
                   onChange={(e) => handleInputChange('date_of_birth', e.target.value)}
                   error={errors.date_of_birth}
-                  required
                 />
               </div>
             </div>
@@ -240,6 +226,7 @@ const AdmissionForm = () => {
                   value={formData.parent_name}
                   onChange={(e) => handleInputChange('parent_name', e.target.value)}
                   error={errors.parent_name}
+                  required
                 />
                 <Input
                   label="Parent/Guardian Phone"

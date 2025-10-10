@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { CheckCircle, Plus, Eye, ArrowLeft, Search, Download, FileText, XCircle, AlertCircle, Users, Phone, Edit, KeyRound } from 'lucide-react'
 import { toast } from 'sonner'
@@ -29,21 +29,27 @@ const AdminStudents = () => {
   const updateStudentPassword = useUpdateStudentPassword()
   
   const [showModal, setShowModal] = useState(false)
+  const [selectedStudent, setSelectedStudent] = useState(null)
   const [showViewModal, setShowViewModal] = useState(false)
   const [showEditModal, setShowEditModal] = useState(false)
   const [showCredentialsModal, setShowCredentialsModal] = useState(false)
   const [showDeleteModal, setShowDeleteModal] = useState(false)
   const [showResetPasswordModal, setShowResetPasswordModal] = useState(false)
-  const [selectedStudent, setSelectedStudent] = useState(null)
   const [newStudentCredentials, setNewStudentCredentials] = useState(null)
   const [searchQuery, setSearchQuery] = useState('')
   const [selectedClass, setSelectedClass] = useState('')
   const [sortBy, setSortBy] = useState('name')
-  const [form, setForm] = useState({
-    user: { username: '', email: '', full_name: '', phone: '', password: '' },
-    roll_number: '', parent_name: '', parent_phone: '', address: '', class_id: '', date_of_birth: ''
-  })
   const [editForm, setEditForm] = useState(null)  // Filter and sort students
+
+  const handleFieldChange = (fieldName, value, newFormData) => {
+    if (fieldName === 'class_id' && value && classes) {
+      const rollNumber = generateRollNumber(value)
+      if (rollNumber) {
+        // Update the roll_number in the newFormData
+        newFormData.roll_number = rollNumber
+      }
+    }
+  }
   const filteredStudents = (students || [])
     .filter(student => {
       const matchesSearch = !searchQuery || 
@@ -146,13 +152,16 @@ const AdminStudents = () => {
 
   // Auto-generate short, unique roll number based on class and existing students
   const generateRollNumber = (classId) => {
-    if (!classId || !students) return ''
+    if (!classId) return ''
     
-    // Get students in the same class
-    const classStudents = students.filter(student => student.class_id === classId)
+    const numericClassId = parseInt(classId)
+    if (isNaN(numericClassId)) return ''
+    
+    // Get students in the same class (handle case when students is not loaded yet)
+    const classStudents = students ? students.filter(student => student.class_id === numericClassId) : []
     
     // Find the class details for short prefix
-    const selectedClass = classes?.find(cls => cls.id === classId)
+    const selectedClass = classes?.find(cls => cls.id === numericClassId)
     if (!selectedClass) return ''
     
     // Create short class prefix (grade + section initial)
@@ -181,74 +190,58 @@ const AdminStudents = () => {
     return `${shortPrefix}${nextRoll.toString().padStart(2, '0')}`
   }
 
-  const handleSubmit = async (e) => {
-    e.preventDefault()
-    
+  const handleSubmit = async (formData) => {
     try {
       // Validation checks
-      if (!form.user.full_name?.trim()) {
+      if (!formData.user?.full_name?.trim()) {
         toast.error('Full name is required')
         return
       }
-      if (!form.user.username?.trim()) {
-        toast.error('Username is required')
-        return
-      }
-      if (!form.user.password?.trim()) {
-        toast.error('Password is required')
-        return
-      }
-      if (!form.user.phone?.trim()) {
+      if (!formData.user?.phone?.trim()) {
         toast.error('Phone number is required')
         return
       }
-      if (!form.roll_number?.trim()) {
+      if (!formData.roll_number?.trim()) {
         toast.error('Roll number is required')
         return
       }
-      if (!form.class_id) {
+      if (!formData.class_id) {
         toast.error('Class selection is required')
         return
       }
-      if (!form.parent_phone?.trim()) {
+      if (!formData.parent_phone?.trim()) {
         toast.error('Parent phone number is required')
         return
       }
 
       // Format the form data properly
-      const formData = {
+      const submissionData = {
         user: {
-          username: form.user.username.trim(),
-          email: form.user.email.trim(),
-          full_name: form.user.full_name.trim(),
-          phone: form.user.phone?.trim() || '',
-          password: form.user.password.trim(),
+          username: formData.roll_number.trim(), // Use roll number as username
+          full_name: formData.user.full_name.trim(),
+          phone: formData.user.phone?.trim() || '',
+          password: formData.user.password?.trim() || generatePassword(), // Auto-generate if not provided
           role: 'student' // Add required role field
         },
-        roll_number: form.roll_number.trim(),
-        parent_name: form.parent_name?.trim() || '',
-        parent_phone: form.parent_phone?.trim() || '',
-        address: form.address?.trim() || '',
-        class_id: parseInt(form.class_id),
-        date_of_birth: form.date_of_birth ? new Date(form.date_of_birth).toISOString() : null
+        roll_number: formData.roll_number.trim(),
+        parent_name: formData.parent_name?.trim() || '',
+        parent_phone: formData.parent_phone?.trim() || '',
+        address: formData.address?.trim() || '',
+        class_id: parseInt(formData.class_id),
+        date_of_birth: formData.date_of_birth ? new Date(formData.date_of_birth).toISOString() : null
       }
 
-      const result = await createStudent.mutateAsync(formData)
+      const result = await createStudent.mutateAsync(submissionData)
       
       // Store credentials for display
       setNewStudentCredentials({
-        fullName: form.user.full_name,
-        username: form.user.username,
-        password: form.user.password,
-        rollNumber: form.roll_number,
-        email: form.user.email
+        fullName: formData.user.full_name,
+        username: formData.roll_number, // Use roll number as username
+        password: formData.user.password || submissionData.user.password, // Use the password that was actually used
+        rollNumber: formData.roll_number
       })
       
       setShowModal(false)
-      setForm({
-        user: { username: '', email: '', full_name: '', phone: '', password: '' },
-        roll_number: '', parent_name: '', parent_phone: '', address: '', class_id: '', date_of_birth: ''
-      })
       
       // Show credentials modal instead of just toast
       setShowCredentialsModal(true)
@@ -260,7 +253,31 @@ const AdminStudents = () => {
       // More detailed error handling
       if (error.response) {
         Logger.error('Server response:', error.response.data)
-        const errorMessage = error.response.data?.detail || error.response.data?.message || 'Server error occurred'
+        let errorMessage = 'Server error occurred'
+        
+        if (error.response.data?.detail) {
+          if (typeof error.response.data.detail === 'string') {
+            errorMessage = error.response.data.detail
+          } else if (typeof error.response.data.detail === 'object') {
+            // Handle validation errors or other object responses
+            if (error.response.data.detail.message) {
+              errorMessage = error.response.data.detail.message
+            } else if (Array.isArray(error.response.data.detail)) {
+              errorMessage = error.response.data.detail.map(err => 
+                typeof err === 'string' ? err : err.message || JSON.stringify(err)
+              ).join(', ')
+            } else {
+              errorMessage = JSON.stringify(error.response.data.detail)
+            }
+          }
+        } else if (error.response.data?.message) {
+          errorMessage = error.response.data.message
+        } else if (error.response.status === 400) {
+          errorMessage = 'Invalid data provided. Please check all required fields.'
+        } else if (error.response.status === 409) {
+          errorMessage = 'A student with this information already exists.'
+        }
+        
         toast.error(`Failed to create student: ${errorMessage}`)
       } else if (error.message) {
         toast.error(`Error: ${error.message}`)
@@ -341,8 +358,6 @@ Please keep these credentials safe and change the password after first login.`
     setEditForm({
       id: student.id,
       user: {
-        username: student.user?.username || '',
-        email: student.user?.email || '',
         full_name: student.user?.full_name || '',
         phone: student.user?.phone || ''
       },
@@ -385,8 +400,7 @@ Please keep these credentials safe and change the password after first login.`
       // Format the form data properly
       const updateData = {
         user: {
-          username: editForm.user.username.trim(),
-          email: editForm.user.email.trim(),
+          username: editForm.roll_number.trim(), // Use roll number as username
           full_name: editForm.user.full_name.trim(),
           phone: editForm.user.phone?.trim() || ''
         },
@@ -461,10 +475,9 @@ Please keep these credentials safe and change the password after first login.`
       // Create credentials object for display
       const credentials = {
         fullName: selectedStudent.user?.full_name || 'Unknown',
-        username: selectedStudent.user?.username || 'unknown',
+        username: selectedStudent.roll_number || 'unknown', // Use roll number as username
         password: newPassword,
-        rollNumber: selectedStudent.roll_number || 'N/A',
-        email: selectedStudent.user?.email || 'N/A'
+        rollNumber: selectedStudent.roll_number || 'N/A'
       }
 
       // Call the actual password update mutation
@@ -682,7 +695,6 @@ Please keep these credentials safe and change the password after first login.`
                     <Table.Head>Photo</Table.Head>
                     <Table.Head>Roll Number</Table.Head>
                     <Table.Head>Full Name</Table.Head>
-                    <Table.Head className="hidden md:table-cell">Username</Table.Head>
                     <Table.Head className="hidden lg:table-cell">Phone</Table.Head>
                     <Table.Head>Parent Name</Table.Head>
                     <Table.Head>Parent Phone</Table.Head>
@@ -711,7 +723,6 @@ Please keep these credentials safe and change the password after first login.`
                     </Table.Cell>
                     <Table.Cell>{student.roll_number}</Table.Cell>
                     <Table.Cell>{student.user?.full_name || 'N/A'}</Table.Cell>
-                    <Table.Cell className="hidden md:table-cell">{student.user?.username || 'N/A'}</Table.Cell>
                     <Table.Cell className="hidden lg:table-cell">{student.user?.phone || 'N/A'}</Table.Cell>
                     <Table.Cell>{student.parent_name || 'N/A'}</Table.Cell>
                     <Table.Cell>{student.parent_phone || 'N/A'}</Table.Cell>
@@ -758,7 +769,11 @@ Please keep these credentials safe and change the password after first login.`
         onClose={() => setShowModal(false)}
         onSubmit={handleSubmit}
         title="Add New Student"
-        initialData={form}
+        initialData={{
+          user: { full_name: '', phone: '', password: '' },
+          roll_number: '', parent_name: '', parent_phone: '', address: '', class_id: '', date_of_birth: ''
+        }}
+        onFieldChange={handleFieldChange}
         submitText="Create Student"
         isLoading={createStudent.isPending}
         className="sm:max-w-md"
@@ -776,30 +791,11 @@ Please keep these credentials safe and change the password after first login.`
             }
           },
           {
-            name: 'user.username',
-            label: 'Username',
-            type: 'text',
-            required: true,
-            placeholder: 'Auto-generated from full name'
-          },
-          {
-            name: 'user.email',
-            label: 'Email',
-            type: 'email'
-          },
-          {
             name: 'user.phone',
             label: 'Phone Number',
             type: 'tel',
             required: true,
             placeholder: "Enter student's phone number"
-          },
-          {
-            name: 'user.password',
-            label: 'Password',
-            type: 'password',
-            required: true,
-            placeholder: 'Enter password or generate one'
           },
           {
             name: 'class_id',
@@ -812,8 +808,11 @@ Please keep these credentials safe and change the password after first login.`
             name: 'roll_number',
             label: 'Roll Number',
             type: 'text',
-            required: true,
-            placeholder: 'e.g., 10A01, 9B03 (auto-generated)'
+            required: false, // Not required since it's auto-generated
+            placeholder: 'Automatically generated when class is selected',
+            props: {
+              readOnly: true
+            }
           },
           {
             name: 'parent_name',
@@ -838,85 +837,15 @@ Please keep these credentials safe and change the password after first login.`
             name: 'date_of_birth',
             label: 'Date of Birth',
             type: 'date'
+          },
+          {
+            name: 'user.password',
+            label: 'Password',
+            type: 'password',
+            placeholder: 'Leave empty to auto-generate secure password'
           }
         ]}
-      >
-        {/* Custom content for username generation */}
-        <div className="space-y-2">
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            onClick={() => setForm({
-              ...form,
-              user: { ...form.user, username: generateUsername(form.user.full_name) }
-            })}
-            className="text-xs"
-            disabled={!form.user.full_name}
-          >
-            {!form.user.full_name ? 'Enter name first' : 'Generate unique username'}
-          </Button>
-        </div>
-
-        {/* Custom content for password generation */}
-        <div className="space-y-2">
-          <div className="flex gap-2">
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              onClick={() => setForm({
-                ...form,
-                user: { ...form.user, password: generatePassword() }
-              })}
-              className="text-xs"
-            >
-              Generate Secure Password
-            </Button>
-            {form.user.password && (
-              <Button
-                type="button"
-                variant="ghost"
-                size="sm"
-                onClick={() => {
-                  navigator.clipboard.writeText(form.user.password)
-                  toast.success('Password copied!')
-                }}
-                className="text-xs"
-              >
-                Copy Password
-              </Button>
-            )}
-          </div>
-          {form.user.password && (
-            <div className="text-xs text-gray-600 bg-gray-50 p-2 rounded border">
-              <strong>Password:</strong> {form.user.password}
-            </div>
-          )}
-        </div>
-
-        {/* Custom content for roll number generation */}
-        <div className="space-y-2">
-          {form.roll_number && !/^\d{1,2}[A-Z]{1,2}\d{1,2}$/.test(form.roll_number) && (
-            <div className="text-xs text-orange-600">
-              Roll number format: GradeSection + Number (e.g., 10A01, 9B03)
-            </div>
-          )}
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            onClick={() => setForm({
-              ...form,
-              roll_number: generateRollNumber(form.class_id)
-            })}
-            disabled={!form.class_id}
-            className="text-xs"
-          >
-            {!form.class_id ? 'Select class first' : 'Generate next roll number'}
-          </Button>
-        </div>
-      </FormModal>
+      />
 
       {/* View Student Modal */}
       <ViewModal
@@ -943,7 +872,6 @@ Please keep these credentials safe and change the password after first login.`
             className: 'bg-gradient-to-r from-blue-50 to-indigo-50 border-blue-100',
             fields: [
               { key: 'name', label: 'Name', value: selectedStudent?.user?.full_name || 'N/A' },
-              { key: 'username', label: 'Username', value: selectedStudent?.user?.username || 'N/A', valueClass: 'font-mono text-xs bg-gray-50 px-1 py-0.5 rounded inline-block' },
               { key: 'roll', label: 'Roll Number', value: selectedStudent?.roll_number || 'N/A', valueClass: 'font-bold' },
               { key: 'class', label: 'Class', value: classes?.find(cls => cls.id === selectedStudent?.class_id)?.name || `Class ${selectedStudent?.class_id}` || 'N/A' },
               {
@@ -1051,17 +979,6 @@ Please keep these credentials safe and change the password after first login.`
             label: 'Full Name',
             type: 'text',
             required: true
-          },
-          {
-            name: 'user.username',
-            label: 'Username',
-            type: 'text',
-            required: true
-          },
-          {
-            name: 'user.email',
-            label: 'Email',
-            type: 'email'
           },
           {
             name: 'user.phone',
@@ -1198,4 +1115,4 @@ Please keep these credentials safe and change the password after first login.`
   )
 }
 
-export default AdminStudents
+export default AdminStudents;

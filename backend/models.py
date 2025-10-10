@@ -36,7 +36,7 @@ class User(UserBase, table=True):
 
 # User creation/response models
 class UserCreate(UserBase):
-    password: str = Field(min_length=6, max_length=50)
+    password: Optional[str] = Field(default=None, min_length=6, max_length=50)  # Made optional for auto-generation
 
 class UserRead(UserBase):
     id: int
@@ -66,6 +66,7 @@ class Student(StudentBase, table=True):
 class StudentCreate(StudentBase):
     user: UserCreate
     class_id: int
+    roll_number: Optional[str] = None  # Made optional for auto-generation
 
 class StudentRead(StudentBase):
     id: int
@@ -370,7 +371,7 @@ class AdmissionRequestBase(SQLModel):
     phone: str = Field(max_length=15)
     
     # Student data
-    parent_name: Optional[str] = Field(default=None, max_length=100)
+    parent_name: str = Field(max_length=100)  # Made required
     parent_phone: str = Field(max_length=15)
     address: Optional[str] = Field(default=None)
     date_of_birth: Optional[datetime] = Field(default=None)

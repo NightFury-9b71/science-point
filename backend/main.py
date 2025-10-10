@@ -190,18 +190,45 @@ def validate_student_access(student_id: int, current_user: User, session: Sessio
             detail="Access denied"
         )
 
-def authenticate_user(username: str, password: str, session: Session) -> Optional[User]:
-    user = session.exec(
-        select(User).options(
-            selectinload(User.student),
-            selectinload(User.teacher)
-        ).where(User.username == username)
-    ).first()
-    if not user:
-        return None
-    if not verify_password(password, user.password_hash):
-        return None
-    return user
+def generate_roll_number_for_class(class_id: int, session: Session) -> str:
+    """Generate a unique roll number for a student in a specific class"""
+    # Find the next available roll number for this class
+    existing_roll_numbers = session.exec(
+        select(Student.roll_number).where(Student.class_id == class_id)
+    ).all()
+    
+    # Extract numeric parts from existing roll numbers
+    existing_nums = []
+    for roll_num in existing_roll_numbers:
+        if roll_num:
+            # Extract numbers from roll number (e.g., "STU001" -> 1)
+            num_part = ''.join(filter(str.isdigit, str(roll_num)))
+            if num_part:
+                try:
+                    existing_nums.append(int(num_part))
+                except ValueError:
+                    pass
+    
+    # Generate next roll number
+    next_num = max(existing_nums) + 1 if existing_nums else 1
+    roll_number = f"STU{next_num:03d}"  # Format as STU001, STU002, etc.
+    
+    # Double-check roll number doesn't exist
+    existing_student = session.exec(select(Student).where(Student.roll_number == roll_number)).first()
+    while existing_student:
+        next_num += 1
+        roll_number = f"STU{next_num:03d}"
+        existing_student = session.exec(select(Student).where(Student.roll_number == roll_number)).first()
+    
+    return roll_number
+
+def generate_secure_password() -> str:
+    """Generate a secure random password"""
+    import random
+    import string
+    letters = ''.join(random.choices(string.ascii_letters, k=4))
+    numbers = ''.join(random.choices(string.digits, k=4))
+    return letters + numbers
 
 # Helper function for generating student credentials
 def generate_student_credentials(full_name: str, class_id: int, session: Session) -> dict:
@@ -506,23 +533,57 @@ def create_student(
     session: Session = Depends(get_session),
     current_user: User = Depends(require_admin)
 ):
-    # First create the user
-    user_data = student.user
-    user_dict = user_data.dict(exclude={'password'})
+    # Auto-generate roll number if not provided
+    roll_number = student.roll_number
+    if not roll_number:
+        # Generate roll number based on class
+        roll_number = generate_roll_number_for_class(student.class_id, session)
+    
+    # Use roll number as username
+    username = roll_number
+    
+    # Check if username already exists
+    existing_user = session.exec(select(User).where(User.username == username)).first()
+    if existing_user:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Username '{username}' already exists. Roll number must be unique."
+        )
+    
+    # Check if email is provided and already exists
+    if student.user.email:
+        email_check = session.exec(select(User).where(User.email == student.user.email)).first()
+        if email_check:
+            raise HTTPException(
+                status_code=400,
+                detail="Email already registered"
+            )
+    
+    # Auto-generate password if not provided
+    password = student.user.password or generate_secure_password()
+    
+    # Create user account
+    hashed_password = get_password_hash(password)
     db_user = User(
-        **user_dict,
-        password_hash=get_password_hash(user_data.password)
-        # role is already included in user_dict from frontend
+        username=username,
+        email=student.user.email,
+        full_name=student.user.full_name,
+        phone=student.user.phone,
+        role=UserRole.STUDENT,
+        password_hash=hashed_password
     )
     session.add(db_user)
     session.flush()  # Flush to get the user ID
     
-    # Then create the student
-    student_dict = student.dict(exclude={'user'})
-    db_student = Student(**student_dict, user_id=db_user.id)
+    # Create student record
+    student_dict = student.dict(exclude={'user', 'roll_number'})
+    db_student = Student(**student_dict, user_id=db_user.id, roll_number=roll_number)
     session.add(db_student)
     session.commit()
     session.refresh(db_student)
+    
+    # Return student with generated credentials
+    # Note: In a real implementation, you'd want to return the plain password only once for security
     return db_student
 
 @app.get("/admin/students", response_model=List[StudentRead])
@@ -2649,6 +2710,15 @@ def get_admin_profile(
         raise HTTPException(status_code=404, detail="Admin not found")
     
     return admin
+
+def authenticate_user(username: str, password: str, session: Session) -> User:
+    """Authenticate a user by username and password"""
+    user = session.exec(select(User).where(User.username == username)).first()
+    if not user:
+        return None
+    if not verify_password(password, user.password_hash):
+        return None
+    return user
 
 if __name__ == "__main__":
     import uvicorn

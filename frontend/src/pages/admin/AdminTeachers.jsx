@@ -1,6 +1,6 @@
 import React, { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Plus,Users,Edit, Eye, ArrowLeft, Search, KeyRound, CheckCircle, Download, FileText, Copy, AlertCircle, Briefcase } from 'lucide-react'
+import { Plus,Users,Edit, Briefcase, Eye, ArrowLeft, Search, KeyRound, CheckCircle, Download, FileText, Copy, AlertCircle } from 'lucide-react'
 import { toast } from 'sonner'
 import Card from '../../components/Card'
 import Button from '../../components/Button'
@@ -27,37 +27,21 @@ const AdminTeachers = () => {
   const [selectedTeacher, setSelectedTeacher] = useState(null)
   const [newTeacherCredentials, setNewTeacherCredentials] = useState(null)
   const [searchQuery, setSearchQuery] = useState('')
-  const [qualificationFilter, setQualificationFilter] = useState('')
-  const [experienceFilter, setExperienceFilter] = useState('')
   const [sortBy, setSortBy] = useState('name')
-  const [form, setForm] = useState(() => ({
-    user: { username: '', email: '', full_name: '', phone: '', password: '' },
-    employee_id: '', qualification: '', experience_years: 0, salary: 0
-  }))
   const [editForm, setEditForm] = useState(() => ({
-    user: { username: '', email: '', full_name: '', phone: '' },
-    qualification: '', experience_years: 0, salary: 0
+    user: { full_name: '', phone: '' },
+    employee_id: '', salary: 200
   }))
-  const [passwordForm, setPasswordForm] = useState({ password: '', confirmPassword: '' })
 
   // Filter and sort teachers
   const filteredTeachers = (teachers || [])
     .filter(teacher => {
       const matchesSearch = !searchQuery || 
         teacher.user?.full_name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        teacher.user?.email?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        teacher.employee_id?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        teacher.qualification?.toLowerCase().includes(searchQuery.toLowerCase())
+        teacher.user?.phone?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        teacher.employee_id?.toLowerCase().includes(searchQuery.toLowerCase())
       
-      const matchesQualification = !qualificationFilter || teacher.qualification?.toLowerCase().includes(qualificationFilter.toLowerCase())
-      
-      const matchesExperience = !experienceFilter || 
-        (experienceFilter === '0-2' && teacher.experience_years >= 0 && teacher.experience_years <= 2) ||
-        (experienceFilter === '3-5' && teacher.experience_years >= 3 && teacher.experience_years <= 5) ||
-        (experienceFilter === '6-10' && teacher.experience_years >= 6 && teacher.experience_years <= 10) ||
-        (experienceFilter === '10+' && teacher.experience_years > 10)
-      
-      return matchesSearch && matchesQualification && matchesExperience
+      return matchesSearch
     })
     .sort((a, b) => {
       switch (sortBy) {
@@ -65,10 +49,6 @@ const AdminTeachers = () => {
           return (a.user?.full_name || '').localeCompare(b.user?.full_name || '')
         case 'employee_id':
           return (a.employee_id || '').localeCompare(b.employee_id || '')
-        case 'experience':
-          return b.experience_years - a.experience_years
-        case 'qualification':
-          return (a.qualification || '').localeCompare(b.qualification || '')
         default:
           return 0
       }
@@ -168,41 +148,97 @@ const AdminTeachers = () => {
     return `T${nextId.toString().padStart(3, '0')}`
   }
 
-  const handleSubmit = async (e) => {
-    e.preventDefault()
+  const handleSubmit = async (formData) => {
     try {
-      // Add role to the form data
-      const formData = {
-        ...form,
-        user: {
-          ...form.user,
-          role: 'teacher'
-        }
+      // Generate employee ID if not provided
+      const employeeId = formData.employee_id?.trim() || generateEmployeeId()
+      
+      // Validation checks
+      if (!formData.user?.full_name?.trim()) {
+        toast.error('Full name is required')
+        return
       }
-      const result = await createTeacher.mutateAsync(formData)
+      if (!formData.user?.phone?.trim()) {
+        toast.error('Phone number is required')
+        return
+      }
+      if (!employeeId) {
+        toast.error('Employee ID is required')
+        return
+      }
+      if (!formData.salary || formData.salary <= 0) {
+        toast.error('Salary must be greater than 0')
+        return
+      }
+
+      // Format the form data properly
+      const submissionData = {
+        user: {
+          username: generateUsername(formData.user.full_name.trim()), // Auto-generate username
+          full_name: formData.user.full_name.trim(),
+          phone: formData.user.phone?.trim() || '',
+          password: formData.user.password?.trim() || generatePassword(), // Auto-generate if not provided
+          role: 'teacher' // Add required role field
+        },
+        employee_id: employeeId,
+        salary: parseFloat(formData.salary),
+        qualification: '', // Empty since removed
+        experience_years: 0 // Default since removed
+      }
+
+      const result = await createTeacher.mutateAsync(submissionData)
       
       // Store credentials for display
       setNewTeacherCredentials({
-        fullName: form.user.full_name,
-        username: form.user.username,
-        password: form.user.password,
-        employeeId: form.employee_id,
-        email: form.user.email
+        fullName: formData.user.full_name,
+        username: submissionData.user.username,
+        password: formData.user.password || submissionData.user.password,
+        employeeId: employeeId
       })
       
       setShowModal(false)
-      setForm({
-        user: { username: '', email: '', full_name: '', phone: '', password: generatePassword() },
-        employee_id: generateEmployeeId(), qualification: '', experience_years: 0, salary: 0
-      })
       
       // Show credentials modal instead of just toast
       setShowCredentialsModal(true)
       toast.success('Teacher created successfully!')
       
     } catch (error) {
-      console.error('Error creating teacher:', error)
-      toast.error('Failed to create teacher. Please try again.')
+      Logger.error('Error creating teacher:', error)
+      
+      // More detailed error handling
+      if (error.response) {
+        Logger.error('Server response:', error.response.data)
+        let errorMessage = 'Server error occurred'
+        
+        if (error.response.data?.detail) {
+          if (typeof error.response.data.detail === 'string') {
+            errorMessage = error.response.data.detail
+          } else if (typeof error.response.data.detail === 'object') {
+            // Handle validation errors or other object responses
+            if (error.response.data.detail.message) {
+              errorMessage = error.response.data.detail.message
+            } else if (Array.isArray(error.response.data.detail)) {
+              errorMessage = error.response.data.detail.map(err => 
+                typeof err === 'string' ? err : err.message || JSON.stringify(err)
+              ).join(', ')
+            } else {
+              errorMessage = JSON.stringify(error.response.data.detail)
+            }
+          }
+        } else if (error.response.data?.message) {
+          errorMessage = error.response.data.message
+        } else if (error.response.status === 400) {
+          errorMessage = 'Invalid data provided. Please check all required fields.'
+        } else if (error.response.status === 409) {
+          errorMessage = 'A teacher with this information already exists.'
+        }
+        
+        toast.error(`Failed to create teacher: ${errorMessage}`)
+      } else if (error.message) {
+        toast.error(`Error: ${error.message}`)
+      } else {
+        toast.error('Failed to create teacher. Please check the form data and try again.')
+      }
     }
   }
 
@@ -214,15 +250,13 @@ const AdminTeachers = () => {
   const handleEditTeacher = (teacher) => {
     setSelectedTeacher(teacher)
     setEditForm({
+      id: teacher.id,
       user: {
-        username: teacher.user?.username || '',
-        email: teacher.user?.email || '',
         full_name: teacher.user?.full_name || '',
         phone: teacher.user?.phone || ''
       },
-      qualification: teacher.qualification || '',
-      experience_years: teacher.experience_years || 0,
-      salary: teacher.salary || 0
+      employee_id: teacher.employee_id || '',
+      salary: teacher.salary || 200
     })
     setShowEditModal(true)
   }
@@ -246,8 +280,7 @@ const AdminTeachers = () => {
         fullName: selectedTeacher.user?.full_name || 'Unknown',
         username: selectedTeacher.user?.username || 'unknown',
         password: newPassword,
-        employeeId: selectedTeacher.employee_id || 'N/A',
-        email: selectedTeacher.user?.email || 'N/A'
+        employeeId: selectedTeacher.employee_id || 'N/A'
       }
 
       // Call the actual password update mutation
@@ -269,23 +302,60 @@ const AdminTeachers = () => {
     }
   }
 
-  const handleEditSubmit = async (e) => {
-    e.preventDefault()
+  const handleUpdateTeacher = async (formData) => {
     try {
+      // Validation checks
+      if (!formData.user?.full_name?.trim()) {
+        toast.error('Full name is required')
+        return
+      }
+      if (!formData.employee_id?.trim()) {
+        toast.error('Employee ID is required')
+        return
+      }
+      if (!formData.user?.phone?.trim()) {
+        toast.error('Phone number is required')
+        return
+      }
+      if (!formData.salary || formData.salary <= 0) {
+        toast.error('Salary must be greater than 0')
+        return
+      }
+
+      // Format the form data properly
+      const updateData = {
+        user: {
+          username: generateUsername(formData.user.full_name.trim()), // Auto-generate username
+          full_name: formData.user.full_name.trim(),
+          phone: formData.user.phone?.trim() || ''
+        },
+        employee_id: formData.employee_id.trim(),
+        salary: parseFloat(formData.salary),
+        qualification: '', // Empty since removed
+        experience_years: 0 // Default since removed
+      }
+
+      // Call the actual update mutation
       await updateTeacher.mutateAsync({ 
-        id: selectedTeacher.id, 
-        user: editForm.user,
-        qualification: editForm.qualification,
-        experience_years: editForm.experience_years,
-        salary: editForm.salary
+        id: editForm.id, 
+        ...updateData 
       })
       
       setShowEditModal(false)
-      setSelectedTeacher(null)
+      setEditForm(null)
       toast.success('Teacher updated successfully!')
+      
     } catch (error) {
-      console.error('Error updating teacher:', error)
-      toast.error('Failed to update teacher. Please try again.')
+      Logger.error('Error updating teacher:', error)
+      
+      if (error.response) {
+        const errorMessage = error.response.data?.detail || error.response.data?.message || 'Server error occurred'
+        toast.error(`Failed to update teacher: ${errorMessage}`)
+      } else if (error.message) {
+        toast.error(`Error: ${error.message}`)
+      } else {
+        toast.error('Failed to update teacher. Please check the form data and try again.')
+      }
     }
   }
 
@@ -307,7 +377,6 @@ const AdminTeachers = () => {
     const credentialsText = `Teacher Login Credentials
 Name: ${newTeacherCredentials.fullName}
 Employee ID: ${newTeacherCredentials.employeeId}
-Email: ${newTeacherCredentials.email}
 Username: ${newTeacherCredentials.username}
 Password: ${newTeacherCredentials.password}
 
@@ -345,7 +414,6 @@ Please keep these credentials secure and share them with the teacher.`
           <div class="credentials">
             <div class="field"><span class="label">Name:</span><span class="value">${newTeacherCredentials.fullName}</span></div>
             <div class="field"><span class="label">Employee ID:</span><span class="value">${newTeacherCredentials.employeeId}</span></div>
-            <div class="field"><span class="label">Email:</span><span class="value">${newTeacherCredentials.email}</span></div>
             <div class="field"><span class="label">Username:</span><span class="value">${newTeacherCredentials.username}</span></div>
             <div class="field"><span class="label">Password:</span><span class="value">${newTeacherCredentials.password}</span></div>
           </div>
@@ -380,18 +448,8 @@ Please keep these credentials secure and share them with the teacher.`
           </Button>
           <h2 className="text-lg sm:text-xl font-semibold">Teachers</h2>
         </div>
-        <Button 
-          onClick={() => {
-            // Reset form with auto-generated employee ID and password
-            setForm({
-              user: { username: '', email: '', full_name: '', phone: '', password: generatePassword() },
-              employee_id: generateEmployeeId(), 
-              qualification: '', 
-              experience_years: 0, 
-              salary: 0
-            })
-            setShowModal(true)
-          }} 
+        <Button
+          onClick={() => setShowModal(true)}
           size="sm"
         >
           <Plus className="h-4 w-4 mr-1 sm:mr-2" />
@@ -410,38 +468,12 @@ Please keep these credentials secure and share them with the teacher.`
                 <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
                 <input
                   type="text"
-                  placeholder="Search by name, email, ID, or qualification..."
+                  placeholder="Search by name, phone, or employee ID..."
                   className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                 />
               </div>
-            </div>
-            
-            {/* Qualification Filter */}
-            <div className="w-full lg:w-48">
-              <input
-                type="text"
-                placeholder="Filter by qualification"
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                value={qualificationFilter}
-                onChange={(e) => setQualificationFilter(e.target.value)}
-              />
-            </div>
-            
-            {/* Experience Filter */}
-            <div className="w-full lg:w-48">
-              <select
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                value={experienceFilter}
-                onChange={(e) => setExperienceFilter(e.target.value)}
-              >
-                <option value="">All Experience</option>
-                <option value="0-2">0-2 years</option>
-                <option value="3-5">3-5 years</option>
-                <option value="6-10">6-10 years</option>
-                <option value="10+">10+ years</option>
-              </select>
             </div>
             
             {/* Sort Options */}
@@ -453,8 +485,6 @@ Please keep these credentials secure and share them with the teacher.`
               >
                 <option value="name">Sort by Name</option>
                 <option value="employee_id">Sort by ID</option>
-                <option value="experience">Sort by Experience</option>
-                <option value="qualification">Sort by Qualification</option>
               </select>
             </div>
           </div>
@@ -464,14 +494,12 @@ Please keep these credentials secure and share them with the teacher.`
             <div className="text-sm text-gray-600">
               Showing {filteredTeachers.length} of {teachers?.length || 0} teachers
             </div>
-            {(searchQuery || qualificationFilter || experienceFilter || sortBy !== 'name') && (
+            {(searchQuery || sortBy !== 'name') && (
               <Button
                 variant="outline"
                 size="sm"
                 onClick={() => {
                   setSearchQuery('')
-                  setQualificationFilter('')
-                  setExperienceFilter('')
                   setSortBy('name')
                 }}
               >
@@ -522,10 +550,8 @@ Please keep these credentials secure and share them with the teacher.`
                   </div>
                 </div>
                 <div className="text-xs text-gray-500 space-y-1 mt-2">
-                  <p>Email: {teacher.user?.email || 'N/A'}</p>
                   <p>Phone: {teacher.user?.phone || 'N/A'}</p>
-                  <p>Qualification: {teacher.qualification || 'N/A'}</p>
-                  <p>Experience: {teacher.experience_years} years</p>
+                  <p>Salary: {teacher.salary || 200} BDT per class</p>
                 </div>
               </div>
             </div>
@@ -543,11 +569,8 @@ Please keep these credentials secure and share them with the teacher.`
                   <Table.Head>Photo</Table.Head>
                   <Table.Head>Employee ID</Table.Head>
                   <Table.Head>Full Name</Table.Head>
-                  <Table.Head className="hidden md:table-cell">Email</Table.Head>
-                  <Table.Head className="hidden lg:table-cell">Phone</Table.Head>
-                  <Table.Head className="hidden lg:table-cell">Qualification</Table.Head>
-                  <Table.Head>Experience</Table.Head>
-                  <Table.Head>Salary</Table.Head>
+                  <Table.Head className="hidden md:table-cell">Phone</Table.Head>
+                  <Table.Head>Salary per Class</Table.Head>
                   <Table.Head>Actions</Table.Head>
                 </Table.Row>
               </Table.Header>
@@ -571,11 +594,8 @@ Please keep these credentials secure and share them with the teacher.`
                     </Table.Cell>
                     <Table.Cell>{teacher.employee_id}</Table.Cell>
                     <Table.Cell>{teacher.user?.full_name || 'N/A'}</Table.Cell>
-                    <Table.Cell className="hidden md:table-cell">{teacher.user?.email || 'N/A'}</Table.Cell>
-                    <Table.Cell className="hidden lg:table-cell">{teacher.user?.phone || 'N/A'}</Table.Cell>
-                    <Table.Cell className="hidden lg:table-cell">{teacher.qualification || 'N/A'}</Table.Cell>
-                    <Table.Cell>{teacher.experience_years} years</Table.Cell>
-                    <Table.Cell>{teacher.salary || 0}</Table.Cell>
+                    <Table.Cell className="hidden md:table-cell">{teacher.user?.phone || 'N/A'}</Table.Cell>
+                    <Table.Cell>{teacher.salary || 200} BDT</Table.Cell>
                     <Table.Cell>
                       <div className="flex gap-1">
                         <Button size="sm" variant="outline" onClick={() => handleViewTeacher(teacher)}>
@@ -607,246 +627,67 @@ Please keep these credentials secure and share them with the teacher.`
         </Card.Content>
       </Card>
 
-      {/* Add New Teacher Modal */}
+      {/* Add Teacher Modal */}
       <FormModal
         isOpen={showModal}
         onClose={() => setShowModal(false)}
+        onSubmit={handleSubmit}
         title="Add New Teacher"
+        initialData={{
+          user: { full_name: '', phone: '', password: '' },
+          employee_id: generateEmployeeId(), salary: 200
+        }}
+        submitText="Create Teacher"
+        isLoading={createTeacher.isPending}
+        className="sm:max-w-md"
         fields={[
           {
-            name: 'full_name',
+            name: 'user.full_name',
             label: 'Full Name',
             type: 'text',
-            placeholder: 'Enter teacher\'s full name',
             required: true,
-            value: form.user.full_name,
-            onChange: (value) => {
-              const fullName = value
-              
-              // Immediate state update for responsive UI
-              setForm(prev => ({
-                ...prev,
-                user: { 
-                  ...prev.user, 
-                  full_name: fullName
-                }
-              }))
-              
-              // Debounced username generation to avoid blocking input
-              if (fullName && fullName.trim().length > 1) {
-                setTimeout(() => {
-                  try {
-                    const username = generateUsername(fullName)
-                    if (username) {
-                      setForm(prev => ({
-                        ...prev,
-                        user: { 
-                          ...prev.user, 
-                          username: username
-                        }
-                      }))
-                    }
-                  } catch (err) {
-                    console.error('Username generation error:', err)
-                  }
-                }, 300)
-              }
+            placeholder: "Enter teacher's full name (e.g., John Doe)",
+            props: {
+              autoComplete: 'name',
+              inputMode: 'text',
+              spellCheck: true
             }
           },
           {
-            name: 'username',
-            label: 'Username',
-            type: 'text',
-            required: true,
-            value: form.user.username,
-            onChange: (value) => setForm({
-              ...form,
-              user: { ...form.user, username: value }
-            }),
-            placeholder: 'Auto-generated from full name',
-            customRender: (field, onChange) => (
-              <div className="space-y-2">
-                <div className="flex gap-2">
-                  <Input
-                    label="Username"
-                    type="text"
-                    value={form.user.username}
-                    onChange={(e) => setForm({
-                      ...form,
-                      user: { ...form.user, username: e.target.value }
-                    })}
-                    required
-                    className="flex-1"
-                    placeholder="Auto-generated from full name"
-                  />
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    onClick={() => {
-                      const username = generateUsername(form.user.full_name)
-                      setForm({
-                        ...form,
-                        user: { ...form.user, username }
-                      })
-                    }}
-                    className="mt-6 px-3"
-                    disabled={!form.user.full_name}
-                    title="Generate unique username from full name"
-                  >
-                    {!form.user.full_name ? 'Name?' : 'Auto'}
-                  </Button>
-                </div>
-              </div>
-            )
-          },
-          {
-            name: 'email',
-            label: 'Email',
-            type: 'email',
-            required: true,
-            value: form.user.email,
-            onChange: (value) => setForm({
-              ...form,
-              user: { ...form.user, email: value }
-            })
-          },
-          {
-            name: 'phone',
-            label: 'Phone',
+            name: 'user.phone',
+            label: 'Phone Number',
             type: 'tel',
-            placeholder: 'Enter phone number',
-            value: form.user.phone,
-            onChange: (value) => setForm({
-              ...form,
-              user: { ...form.user, phone: value }
-            })
-          },
-          {
-            name: 'password',
-            label: 'Password',
-            type: 'password',
             required: true,
-            value: form.user.password,
-            onChange: (value) => setForm({
-              ...form,
-              user: { ...form.user, password: value }
-            }),
-            placeholder: 'Enter password or generate one',
-            customRender: (field, onChange) => (
-              <div className="space-y-2">
-                <Input
-                  label="Password"
-                  type="password"
-                  value={form.user.password}
-                  onChange={(e) => setForm({
-                    ...form,
-                    user: { ...form.user, password: e.target.value }
-                  })}
-                  required
-                  placeholder="Enter password or generate one"
-                />
-                <div className="flex gap-2">
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    onClick={() => setForm({
-                      ...form,
-                      user: { ...form.user, password: generatePassword() }
-                    })}
-                    className="text-xs"
-                  >
-                    Generate Secure Password
-                  </Button>
-                  {form.user.password && (
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => {
-                        navigator.clipboard.writeText(form.user.password)
-                        toast.success('Password copied!')
-                      }}
-                      className="text-xs"
-                    >
-                      Copy Password
-                    </Button>
-                  )}
-                </div>
-                {form.user.password && (
-                  <div className="text-xs text-gray-600 bg-gray-50 p-2 rounded border">
-                    <strong>Password:</strong> {form.user.password}
-                  </div>
-                )}
-              </div>
-            )
+            placeholder: "Enter teacher's phone number"
           },
           {
             name: 'employee_id',
             label: 'Employee ID',
             type: 'text',
-            required: true,
-            value: form.employee_id,
-            onChange: (value) => setForm({ ...form, employee_id: value }),
-            placeholder: 'e.g., T001, T002 (auto-generated)',
-            customRender: (field, onChange) => (
-              <div className="space-y-2">
-                <Input
-                  label="Employee ID"
-                  type="text"
-                  value={form.employee_id}
-                  onChange={(e) => setForm({ ...form, employee_id: e.target.value })}
-                  required
-                  placeholder="e.g., T001, T002 (auto-generated)"
-                />
-                {!/^T\d{3,}$/.test(form.employee_id) && form.employee_id && (
-                  <div className="text-xs text-orange-600">
-                    Employee ID format: T + 3-digit number (e.g., T001, T002)
-                  </div>
-                )}
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setForm({
-                    ...form,
-                    employee_id: generateEmployeeId()
-                  })}
-                  className="text-xs"
-                >
-                  Generate next employee ID
-                </Button>
-              </div>
-            )
-          },
-          {
-            name: 'qualification',
-            label: 'Qualification',
-            type: 'text',
-            placeholder: 'e.g., M.Sc Mathematics, B.Ed',
-            value: form.qualification,
-            onChange: (value) => setForm({ ...form, qualification: value })
-          },
-          {
-            name: 'experience_years',
-            label: 'Experience (years)',
-            type: 'number',
-            value: form.experience_years,
-            onChange: (value) => setForm({ ...form, experience_years: parseInt(value) || 0 })
+            required: false, // Not required since it's auto-generated
+            placeholder: 'Automatically generated (e.g., T001, T002)',
+            props: {
+              readOnly: true
+            }
           },
           {
             name: 'salary',
-            label: 'Salary',
+            label: 'Salary per Class (BDT)',
             type: 'number',
-            value: form.salary,
-            onChange: (value) => setForm({ ...form, salary: parseFloat(value) || 0 })
+            required: true,
+            placeholder: 'Enter salary per class',
+            props: {
+              min: 0,
+              step: 1
+            }
+          },
+          {
+            name: 'user.password',
+            label: 'Password',
+            type: 'password',
+            placeholder: 'Leave empty to auto-generate secure password'
           }
         ]}
-        onSubmit={handleSubmit}
-        submitButtonText="Create Teacher"
-        isLoading={createTeacher.isPending}
-        className="sm:max-w-md"
       />
 
       {/* View Teacher Modal */}
@@ -883,10 +724,8 @@ Please keep these credentials secure and share them with the teacher.`
                 <div className="flex-1 min-w-0">
                   <h2 className="text-xl font-bold truncate">{selectedTeacher.user?.full_name || 'Teacher Details'}</h2>
                   <p className="text-sm text-emerald-100">ID: {selectedTeacher.employee_id}</p>
-                  <p className="text-sm text-emerald-200 truncate">{selectedTeacher.qualification || 'Not specified'}</p>
                   <div className="flex gap-2 mt-2">
-                    <span className="text-xs bg-white/20 px-2 py-1 rounded">{selectedTeacher.experience_years || 0} yrs</span>
-                    <span className="text-xs bg-white/20 px-2 py-1 rounded">${selectedTeacher.salary || 0}</span>
+                    <span className="text-xs bg-white/20 px-2 py-1 rounded">{selectedTeacher.salary || 200} BDT/class</span>
                     <span className={`text-xs px-2 py-1 rounded ${
                       selectedTeacher.user?.is_active ? 'bg-green-500/20 text-green-100' : 'bg-red-500/20 text-red-100'
                     }`}>
@@ -909,21 +748,17 @@ Please keep these credentials secure and share them with the teacher.`
               { label: 'Name', value: selectedTeacher?.user?.full_name || 'N/A', type: 'text' },
               { label: 'Username', value: selectedTeacher?.user?.username || 'N/A', type: 'mono' },
               { label: 'Employee ID', value: selectedTeacher?.employee_id || 'N/A', type: 'bold' },
-              { label: 'Phone', value: selectedTeacher?.user?.phone || 'N/A', type: 'text' },
-              { label: 'Email', value: selectedTeacher?.user?.email || 'N/A', type: 'email' }
+              { label: 'Phone', value: selectedTeacher?.user?.phone || 'N/A', type: 'text' }
             ]
           },
           {
-            title: 'Professional Info',
+            title: 'Salary Info',
             icon: Briefcase,
             iconColor: 'text-teal-600',
             bgColor: 'from-teal-50 to-cyan-50',
             borderColor: 'border-teal-100',
             fields: [
-              { label: 'Qualification', value: selectedTeacher?.qualification || 'N/A', type: 'text' },
-              { label: 'Experience', value: `${selectedTeacher?.experience_years || 0} years`, type: 'bold' },
-              { label: 'Monthly', value: `$${selectedTeacher?.salary || 0}`, type: 'green' },
-              { label: 'Annual', value: `$${(selectedTeacher?.salary || 0) * 12}`, type: 'green' }
+              { label: 'Salary per Class', value: `${selectedTeacher?.salary || 200} BDT`, type: 'green' }
             ]
           },
           {
@@ -979,78 +814,46 @@ Please keep these credentials secure and share them with the teacher.`
       {/* Edit Teacher Modal */}
       <FormModal
         isOpen={showEditModal}
-        onClose={() => setShowEditModal(false)}
+        onClose={() => {
+          setShowEditModal(false)
+          setEditForm(null)
+        }}
+        onSubmit={handleUpdateTeacher}
         title="Edit Teacher"
+        initialData={editForm}
+        submitText="Update Teacher"
+        isLoading={updateTeacher.isPending}
+        className="sm:max-w-md"
         fields={[
           {
-            name: 'full_name',
+            name: 'user.full_name',
             label: 'Full Name',
             type: 'text',
-            required: true,
-            value: editForm.user.full_name,
-            onChange: (value) => setEditForm({
-              ...editForm,
-              user: { ...editForm.user, full_name: value }
-            })
+            required: true
           },
           {
-            name: 'username',
-            label: 'Username',
-            type: 'text',
-            required: true,
-            value: editForm.user.username,
-            onChange: (value) => setEditForm({
-              ...editForm,
-              user: { ...editForm.user, username: value }
-            })
-          },
-          {
-            name: 'email',
-            label: 'Email',
-            type: 'email',
-            required: true,
-            value: editForm.user.email,
-            onChange: (value) => setEditForm({
-              ...editForm,
-              user: { ...editForm.user, email: value }
-            })
-          },
-          {
-            name: 'phone',
-            label: 'Phone',
+            name: 'user.phone',
+            label: 'Phone Number',
             type: 'tel',
-            value: editForm.user.phone,
-            onChange: (value) => setEditForm({
-              ...editForm,
-              user: { ...editForm.user, phone: value }
-            })
+            required: true
           },
           {
-            name: 'qualification',
-            label: 'Qualification',
+            name: 'employee_id',
+            label: 'Employee ID',
             type: 'text',
-            value: editForm.qualification,
-            onChange: (value) => setEditForm({ ...editForm, qualification: value })
-          },
-          {
-            name: 'experience_years',
-            label: 'Experience (years)',
-            type: 'number',
-            value: editForm.experience_years,
-            onChange: (value) => setEditForm({ ...editForm, experience_years: parseInt(value) || 0 })
+            required: true
           },
           {
             name: 'salary',
-            label: 'Salary',
+            label: 'Salary per Class (BDT)',
             type: 'number',
-            value: editForm.salary,
-            onChange: (value) => setEditForm({ ...editForm, salary: parseFloat(value) || 0 })
+            required: true,
+            props: {
+              min: 0,
+              step: 1
+            }
           }
         ]}
-        onSubmit={handleEditSubmit}
-        submitButtonText="Update Teacher"
-        isLoading={updateTeacher.isPending}
-        className="sm:max-w-md"
       />
 
       {/* Delete Confirmation Modal */}
@@ -1092,7 +895,6 @@ Please keep these credentials secure and share them with the teacher.`
               <p><strong>Name:</strong> {selectedTeacher.user?.full_name}</p>
               <p><strong>Username:</strong> {selectedTeacher.user?.username}</p>
               <p><strong>Employee ID:</strong> {selectedTeacher.employee_id}</p>
-              <p><strong>Email:</strong> {selectedTeacher.user?.email}</p>
             </div>
           </div>
         )}

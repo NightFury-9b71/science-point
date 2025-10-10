@@ -129,7 +129,7 @@ class AdmissionRequestCreate(BaseModel):
     email: Optional[str] = None
     phone: str
     # Student data
-    parent_name: Optional[str] = None
+    parent_name: str  # Made required
     parent_phone: str  # Made required
     address: Optional[str] = None
     date_of_birth: Optional[datetime] = None

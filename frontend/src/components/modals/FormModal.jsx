@@ -10,10 +10,12 @@ const FormModal = ({
   title,
   fields,
   initialData = {},
+  data, // New prop for dynamic data updates
   submitText = 'Save',
   cancelText = 'Cancel',
   isLoading = false,
   className = 'sm:max-w-md',
+  onFieldChange, // New prop for field change callbacks
   children
 }) => {
   const [formData, setFormData] = useState(initialData)
@@ -24,6 +26,13 @@ const FormModal = ({
       setFormData(initialData || {})
     }
   }, [isOpen, initialData])
+
+  // Update form data when data prop changes
+  useEffect(() => {
+    if (data && isOpen) {
+      setFormData(data)
+    }
+  }, [data, isOpen])
 
   const handleSubmit = (e) => {
     e.preventDefault()
@@ -50,6 +59,11 @@ const FormModal = ({
           current = current[key]
         }
         current[keys[keys.length - 1]] = value
+      }
+      
+      // Call onFieldChange if provided
+      if (onFieldChange) {
+        onFieldChange(fieldName, value, newData)
       }
       
       return newData
