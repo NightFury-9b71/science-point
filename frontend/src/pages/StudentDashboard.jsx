@@ -10,6 +10,7 @@ import StudentMaterials from './student/StudentMaterials'
 import StudentNotices from './student/StudentNotices'
 import StudentDashboardOverview from './student/StudentDashboardOverview'
 import StudentScheduleView from './student/StudentScheduleView'
+import StudentProfile from './student/StudentProfile'
 import NotFound from './NotFound'
 
 const StudentDashboard = () => {
@@ -37,6 +38,7 @@ const StudentDashboard = () => {
   return (
     <Routes>
       <Route path="/" element={<StudentDashboardOverview />} />
+      <Route path="/profile" element={<StudentProfile />} />
       <Route path="/results" element={<StudentResults />} />
       <Route path="/schedule" element={<StudentScheduleView />} />
       <Route path="/notices" element={<StudentNotices />} />

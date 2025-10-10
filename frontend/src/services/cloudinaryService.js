@@ -38,6 +38,7 @@ class CloudinaryService {
     } else if (file.type.startsWith('video/')) {
       formData.append('resource_type', 'video')
     } else {
+      // For documents, PDFs, and other files, use 'raw' resource type
       formData.append('resource_type', 'raw')
     }
 
@@ -72,15 +73,27 @@ class CloudinaryService {
   /**
    * Delete a file from Cloudinary
    * @param {string} publicId - The public ID of the file to delete
-   * @param {string} resourceType - The resource type (image, video, raw)
+   * @param {string} resourceType - The resource type (image, video, raw). If not provided, will be auto-detected
    * @returns {Promise<Object>} Delete result
    */
-  async deleteFile(publicId, resourceType = 'image') {
+  async deleteFile(publicId, resourceType = null) {
+    // Auto-detect resource type if not provided
+    if (!resourceType) {
+      // Check file extension first (most reliable)
+      if (publicId.match(/\.(jpg|jpeg|png|gif|webp|bmp|tiff?|svg)$/i)) {
+        resourceType = 'image'
+      } else if (publicId.match(/\.(mp4|avi|mov|wmv|flv|webm|mkv|mp3|wav|ogg)$/i)) {
+        resourceType = 'video'
+      } else {
+        // Default to raw for documents, PDFs, and other files
+        resourceType = 'raw'
+      }
+    }
+
     const deleteUrl = `https://api.cloudinary.com/v1_1/${this.cloudName}/${resourceType}/destroy`
 
     const formData = new FormData()
     formData.append('public_id', publicId)
-    formData.append('upload_preset', this.uploadPreset)
     formData.append('api_key', this.apiKey)
 
     try {

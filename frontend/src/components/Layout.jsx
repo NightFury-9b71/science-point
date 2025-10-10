@@ -260,9 +260,9 @@ const Layout = ({ children }) => {
                   className="flex items-center p-1 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-full transition-colors"
                 >
                   <div className="w-8 h-8 rounded-full overflow-hidden bg-gray-200 flex items-center justify-center">
-                    {user?.photo_path ? (
+                    {user?.photo_url || (user?.photo_path && user.photo_path.startsWith('http')) ? (
                       <img 
-                        src={`/uploads/${user.photo_path}`} 
+                        src={user.photo_url || user.photo_path} 
                         alt={`${user?.full_name || 'User'} profile`}
                         className="w-full h-full object-cover"
                       />
@@ -347,9 +347,9 @@ const Layout = ({ children }) => {
               <div className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-lg p-4 mb-4 border border-blue-100">
                 <div className="flex items-center space-x-3">
                   <div className="w-12 h-12 rounded-full overflow-hidden bg-gradient-to-br from-blue-100 to-blue-200 flex items-center justify-center ring-2 ring-blue-200">
-                    {user?.photo_path ? (
+                    {user?.photo_url || (user?.photo_path && user.photo_path.startsWith('http')) ? (
                       <img
-                        src={`/uploads/${user.photo_path}`}
+                        src={user.photo_url || user.photo_path}
                         alt={`${user?.full_name || 'User'} profile`}
                         className="w-full h-full object-cover"
                       />

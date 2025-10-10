@@ -15,6 +15,10 @@ import uvicorn
 from typing import List, Optional
 import os
 import shutil
+from dotenv import load_dotenv
+
+# Load environment variables from .env file
+load_dotenv()
 
 def parse_datetime_field(value, field_name):
     """Helper function to parse datetime fields from string to datetime object"""
@@ -38,6 +42,9 @@ pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 SECRET_KEY = os.getenv("SECRET_KEY", "your-secret-key-here-change-in-production")
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 30
+
+# File upload settings
+MAX_UPLOAD_SIZE = int(os.getenv("MAX_UPLOAD_SIZE", 100 * 1024 * 1024))  # Default 100MB
 
 # Security
 security = HTTPBearer()
@@ -328,6 +335,7 @@ def login(login_data: LoginRequest, session: Session = Depends(get_session)):
         "full_name": user.full_name,
         "phone": user.phone,
         "photo_path": user.photo_path,
+        "photo_url": user.photo_url,
         "role": user.role,
         "is_active": user.is_active
     }
@@ -2418,18 +2426,15 @@ def get_teacher_students(teacher_id: int, session: Session = Depends(get_session
 
 @app.get("/teacher/{teacher_id}/study-materials", response_model=List[StudyMaterialRead])
 def get_teacher_study_materials(teacher_id: int, session: Session = Depends(get_session)):
-    """Get all study materials for subjects taught by a specific teacher"""
-    # Get all subjects taught by this teacher
-    teacher_subjects = get_teacher_subjects(teacher_id, session)
+    """Get all study materials uploaded by a specific teacher"""
+    # Verify the teacher exists
+    teacher = session.get(Teacher, teacher_id)
+    if not teacher:
+        raise HTTPException(status_code=404, detail="Teacher not found")
     
-    if not teacher_subjects:
-        return []
-    
-    subject_ids = [subject.id for subject in teacher_subjects]
-    
-    # Get study materials for those subjects
+    # Get study materials created by this teacher
     statement = select(StudyMaterial).where(
-        StudyMaterial.subject_id.in_(subject_ids)
+        StudyMaterial.created_by_id == teacher.user_id
     ).order_by(StudyMaterial.created_at.desc())
     materials = session.exec(statement).all()
     
@@ -2600,11 +2605,11 @@ if __name__ == "__main__":
         host="0.0.0.0", 
         port=8000, 
         reload=True,
-        # Configure for large file uploads (100MB limit)
+        # Configure for large file uploads
         limit_concurrency=10,
         limit_max_requests=100,
         # File upload limits
         http={
-            'max_request_size': 100 * 1024 * 1024,  # 100MB
+            'max_request_size': MAX_UPLOAD_SIZE,
         }
     )

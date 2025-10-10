@@ -90,6 +90,24 @@ export const AuthProvider = ({ children }) => {
     }
   }
 
+  const updateUser = (updatedUserData) => {
+    try {
+      // Merge updated data with existing user data
+      const currentUserData = user || {}
+      const newUserData = { ...currentUserData, ...updatedUserData }
+      
+      // Update localStorage
+      localStorage.setItem(config.auth.userKey, JSON.stringify(newUserData))
+      
+      // Update state
+      setUser(newUserData)
+      
+      Logger.info('User data updated successfully')
+    } catch (error) {
+      Logger.error('Error updating user data:', error)
+    }
+  }
+
   // Function to check if user has permission for a specific action
   const hasPermission = (requiredRole) => {
     if (!isAuthenticated || !user) return false
@@ -111,6 +129,7 @@ export const AuthProvider = ({ children }) => {
     isAuthenticated,
     login,
     logout,
+    updateUser,
     hasPermission
   }
 

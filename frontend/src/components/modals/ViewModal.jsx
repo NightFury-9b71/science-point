@@ -50,9 +50,9 @@ const ViewModal = ({
           <div className="bg-gradient-to-br from-blue-600 via-blue-700 to-indigo-800 text-white p-4 -m-6 mb-3 rounded-t-lg relative overflow-hidden">
             <div className="relative flex items-center space-x-3">
               <div className="w-16 h-16 rounded-full overflow-hidden border-2 border-white shadow-lg bg-white flex items-center justify-center flex-shrink-0">
-                {data.photo_path ? (
+                {data.photo_url || (data.photo_path && (data.photo_path.startsWith('http') || data.photo_path.startsWith('https'))) ? (
                   <img
-                    src={`/uploads/${data.photo_path}`}
+                    src={data.photo_url || data.photo_path}
                     alt={`${data.full_name || 'Profile'} photo`}
                     className="w-full h-full object-cover"
                   />

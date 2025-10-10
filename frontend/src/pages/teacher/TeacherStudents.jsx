@@ -178,9 +178,9 @@ const TeacherStudents = () => {
           <Card key={student.id} className="p-4">
             <div className="flex items-start space-x-3">
               <div className="w-12 h-12 rounded-full overflow-hidden bg-gray-200 flex items-center justify-center flex-shrink-0">
-                {student.user?.photo_path ? (
+                {student.user?.photo_url || (student.user?.photo_path && student.user.photo_path.startsWith('http')) ? (
                   <img 
-                    src={`/uploads/${student.user.photo_path}`} 
+                    src={student.user.photo_url || student.user.photo_path} 
                     alt={`${student.user?.full_name || 'Student'} profile`}
                     className="w-full h-full object-cover"
                   />
@@ -237,9 +237,9 @@ const TeacherStudents = () => {
                     <Table.Row key={student.id}>
                       <Table.Cell>
                         <div className="w-10 h-10 rounded-full overflow-hidden bg-gray-200 flex items-center justify-center">
-                          {student.user?.photo_path ? (
+                          {student.user?.photo_url || (student.user?.photo_path && student.user.photo_path.startsWith('http')) ? (
                             <img 
-                              src={`/uploads/${student.user.photo_path}`} 
+                              src={student.user.photo_url || student.user.photo_path} 
                               alt={`${student.user?.full_name || 'Student'} profile`}
                               className="w-full h-full object-cover"
                             />

@@ -8,7 +8,7 @@ import { useState } from 'react'
 import { toast } from 'sonner'
 
 function AdminProfile() {
-  const { user } = useAuth()
+  const { user, updateUser } = useAuth()
   const adminId = user?.id
   
   // API hooks
@@ -61,6 +61,12 @@ function AdminProfile() {
         }
       })
       
+      // Update user data in AuthContext to reflect the new photo
+      updateUser({
+        photo_path: cloudinaryResult.publicId,
+        photo_url: cloudinaryResult.url
+      })
+      
       toast.success('Photo uploaded successfully!')
       setSelectedPhoto(null)
       setPhotoPreview(null)
@@ -88,6 +94,12 @@ function AdminProfile() {
       
       // Delete from backend
       await deletePhotoMutation.mutateAsync(profile.id)
+      
+      // Update user data in AuthContext to clear the photo
+      updateUser({
+        photo_path: null,
+        photo_url: null
+      })
       
       toast.success('Photo deleted successfully!')
       // Profile will be automatically refreshed by the mutation's onSuccess callback

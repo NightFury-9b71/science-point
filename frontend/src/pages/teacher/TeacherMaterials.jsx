@@ -69,6 +69,27 @@ const TeacherMaterials = () => {
   const handleFileChange = (e) => {
     const file = e.target.files[0]
     if (file) {
+      // Validate file size (100MB limit to match backend)
+      const maxSize = 100 * 1024 * 1024 // 100MB
+      if (file.size > maxSize) {
+        alert(`File size must be less than 100MB. Selected file is ${(file.size / 1024 / 1024).toFixed(2)}MB.`)
+        return
+      }
+
+      // Validate file type
+      const allowedTypes = [
+        'application/pdf',
+        'image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp',
+        'application/msword',
+        'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+        'text/plain'
+      ]
+      
+      if (!allowedTypes.includes(file.type)) {
+        alert('Please select a valid file type: PDF, Images (JPG, PNG, GIF, WebP), or Documents (DOC, DOCX, TXT)')
+        return
+      }
+
       setUploadForm(prev => ({ ...prev, file }))
     }
   }
@@ -121,7 +142,18 @@ const TeacherMaterials = () => {
       setUploadProgress(0)
     } catch (error) {
       console.error('Upload failed:', error)
-      alert('Failed to upload material. Please try again.')
+      
+      // Provide more specific error messages
+      let errorMessage = 'Failed to upload material. Please try again.'
+      if (error.message?.includes('network') || error.message?.includes('fetch')) {
+        errorMessage = 'Network error. Please check your connection and try again.'
+      } else if (error.message?.includes('size') || error.message?.includes('large')) {
+        errorMessage = 'File is too large. Please select a smaller file (max 100MB).'
+      } else if (error.message?.includes('format') || error.message?.includes('type')) {
+        errorMessage = 'Unsupported file format. Please select PDF, image, or document files.'
+      }
+      
+      alert(errorMessage)
     } finally {
       setIsUploading(false)
       setUploadProgress(0)
@@ -190,30 +222,81 @@ const TeacherMaterials = () => {
       setEditingMaterial(null)
     } catch (error) {
       console.error('Update failed:', error)
-      alert('Failed to update material. Please try again.')
+      
+      // Provide more specific error messages
+      let errorMessage = 'Failed to update material. Please try again.'
+      if (error.message?.includes('network') || error.message?.includes('fetch')) {
+        errorMessage = 'Network error. Please check your connection and try again.'
+      } else if (error.message?.includes('size') || error.message?.includes('large')) {
+        errorMessage = 'File is too large. Please select a smaller file (max 100MB).'
+      } else if (error.message?.includes('format') || error.message?.includes('type')) {
+        errorMessage = 'Unsupported file format. Please select PDF, image, or document files.'
+      }
+      
+      alert(errorMessage)
     }
   }
 
   const handleDeleteConfirm = async () => {
     if (deletingMaterial) {
-      try {
-        // Delete from backend first
-        await deleteMutation.mutateAsync({ teacherId, materialId: deletingMaterial.id })
+      let cloudinaryDeleted = false
+      let backendDeleted = false
 
-        // Delete file from Cloudinary if it exists
+      try {
+        // Delete file from Cloudinary first (if it exists)
         if (deletingMaterial.file_path && deletingMaterial.file_path.startsWith('science-point/')) {
           try {
-            await cloudinaryService.deleteFile(deletingMaterial.file_path)
+            console.log('Attempting to delete from Cloudinary:', deletingMaterial.file_path)
+            const deleteResult = await cloudinaryService.deleteFile(deletingMaterial.file_path)
+            console.log('Cloudinary delete result:', deleteResult)
+            if (deleteResult.success) {
+              cloudinaryDeleted = true
+              console.log('Successfully deleted from Cloudinary')
+            } else {
+              console.warn('Cloudinary delete returned unsuccessful result:', deleteResult)
+            }
           } catch (deleteError) {
-            console.warn('Failed to delete file from Cloudinary:', deleteError)
+            console.error('Failed to delete file from Cloudinary:', deleteError)
+            // Continue with backend deletion even if Cloudinary fails
+            // The file will remain in Cloudinary but won't be accessible via the app
           }
+        } else {
+          console.log('No Cloudinary file to delete (file_path missing or not Cloudinary):', deletingMaterial.file_path)
+        }
+
+        // Then delete from backend
+        console.log('Attempting to delete from backend:', deletingMaterial.id)
+        await deleteMutation.mutateAsync({ teacherId, materialId: deletingMaterial.id })
+        backendDeleted = true
+        console.log('Successfully deleted from backend')
+
+        // Success message
+        if (cloudinaryDeleted && backendDeleted) {
+          alert('Study material deleted successfully from both storage and database.')
+        } else if (backendDeleted) {
+          alert('Study material deleted successfully. Note: File may still exist in cloud storage.')
         }
 
         setShowDeleteConfirm(false)
         setDeletingMaterial(null)
       } catch (error) {
         console.error('Delete failed:', error)
-        alert('Failed to delete material. Please try again.')
+
+        // Provide more specific error messages
+        let errorMessage = 'Failed to delete material. Please try again.'
+        if (error.message?.includes('network') || error.message?.includes('fetch')) {
+          errorMessage = 'Network error. Please check your connection and try again.'
+        } else if (error.message?.includes('permission') || error.message?.includes('forbidden')) {
+          errorMessage = 'You do not have permission to delete this material.'
+        } else if (error.message?.includes('not found')) {
+          errorMessage = 'Material not found. It may have already been deleted.'
+        } else if (error.response?.status === 404) {
+          errorMessage = 'Material not found. It may have already been deleted.'
+        } else if (error.response?.status === 403) {
+          errorMessage = 'You do not have permission to delete this material.'
+        }
+
+        alert(errorMessage)
       }
     }
   }
@@ -446,7 +529,7 @@ const TeacherMaterials = () => {
                   </p>
                 )}
                 <p className="text-xs text-gray-500 mt-1">
-                  Supported formats: PDF, Images (JPG, PNG), Documents (DOC, DOCX, TXT)
+                  Supported formats: PDF, Images (JPG, PNG, GIF, WebP), Documents (DOC, DOCX, TXT). Maximum size: 100MB
                 </p>
               </div>
 
@@ -551,7 +634,32 @@ const TeacherMaterials = () => {
                   key={showEditForm ? 'edit-file-input' : 'edit-file-input-reset'}
                   type="file"
                   accept=".pdf,.jpg,.jpeg,.png,.doc,.docx,.txt"
-                  onChange={(e) => setEditForm(prev => ({ ...prev, file: e.target.files[0] }))}
+                  onChange={(e) => {
+                    const file = e.target.files[0]
+                    if (file) {
+                      // Validate file size (100MB limit to match backend)
+                      const maxSize = 100 * 1024 * 1024 // 100MB
+                      if (file.size > maxSize) {
+                        alert(`File size must be less than 100MB. Selected file is ${(file.size / 1024 / 1024).toFixed(2)}MB.`)
+                        return
+                      }
+
+                      // Validate file type
+                      const allowedTypes = [
+                        'application/pdf',
+                        'image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp',
+                        'application/msword',
+                        'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+                        'text/plain'
+                      ]
+                      
+                      if (!allowedTypes.includes(file.type)) {
+                        alert('Please select a valid file type: PDF, Images (JPG, PNG, GIF, WebP), or Documents (DOC, DOCX, TXT)')
+                        return
+                      }
+                    }
+                    setEditForm(prev => ({ ...prev, file: file }))
+                  }}
                   className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                 />
                 {editForm.file && (
@@ -561,7 +669,7 @@ const TeacherMaterials = () => {
                 )}
                 {!editForm.file && (
                   <p className="text-xs text-gray-500 mt-1">
-                    Leave empty to keep current file. Supported formats: PDF, Images (JPG, PNG), Documents (DOC, DOCX, TXT)
+                    Leave empty to keep current file. Supported formats: PDF, Images (JPG, PNG, GIF, WebP), Documents (DOC, DOCX, TXT). Maximum size: 100MB
                   </p>
                 )}
               </div>

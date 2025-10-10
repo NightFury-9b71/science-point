@@ -604,9 +604,9 @@ Please keep these credentials safe and change the password after first login.`
             <Card key={student.id} className="p-4 hover:shadow-lg transition-shadow duration-200">
               <div className="flex items-start space-x-3">
                 <div className="w-14 h-14 rounded-full overflow-hidden bg-gradient-to-br from-blue-100 to-blue-200 flex items-center justify-center flex-shrink-0 ring-2 ring-blue-100">
-                  {student.user?.photo_path ? (
+                  {student.user?.photo_url || (student.user?.photo_path && student.user.photo_path.startsWith('http')) ? (
                     <img 
-                      src={`/uploads/${student.user.photo_path}`} 
+                      src={student.user.photo_url || student.user.photo_path} 
                       alt={`${student.user?.full_name || 'Student'} profile`}
                       className="w-full h-full object-cover"
                     />
@@ -708,9 +708,9 @@ Please keep these credentials safe and change the password after first login.`
                   <Table.Row key={student.id}>
                     <Table.Cell>
                       <div className="w-10 h-10 rounded-full overflow-hidden bg-gray-200 flex items-center justify-center">
-                        {student.user?.photo_path ? (
+                        {student.user?.photo_url || (student.user?.photo_path && student.user.photo_path.startsWith('http')) ? (
                           <img 
-                            src={`/uploads/${student.user.photo_path}`} 
+                            src={student.user.photo_url || student.user.photo_path} 
                             alt={`${student.user?.full_name || 'Student'} profile`}
                             className="w-full h-full object-cover"
                           />

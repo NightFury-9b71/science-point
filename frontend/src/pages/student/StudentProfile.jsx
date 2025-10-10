@@ -8,7 +8,7 @@ import { toast } from 'sonner'
 import cloudinaryService from '../../services/cloudinaryService'
 
 function StudentProfile() {
-  const { user } = useAuth()
+  const { user, updateUser } = useAuth()
   const studentId = user?.student_id || user?.studentId
   
   // API hooks
@@ -60,6 +60,12 @@ function StudentProfile() {
         }
       })
 
+      // Update user data in AuthContext to reflect the new photo
+      updateUser({
+        photo_path: cloudinaryResult.publicId,
+        photo_url: cloudinaryResult.url
+      })
+
       toast.success('Photo uploaded successfully!')
       setSelectedPhoto(null)
       setPhotoPreview(null)
@@ -77,6 +83,12 @@ function StudentProfile() {
     
     try {
       await deletePhotoMutation.mutateAsync(profile.user.id)
+      
+      // Update user data in AuthContext to clear the photo
+      updateUser({
+        photo_path: null,
+        photo_url: null
+      })
       
       toast.success('Photo deleted successfully!')
       // Profile will be automatically refreshed by the mutation's onSuccess callback
@@ -131,7 +143,7 @@ function StudentProfile() {
   }
 
   const hasPhoto = profile.user?.photo_path || photoPreview
-  const displayPhoto = photoPreview || (profile.user?.photo_path ? `/uploads/${profile.user.photo_path}` : null)
+  const displayPhoto = photoPreview || profile.user?.photo_url || (profile.user?.photo_path && profile.user.photo_path.startsWith('http') ? profile.user.photo_path : null)
 
   return (
     <div className="space-y-6 pb-6">
