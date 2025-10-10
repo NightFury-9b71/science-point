@@ -1,4 +1,4 @@
-import { User, Mail, Phone, Calendar, Shield, Camera, X, Check, Upload, Users, GraduationCap, BookOpen, FileText, Settings } from 'lucide-react'
+import { User, Phone, Calendar, Shield, Camera, X, Check, Upload, Users, GraduationCap, BookOpen, FileText, Settings } from 'lucide-react'
 import Card from '../../components/Card'
 import Button from '../../components/Button'
 import { useAuth } from '../../contexts/AuthContext'
@@ -292,11 +292,6 @@ function AdminProfile() {
               icon={User} 
               label="Full Name" 
               value={profile.full_name || 'N/A'} 
-            />
-            <InfoItem 
-              icon={Mail} 
-              label="Email Address" 
-              value={profile.email || 'N/A'} 
             />
             <InfoItem 
               icon={Phone} 

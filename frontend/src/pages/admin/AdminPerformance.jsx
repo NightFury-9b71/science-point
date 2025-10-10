@@ -77,13 +77,14 @@ const AdminPerformance = () => {
     }
   }, [filteredStudents, examResults, attendanceRecords])
 
-  const getPerformanceGrade = (score) => {
-    if (score >= 90) return { grade: 'A+', color: 'text-green-600', bgColor: 'bg-green-100' }
-    if (score >= 80) return { grade: 'A', color: 'text-green-600', bgColor: 'bg-green-100' }
-    if (score >= 70) return { grade: 'B', color: 'text-blue-600', bgColor: 'bg-blue-100' }
-    if (score >= 60) return { grade: 'C', color: 'text-yellow-600', bgColor: 'bg-yellow-100' }
-    if (score >= 50) return { grade: 'D', color: 'text-orange-600', bgColor: 'bg-orange-100' }
-    return { grade: 'F', color: 'text-red-600', bgColor: 'bg-red-100' }
+    const getPerformanceGrade = (score) => {
+    if (score >= 80) return { grade: '5.00 (A+)', color: 'text-green-600', bgColor: 'bg-green-100' }
+    if (score >= 70) return { grade: '4.00 (A)', color: 'text-green-600', bgColor: 'bg-green-100' }
+    if (score >= 60) return { grade: '3.50 (A-)', color: 'text-blue-600', bgColor: 'bg-blue-100' }
+    if (score >= 50) return { grade: '3.00 (B)', color: 'text-blue-600', bgColor: 'bg-blue-100' }
+    if (score >= 40) return { grade: '2.00 (C)', color: 'text-yellow-600', bgColor: 'bg-yellow-100' }
+    if (score >= 33) return { grade: '1.00 (D)', color: 'text-orange-600', bgColor: 'bg-orange-100' }
+    return { grade: '0.00 (F)', color: 'text-red-600', bgColor: 'bg-red-100' }
   }
 
   const getAttendanceStatus = (percentage) => {

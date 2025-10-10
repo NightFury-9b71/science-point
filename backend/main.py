@@ -1183,7 +1183,7 @@ def delete_exam(
 
 # Exam results
 @app.post("/admin/exam-results", response_model=ExamResultRead)
-def create_exam_result(result: ExamResultCreate, session: Session = Depends(get_session)):
+def create_exam_result(result: ExamResultCreate, session: Session = Depends(get_session), current_user: User = Depends(require_teacher_or_admin)):
     # Check if result already exists for this student-exam combination
     existing_result = session.exec(
         select(ExamResult).where(
@@ -1198,44 +1198,67 @@ def create_exam_result(result: ExamResultCreate, session: Session = Depends(get_
             detail="Exam result already exists for this student. Use update instead."
         )
     
-    # Validate marks don't exceed maximum
+    # Validate exam exists
     exam = session.get(Exam, result.exam_id)
     if not exam:
         raise HTTPException(status_code=404, detail="Exam not found")
     
+    # Validate student exists
+    student = session.get(Student, result.student_id)
+    if not student:
+        raise HTTPException(status_code=404, detail="Student not found")
+    
+    # Validate marks don't exceed maximum
     if result.marks_obtained > exam.max_marks:
         raise HTTPException(
             status_code=400,
-            detail="Marks obtained cannot exceed maximum marks"
+            detail=f"Marks obtained ({result.marks_obtained}) cannot exceed maximum marks ({exam.max_marks})"
         )
     
     # Auto-calculate grade based on percentage if not provided
     grade = getattr(result, 'grade', None)
     if grade is None:
         percentage = (result.marks_obtained / exam.max_marks) * 100
-        if percentage >= 90:
-            grade = "A+"
-        elif percentage >= 80:
-            grade = "A"
+        if percentage >= 80:
+            grade = "5.00 (A+)"
         elif percentage >= 70:
-            grade = "B+"
+            grade = "4.00 (A)"
+        elif percentage >= 60:
+            grade = "3.50 (A-)"
+        elif percentage >= 50:
+            grade = "3.00 (B)"
+        elif percentage >= 40:
+            grade = "2.00 (C)"
+        elif percentage >= 33:
+            grade = "1.00 (D)"
         else:
-            grade = "B"
+            grade = "0.00 (F)"
     
-    db_result = ExamResult(
-        **result.dict(),
-        grade=grade
-    )
-    session.add(db_result)
-    session.commit()
-    session.refresh(db_result)
-    return db_result
+    try:
+        db_result = ExamResult(
+            exam_id=result.exam_id,
+            student_id=result.student_id,
+            marks_obtained=result.marks_obtained,
+            remarks=result.remarks,
+            grade=grade
+        )
+        session.add(db_result)
+        session.commit()
+        session.refresh(db_result)
+        return db_result
+    except Exception as e:
+        session.rollback()
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to create exam result: {str(e)}"
+        )
 
 @app.get("/admin/exam-results", response_model=List[ExamResultRead])
 def get_exam_results(
     exam_id: int = None,
     student_id: int = None,
-    session: Session = Depends(get_session)
+    session: Session = Depends(get_session),
+    current_user: User = Depends(require_teacher_or_admin)
 ):
     statement = select(ExamResult)
     if exam_id:
@@ -1247,7 +1270,7 @@ def get_exam_results(
     return results
 
 @app.put("/admin/exam-results/{result_id}", response_model=ExamResultRead)
-def update_exam_result(result_id: int, result_update: ExamResultUpdate, session: Session = Depends(get_session)):
+def update_exam_result(result_id: int, result_update: ExamResultUpdate, session: Session = Depends(get_session), current_user: User = Depends(require_teacher_or_admin)):
     # Get existing result
     db_result = session.get(ExamResult, result_id)
     if not db_result:
@@ -1265,14 +1288,20 @@ def update_exam_result(result_id: int, result_update: ExamResultUpdate, session:
         # Auto-calculate grade based on new marks if grade not explicitly provided
         if result_update.grade is None:
             percentage = (result_update.marks_obtained / exam.max_marks) * 100
-            if percentage >= 90:
-                result_update.grade = "A+"
-            elif percentage >= 80:
-                result_update.grade = "A"
+            if percentage >= 80:
+                result_update.grade = "5.00 (A+)"
             elif percentage >= 70:
-                result_update.grade = "B+"
+                result_update.grade = "4.00 (A)"
+            elif percentage >= 60:
+                result_update.grade = "3.50 (A-)"
+            elif percentage >= 50:
+                result_update.grade = "3.00 (B)"
+            elif percentage >= 40:
+                result_update.grade = "2.00 (C)"
+            elif percentage >= 33:
+                result_update.grade = "1.00 (D)"
             else:
-                result_update.grade = "B"
+                result_update.grade = "0.00 (F)"
     
     # Update the result
     result_data = result_update.dict(exclude_unset=True)

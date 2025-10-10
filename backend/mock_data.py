@@ -415,15 +415,21 @@ def generate_exam_results():
             percentage = random.uniform(0.70, 0.95)
             marks = round(exam_max_marks * percentage, 1)
             
-            # Assign grade based on percentage
-            if percentage >= 0.90:
-                grade = "A+"
-            elif percentage >= 0.80:
-                grade = "A"
+            # Assign grade based on Bangladesh GPA system
+            if percentage >= 0.80:
+                grade = "5.00 (A+)"
             elif percentage >= 0.70:
-                grade = "B+"
+                grade = "4.00 (A)"
+            elif percentage >= 0.60:
+                grade = "3.50 (A-)"
+            elif percentage >= 0.50:
+                grade = "3.00 (B)"
+            elif percentage >= 0.40:
+                grade = "2.00 (C)"
+            elif percentage >= 0.33:
+                grade = "1.00 (D)"
             else:
-                grade = "B"
+                grade = "0.00 (F)"
             
             results.append({
                 "exam_id": exam_id,

@@ -249,7 +249,7 @@ class ExamRead(ExamBase):
 
 class ExamResultBase(SQLModel):
     marks_obtained: float = Field(ge=0)
-    grade: Optional[str] = Field(default=None, max_length=5)
+    grade: Optional[str] = Field(default=None, max_length=20)
     remarks: Optional[str] = Field(default=None)
 
 class ExamResult(ExamResultBase, table=True):

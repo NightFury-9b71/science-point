@@ -45,18 +45,56 @@ const TeacherResults = () => {
 
   const handleCreateResult = async (e) => {
     e.preventDefault()
+    
+    // Validate form data
+    if (!resultForm.student_id || !resultForm.obtained_marks) {
+      toast.error('Please fill in all required fields')
+      return
+    }
+    
+    if (!selectedExamId) {
+      toast.error('Please select an exam first')
+      return
+    }
+    
+    const examId = parseInt(selectedExamId)
+    const studentId = parseInt(resultForm.student_id)
+    const marksObtained = parseFloat(resultForm.obtained_marks)
+    
+    if (isNaN(examId) || examId <= 0) {
+      toast.error('Invalid exam selection')
+      return
+    }
+    
+    if (isNaN(studentId) || studentId <= 0) {
+      toast.error('Invalid student selection')
+      return
+    }
+    
+    if (isNaN(marksObtained) || marksObtained < 0) {
+      toast.error('Invalid marks entered')
+      return
+    }
+    
+    if (selectedExam && marksObtained > selectedExam.total_marks) {
+      toast.error(`Marks cannot exceed maximum marks (${selectedExam.total_marks})`)
+      return
+    }
+    
     try {
       await createResult.mutateAsync({
-        exam_id: parseInt(selectedExamId),
-        student_id: parseInt(resultForm.student_id),
-        marks_obtained: parseFloat(resultForm.obtained_marks), // Backend uses 'marks_obtained', frontend uses 'obtained_marks'
-        remarks: resultForm.remarks
+        exam_id: examId,
+        student_id: studentId,
+        marks_obtained: marksObtained,
+        remarks: resultForm.remarks || ''
       })
       setShowCreateModal(false)
       setResultForm({ student_id: '', obtained_marks: '', remarks: '' })
       toast.success('Result added successfully!')
     } catch (error) {
-      toast.error('Failed to add result')
+      console.error('Create result error:', error)
+      const errorMessage = error?.response?.data?.detail || error?.message || 'Failed to add result'
+      toast.error(errorMessage)
     }
   }
 
@@ -121,13 +159,13 @@ const TeacherResults = () => {
 
   const calculateGrade = (obtained, total) => {
     const percentage = (obtained / total) * 100
-    if (percentage >= 90) return 'A+'
-    if (percentage >= 80) return 'A'
-    if (percentage >= 70) return 'B+'
-    if (percentage >= 60) return 'B'
-    if (percentage >= 50) return 'C'
-    if (percentage >= 40) return 'D'
-    return 'F'
+    if (percentage >= 80) return '5.00 (A+)'
+    if (percentage >= 70) return '4.00 (A)'
+    if (percentage >= 60) return '3.50 (A-)'
+    if (percentage >= 50) return '3.00 (B)'
+    if (percentage >= 40) return '2.00 (C)'
+    if (percentage >= 33) return '1.00 (D)'
+    return '0.00 (F)'
   }
 
   // Filter and sort results

@@ -1,4 +1,4 @@
-import { User, Mail, Phone, Calendar, School, Camera, X, Check, Upload, BookOpen, FileText, Headphones, Award, GraduationCap } from 'lucide-react'
+import { User, Phone, Calendar, School, Camera, X, Check, Upload, BookOpen, FileText, Headphones, Award, GraduationCap } from 'lucide-react'
 import Card from '../../components/Card'
 import Button from '../../components/Button'
 import { useAuth } from '../../contexts/AuthContext'
@@ -320,11 +320,6 @@ function TeacherProfile() {
               icon={User} 
               label="Full Name" 
               value={profile.user?.full_name || 'N/A'} 
-            />
-            <InfoItem 
-              icon={Mail} 
-              label="Email Address" 
-              value={profile.user?.email || 'N/A'} 
             />
             <InfoItem 
               icon={Phone} 

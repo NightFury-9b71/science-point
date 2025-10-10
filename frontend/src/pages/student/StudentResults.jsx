@@ -30,17 +30,15 @@ function StudentResults() {
   const { data: examResults = [], isLoading, error } = useStudentExamResults(studentId)
 
   const getGradeColor = (grade) => {
-    const gradeColors = {
-      'A+': 'bg-green-100 text-green-800',
-      'A': 'bg-green-100 text-green-800',
-      'B+': 'bg-blue-100 text-blue-800',
-      'B': 'bg-blue-100 text-blue-800',
-      'C+': 'bg-yellow-100 text-yellow-800',
-      'C': 'bg-yellow-100 text-yellow-800',
-      'D': 'bg-orange-100 text-orange-800',
-      'F': 'bg-red-100 text-red-800'
-    }
-    return gradeColors[grade] || 'bg-gray-100 text-gray-800'
+    // Extract GPA value from format like "5.00 (A+)" or just "5.00"
+    const gpaMatch = grade.match(/^(\d+\.\d+)/)
+    const gpa = gpaMatch ? parseFloat(gpaMatch[1]) : 0
+    
+    if (gpa >= 4.0) return 'bg-green-100 text-green-800'  // 5.00, 4.00
+    if (gpa >= 3.0) return 'bg-blue-100 text-blue-800'   // 3.50, 3.00
+    if (gpa >= 2.0) return 'bg-yellow-100 text-yellow-800' // 2.00
+    if (gpa >= 1.0) return 'bg-orange-100 text-orange-800' // 1.00
+    return 'bg-red-100 text-red-800'  // 0.00
   }
 
   if (isLoading) {

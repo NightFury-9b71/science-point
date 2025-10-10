@@ -29,15 +29,21 @@ def update_missing_grades():
             if exam:
                 percentage = (result.marks_obtained / exam.max_marks) * 100
 
-                # Calculate grade
-                if percentage >= 90:
-                    grade = "A+"
-                elif percentage >= 80:
-                    grade = "A"
+                # Calculate GPA based on Bangladesh system
+                if percentage >= 80:
+                    grade = "5.00 (A+)"
                 elif percentage >= 70:
-                    grade = "B+"
+                    grade = "4.00 (A)"
+                elif percentage >= 60:
+                    grade = "3.50 (A-)"
+                elif percentage >= 50:
+                    grade = "3.00 (B)"
+                elif percentage >= 40:
+                    grade = "2.00 (C)"
+                elif percentage >= 33:
+                    grade = "1.00 (D)"
                 else:
-                    grade = "B"
+                    grade = "0.00 (F)"
 
                 result.grade = grade
                 session.add(result)

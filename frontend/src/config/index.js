@@ -62,7 +62,7 @@ class Config {
   get ui() {
     return {
       paginationLimit: parseInt(import.meta.env.VITE_PAGINATION_LIMIT || '25'),
-      fileUploadMaxSize: parseInt(import.meta.env.VITE_FILE_UPLOAD_MAX_SIZE || '5242880'),
+      fileUploadMaxSize: parseInt(import.meta.env.VITE_FILE_UPLOAD_MAX_SIZE || '104857600'), // 100MB to match backend
       cacheTimeout: parseInt(import.meta.env.VITE_CACHE_TTL || '300'),
       debounceDelay: 300,
       toastTimeout: 5000
