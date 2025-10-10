@@ -50,13 +50,14 @@ function AdminProfile() {
     try {
       // Upload to Cloudinary first
       const cloudinaryResult = await cloudinaryService.uploadFile(selectedPhoto)
-      
-      // Then send Cloudinary data to backend
+
+      // cloudinaryService returns { url, publicId, ... }
+      // Send Cloudinary data to backend in the JSON shape the backend expects
       await uploadPhotoMutation.mutateAsync({
         userId: profile.id,
         photoData: {
-          file_url: cloudinaryResult.secure_url,
-          file_path: cloudinaryResult.public_id
+          file_url: cloudinaryResult.url,
+          file_path: cloudinaryResult.publicId
         }
       })
       

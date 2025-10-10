@@ -837,9 +837,9 @@ export const useAdminUploadPhoto = () => {
   
   return useMutation({
     mutationFn: ({ userId, photoData }) => adminAPI.uploadUserPhoto(userId, photoData),
-    onSuccess: () => {
+    onSuccess: (data, variables) => {
       // Invalidate admin profile to refresh photo
-      queryClient.invalidateQueries({ queryKey: ['adminProfile'] })
+      queryClient.invalidateQueries({ queryKey: ['adminProfile', variables.userId] })
     },
   })
 }
@@ -849,9 +849,9 @@ export const useAdminDeletePhoto = () => {
   
   return useMutation({
     mutationFn: (userId) => adminAPI.deleteUserPhoto(userId),
-    onSuccess: () => {
+    onSuccess: (data, userId) => {
       // Invalidate admin profile to refresh photo
-      queryClient.invalidateQueries({ queryKey: ['adminProfile'] })
+      queryClient.invalidateQueries({ queryKey: ['adminProfile', userId] })
     },
   })
 }

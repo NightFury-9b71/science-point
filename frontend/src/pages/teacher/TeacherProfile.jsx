@@ -5,6 +5,7 @@ import { useAuth } from '../../contexts/AuthContext'
 import { useTeacherProfile, useTeacherUploadPhoto, useTeacherDeletePhoto } from '../../services/queries'
 import { useState } from 'react'
 import { toast } from 'sonner'
+import cloudinaryService from '../../services/cloudinaryService.js'
 
 function TeacherProfile() {
   const { user } = useAuth()
@@ -73,14 +74,18 @@ function TeacherProfile() {
     
     setIsUploadingPhoto(true)
     try {
-      const formData = new FormData()
-      formData.append('file', selectedPhoto)
-      
+      // Upload to Cloudinary first
+      const cloudinaryResult = await cloudinaryService.uploadFile(selectedPhoto)
+
+      // Send JSON payload with Cloudinary data to backend
       await uploadPhotoMutation.mutateAsync({
         userId: profile.user.id,
-        formData
+        photoData: {
+          file_url: cloudinaryResult.url,
+          file_path: cloudinaryResult.publicId
+        }
       })
-      
+
       toast.success('Photo uploaded successfully!')
       setSelectedPhoto(null)
       setPhotoPreview(null)
