@@ -1,14 +1,16 @@
 from sqlmodel import SQLModel, create_engine, Session
 import os
 
-# Database URL (SQLite for development, can be changed to PostgreSQL/MySQL for production)
-DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///./coaching_center.db")
+DATABASE_URL = os.getenv("DATABASE_URL")
 
-# Create engine
+# Replace postgresql:// with postgresql+psycopg://
+if DATABASE_URL and DATABASE_URL.startswith("postgresql://"):
+    DATABASE_URL = DATABASE_URL.replace("postgresql://", "postgresql+psycopg://", 1)
+
 engine = create_engine(
-    DATABASE_URL, 
+    DATABASE_URL,
     connect_args={"check_same_thread": False} if "sqlite" in DATABASE_URL else {},
-    echo=False  # Set to True for SQL query logging in development
+    echo=False
 )
 
 # Dependency to get DB session
