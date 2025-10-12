@@ -17,7 +17,7 @@ MOCK_USERS = [
         "password_hash": get_password_hash("admin123"),
         "full_name": "System Administrator",
         "phone": "1234567890",
-        "role": UserRole.ADMIN,
+        "role": "admin",
         "is_active": True
     },
     {
@@ -26,7 +26,7 @@ MOCK_USERS = [
         "password_hash": get_password_hash("principal123"),
         "full_name": "Dr. Sarah Johnson",
         "phone": "1234567891",
-        "role": UserRole.ADMIN,
+        "role": "admin",
         "is_active": True
     },
     
@@ -37,7 +37,7 @@ MOCK_USERS = [
         "password_hash": get_password_hash("teacher123"),
         "full_name": "Prof. John Smith",
         "phone": "9876543210",
-        "role": UserRole.TEACHER,
+        "role": "teacher",
         "is_active": True
     },
     {
@@ -46,7 +46,7 @@ MOCK_USERS = [
         "password_hash": get_password_hash("teacher123"),
         "full_name": "Dr. Emily Chen",
         "phone": "9876543211",
-        "role": UserRole.TEACHER,
+        "role": "teacher",
         "is_active": True
     },
     {
@@ -55,7 +55,7 @@ MOCK_USERS = [
         "password_hash": get_password_hash("teacher123"),
         "full_name": "Mr. Robert Davis",
         "phone": "9876543212",
-        "role": UserRole.TEACHER,
+        "role": "teacher",
         "is_active": True
     },
     {
@@ -64,7 +64,7 @@ MOCK_USERS = [
         "password_hash": get_password_hash("teacher123"),
         "full_name": "Ms. Lisa Brown",
         "phone": "9876543213",
-        "role": UserRole.TEACHER,
+        "role": "teacher",
         "is_active": True
     },
     {
@@ -73,7 +73,7 @@ MOCK_USERS = [
         "password_hash": get_password_hash("teacher123"),
         "full_name": "Mrs. Jennifer Wilson",
         "phone": "9876543214",
-        "role": UserRole.TEACHER,
+        "role": "teacher",
         "is_active": True
     },
     
@@ -84,7 +84,7 @@ MOCK_USERS = [
         "password_hash": get_password_hash("student123"),
         "full_name": "Alice Johnson",
         "phone": "5551234567",
-        "role": UserRole.STUDENT,
+        "role": "student",
         "is_active": True
     },
     {
@@ -93,7 +93,7 @@ MOCK_USERS = [
         "password_hash": get_password_hash("student123"),
         "full_name": "Bob Smith",
         "phone": "5551234568",
-        "role": UserRole.STUDENT,
+        "role": "student",
         "is_active": True
     },
     {
@@ -102,7 +102,7 @@ MOCK_USERS = [
         "password_hash": get_password_hash("student123"),
         "full_name": "Charlie Brown",
         "phone": "5551234569",
-        "role": UserRole.STUDENT,
+        "role": "student",
         "is_active": True
     },
     {
@@ -111,7 +111,7 @@ MOCK_USERS = [
         "password_hash": get_password_hash("student123"),
         "full_name": "Diana Prince",
         "phone": "5551234570",
-        "role": UserRole.STUDENT,
+        "role": "student",
         "is_active": True
     },
     {
@@ -120,7 +120,7 @@ MOCK_USERS = [
         "password_hash": get_password_hash("student123"),
         "full_name": "Eve Martinez",
         "phone": "5551234571",
-        "role": UserRole.STUDENT,
+        "role": "student",
         "is_active": True
     },
     {
@@ -129,7 +129,7 @@ MOCK_USERS = [
         "password_hash": get_password_hash("student123"),
         "full_name": "Frank Wilson",
         "phone": "5551234572",
-        "role": UserRole.STUDENT,
+        "role": "student",
         "is_active": True
     },
     {
@@ -138,7 +138,7 @@ MOCK_USERS = [
         "password_hash": get_password_hash("student123"),
         "full_name": "Grace Lee",
         "phone": "5551234573",
-        "role": UserRole.STUDENT,
+        "role": "student",
         "is_active": True
     },
     {
@@ -147,7 +147,7 @@ MOCK_USERS = [
         "password_hash": get_password_hash("student123"),
         "full_name": "Henry Davis",
         "phone": "5551234574",
-        "role": UserRole.STUDENT,
+        "role": "student",
         "is_active": True
     }
 ]
@@ -350,14 +350,14 @@ def generate_attendance_data():
             if current_date.weekday() < 5:  # Monday = 0, Friday = 4
                 # 85% chance of being present
                 import random
-                status = AttendanceStatus.PRESENT if random.random() < 0.85 else AttendanceStatus.ABSENT
+                status = "present" if random.random() < 0.85 else "absent"
                 
                 attendance_data.append({
                     "student_id": student_id,
                     "class_id": (student_id - 1) // 2 + 1,  # Distribute students across classes
                     "date": current_date,
                     "status": status,
-                    "remarks": "Regular attendance" if status == AttendanceStatus.PRESENT else "Absent"
+                    "remarks": "Regular attendance" if status == "present" else "Absent"
                 })
     
     return attendance_data
@@ -462,7 +462,7 @@ MOCK_NOTICES = [
         "title": "HSC ২০২৬ ব্যাচের ভর্তি",
         "content": "📚 HSC ২০২৬ ব্যাচের ভর্তি চলছে - বিশেষ ছাড়ে! গণিত, পদার্থ, রসায়ন ও জীববিজ্ঞানে বিশেষজ্ঞ শিক্ষকমণ্ডলী।",
         "created_by_id": 1,
-        "target_role": UserRole.STUDENT,
+        "target_role": "student",
         "is_urgent": True,
         "show_on_landing": True,
         "expires_at": datetime(2025, 11, 30),
@@ -482,7 +482,7 @@ MOCK_NOTICES = [
         "title": "বিনামূল্যে মডেল টেস্ট",
         "content": "📝 বিনামূল্যে মডেল টেস্ট প্রতি শনিবার। SSC ও HSC পরীক্ষার্থীদের জন্য বিশেষ প্রস্তুতি।",
         "created_by_id": 2,
-        "target_role": UserRole.STUDENT,
+        "target_role": "student",
         "is_urgent": False,
         "show_on_landing": True,
         "expires_at": datetime(2025, 12, 31),
@@ -532,7 +532,7 @@ MOCK_NOTICES = [
         "title": "অনলাইন ক্লাস সুবিধা",
         "content": "💻 এখন অনলাইন ক্লাসের সুবিধা! যেকোনো জরুরি অবস্থায় বাড়িতে বসেই ক্লাস করার সুযোগ।",
         "created_by_id": 1,
-        "target_role": UserRole.STUDENT,
+        "target_role": "student",
         "is_urgent": False,
         "show_on_landing": False,
         "expires_at": datetime(2025, 12, 31),
@@ -596,7 +596,7 @@ MOCK_TEACHER_REVIEWS = [
 MOCK_CLASS_SCHEDULES = [
     # Monday schedules
     {
-        "day_of_week": DayOfWeek.MONDAY,
+        "day_of_week": "monday",
         "start_time": "08:00",
         "end_time": "09:30",
         "subject_id": 1,  # Mathematics for Grade 10A
@@ -605,7 +605,7 @@ MOCK_CLASS_SCHEDULES = [
         "room_number": "Room 101"
     },
     {
-        "day_of_week": DayOfWeek.MONDAY,
+        "day_of_week": "monday",
         "start_time": "09:45",
         "end_time": "11:15",
         "subject_id": 2,  # Physics for Grade 10A
@@ -614,7 +614,7 @@ MOCK_CLASS_SCHEDULES = [
         "room_number": "Room 102"
     },
     {
-        "day_of_week": DayOfWeek.MONDAY,
+        "day_of_week": "monday",
         "start_time": "11:30",
         "end_time": "13:00",
         "subject_id": 3,  # Chemistry for Grade 10A
@@ -625,7 +625,7 @@ MOCK_CLASS_SCHEDULES = [
     
     # Tuesday schedules
     {
-        "day_of_week": DayOfWeek.TUESDAY,
+        "day_of_week": "tuesday",
         "start_time": "08:00",
         "end_time": "09:30",
         "subject_id": 4,  # Biology for Grade 10A
@@ -634,7 +634,7 @@ MOCK_CLASS_SCHEDULES = [
         "room_number": "Lab 2"
     },
     {
-        "day_of_week": DayOfWeek.TUESDAY,
+        "day_of_week": "tuesday",
         "start_time": "09:45",
         "end_time": "11:15",
         "subject_id": 5,  # English for Grade 10A
@@ -643,7 +643,7 @@ MOCK_CLASS_SCHEDULES = [
         "room_number": "Room 103"
     },
     {
-        "day_of_week": DayOfWeek.TUESDAY,
+        "day_of_week": "tuesday",
         "start_time": "11:30",
         "end_time": "13:00",
         "subject_id": 1,  # Mathematics for Grade 10A
@@ -654,7 +654,7 @@ MOCK_CLASS_SCHEDULES = [
     
     # Wednesday schedules
     {
-        "day_of_week": DayOfWeek.WEDNESDAY,
+        "day_of_week": "wednesday",
         "start_time": "08:00",
         "end_time": "09:30",
         "subject_id": 2,  # Physics for Grade 10A
@@ -663,7 +663,7 @@ MOCK_CLASS_SCHEDULES = [
         "room_number": "Room 102"
     },
     {
-        "day_of_week": DayOfWeek.WEDNESDAY,
+        "day_of_week": "wednesday",
         "start_time": "09:45",
         "end_time": "11:15",
         "subject_id": 3,  # Chemistry for Grade 10A
@@ -674,7 +674,7 @@ MOCK_CLASS_SCHEDULES = [
     
     # Thursday schedules
     {
-        "day_of_week": DayOfWeek.THURSDAY,
+        "day_of_week": "thursday",
         "start_time": "08:00",
         "end_time": "09:30",
         "subject_id": 5,  # English for Grade 10A
@@ -683,7 +683,7 @@ MOCK_CLASS_SCHEDULES = [
         "room_number": "Room 103"
     },
     {
-        "day_of_week": DayOfWeek.THURSDAY,
+        "day_of_week": "thursday",
         "start_time": "09:45",
         "end_time": "11:15",
         "subject_id": 4,  # Biology for Grade 10A
@@ -692,7 +692,7 @@ MOCK_CLASS_SCHEDULES = [
         "room_number": "Lab 2"
     },
     {
-        "day_of_week": DayOfWeek.THURSDAY,
+        "day_of_week": "thursday",
         "start_time": "11:30",
         "end_time": "13:00",
         "subject_id": 1,  # Mathematics for Grade 10A
@@ -703,7 +703,7 @@ MOCK_CLASS_SCHEDULES = [
     
     # Friday schedules
     {
-        "day_of_week": DayOfWeek.FRIDAY,
+        "day_of_week": "friday",
         "start_time": "08:00",
         "end_time": "09:30",
         "subject_id": 2,  # Physics for Grade 10A
@@ -712,7 +712,7 @@ MOCK_CLASS_SCHEDULES = [
         "room_number": "Room 102"
     },
     {
-        "day_of_week": DayOfWeek.FRIDAY,
+        "day_of_week": "friday",
         "start_time": "09:45",
         "end_time": "11:15",
         "subject_id": 3,  # Chemistry for Grade 10A
@@ -723,7 +723,7 @@ MOCK_CLASS_SCHEDULES = [
     
     # Saturday schedules (lighter day)
     {
-        "day_of_week": DayOfWeek.SATURDAY,
+        "day_of_week": "saturday",
         "start_time": "09:00",
         "end_time": "10:30",
         "subject_id": 5,  # English for Grade 10A
@@ -732,7 +732,7 @@ MOCK_CLASS_SCHEDULES = [
         "room_number": "Room 103"
     },
     {
-        "day_of_week": DayOfWeek.SATURDAY,
+        "day_of_week": "saturday",
         "start_time": "10:45",
         "end_time": "12:15",
         "subject_id": 1,  # Mathematics for Grade 10A

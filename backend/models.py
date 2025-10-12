@@ -21,7 +21,7 @@ class UserBase(SQLModel):
     phone: Optional[str] = Field(default=None, max_length=15)
     photo_path: Optional[str] = Field(default=None, max_length=500)  # Cloudinary public ID
     photo_url: Optional[str] = Field(default=None, max_length=1000)  # Cloudinary URL
-    role: UserRole
+    role: str  # Changed from UserRole to str to accept string values
     is_active: bool = Field(default=True)
 
 class User(UserBase, table=True):
@@ -162,7 +162,7 @@ class DayOfWeek(str, Enum):
     FRIDAY = "friday"
 
 class ClassScheduleBase(SQLModel):
-    day_of_week: DayOfWeek
+    day_of_week: str  # Changed from DayOfWeek to str
     start_time: str = Field(max_length=8)  # Format: "HH:MM:SS" or "HH:MM"
     end_time: str = Field(max_length=8)    # Format: "HH:MM:SS" or "HH:MM"
     room_number: Optional[str] = Field(default=None, max_length=20)
@@ -198,7 +198,7 @@ class ClassScheduleRead(ClassScheduleBase):
 
 class AttendanceBase(SQLModel):
     date: datetime
-    status: AttendanceStatus
+    status: str  # Changed from AttendanceStatus to str
     remarks: Optional[str] = Field(default=None)
 
 class Attendance(AttendanceBase, table=True):
@@ -313,8 +313,9 @@ class StudyMaterialRead(StudyMaterialBase):
 
 class NoticeBase(SQLModel):
     title: str = Field(max_length=200)
-    content: str = Field(min_length=10)
-    target_role: Optional[UserRole] = Field(default=None)
+    content: str
+    created_by_id: int = Field(foreign_key="users.id")
+    target_role: Optional[str] = Field(default=None)  # Changed from UserRole to str
     is_urgent: bool = Field(default=False)
     show_on_landing: bool = Field(default=False)
     expires_at: Optional[datetime] = Field(default=None)

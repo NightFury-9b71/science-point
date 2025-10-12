@@ -105,7 +105,7 @@ class StudyMaterialUpdate(BaseModel):
 class NoticeUpdate(BaseModel):
     title: Optional[str] = None
     content: Optional[str] = None
-    target_role: Optional[UserRole] = None
+    target_role: Optional[str] = None  # Changed from UserRole to str
     is_urgent: Optional[bool] = None
     show_on_landing: Optional[bool] = None
     expires_at: Optional[datetime] = None

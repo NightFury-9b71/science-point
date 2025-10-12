@@ -1327,9 +1327,9 @@ def get_notices(
     statement = select(Notice)
     
     # If user is a teacher, they can only see notices targeted at teachers or general notices
-    if current_user.role == UserRole.TEACHER:
+    if current_user.role == "teacher":
         statement = statement.where(
-            (Notice.target_role == UserRole.TEACHER) | (Notice.target_role == None)
+            (Notice.target_role == "teacher") | (Notice.target_role == None)
         )
     elif target_role:
         statement = statement.where(Notice.target_role == target_role)
@@ -1509,7 +1509,7 @@ def get_teacher_schedule(
     current_user: User = Depends(require_teacher_or_admin)
 ):
     # Validate teacher access (teachers can only see their own schedule, admins can see any)
-    if current_user.role == UserRole.TEACHER:
+    if current_user.role == "teacher":
         teacher_statement = select(Teacher).where(Teacher.user_id == current_user.id)
         teacher = session.exec(teacher_statement).first()
         if not teacher or teacher.id != teacher_id:
@@ -1966,7 +1966,7 @@ def create_admin_with_code(
     # Create the admin user
     hashed_password = get_password_hash(admin_request.user.password)
     user_data = admin_request.user.dict(exclude={'password'})
-    user_data['role'] = UserRole.ADMIN  # Force admin role
+    user_data['role'] = "admin"  # Force admin role
     
     db_user = User(**user_data, password_hash=hashed_password)
     session.add(db_user)
@@ -2127,7 +2127,7 @@ def approve_admission_request(
         email=admission_request.email,
         full_name=admission_request.full_name,
         phone=admission_request.phone,
-        role=UserRole.STUDENT,
+        role="student",
         password_hash=hashed_password
     )
     session.add(db_user)
@@ -2326,7 +2326,7 @@ def get_student_notices(
     # Get active notices for students or general notices
     statement = select(Notice).where(
         Notice.is_active == True,
-        (Notice.target_role == UserRole.STUDENT) | (Notice.target_role == None)
+        (Notice.target_role == "student") | (Notice.target_role == None)
     ).order_by(Notice.created_at.desc())
     notices = session.exec(statement).all()
     return notices
@@ -2340,7 +2340,7 @@ def get_teacher_profile(
 ):
     """Get teacher profile with user information"""
     # Validate access - teachers can only see their own profile, admins can see any
-    if current_user.role == UserRole.TEACHER:
+    if current_user.role == "teacher":
         teacher = session.get(Teacher, teacher_id)
         if not teacher or teacher.user_id != current_user.id:
             raise HTTPException(status_code=403, detail="Access denied. You can only view your own profile.")
@@ -2572,7 +2572,7 @@ def get_admin_profile(
     
     # Get the admin user
     admin = session.get(User, admin_id)
-    if not admin or admin.role != UserRole.ADMIN:
+    if not admin or admin.role != "admin":
         raise HTTPException(status_code=404, detail="Admin not found")
     
     return admin
