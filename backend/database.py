@@ -2,6 +2,9 @@ from sqlmodel import SQLModel, create_engine, Session
 import os
 from sqlalchemy import text
 
+# Import models to ensure they're registered with SQLModel
+from models import *
+
 # Database URL (SQLite for development, can be changed to PostgreSQL/MySQL for production)
 DATABASE_URL = os.getenv("DATABASE_URL") or "sqlite:///./coaching_center.db"
 
@@ -73,14 +76,11 @@ def reset_database():
         conn.commit()
         print("✅ All tables dropped")
 
-        # Import models and recreate tables
-        from models import *
+        # Recreate tables
         print("🏗️  Recreating tables...")
         SQLModel.metadata.create_all(engine)
         print("✅ Database reset complete!")
 
 if __name__ == "__main__":
-    # Import models to ensure they're registered with SQLModel
-    from models import *
     create_db_and_tables()
     print("Database and tables created successfully!")
