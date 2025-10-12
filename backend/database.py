@@ -40,8 +40,20 @@ def reset_database():
     with engine.connect() as conn:
         if is_postgres:
             # PostgreSQL/Neon reset
-            print("🗑️  Dropping all tables (PostgreSQL)...")
+            print("🗑️  Dropping enum types and all tables (PostgreSQL)...")
 
+            # Drop enum types first
+            drop_enums_sql = """
+            DROP TYPE IF EXISTS userrole CASCADE;
+            DROP TYPE IF EXISTS attendancestatus CASCADE;
+            DROP TYPE IF EXISTS dayofweek CASCADE;
+            """
+
+            for statement in drop_enums_sql.strip().split(';'):
+                if statement.strip():
+                    conn.execute(text(statement.strip()))
+
+            # Then drop tables
             drop_tables_sql = """
             DROP TABLE IF EXISTS teacher_reviews CASCADE;
             DROP TABLE IF EXISTS notices CASCADE;
@@ -74,7 +86,7 @@ def reset_database():
                 conn.execute(text(f"DROP TABLE IF EXISTS {table}"))
 
         conn.commit()
-        print("✅ All tables dropped")
+        print("✅ All enum types and tables dropped")
 
         # Recreate tables
         print("🏗️  Recreating tables...")
