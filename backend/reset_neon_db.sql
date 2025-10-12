@@ -2,7 +2,12 @@
 -- Run this in your Neon SQL Editor or psql console
 -- WARNING: This will permanently delete all data!
 
--- Step 1: Drop all tables in reverse dependency order
+-- Step 1: Drop enum types (they persist independently of tables)
+DROP TYPE IF EXISTS userrole CASCADE;
+DROP TYPE IF EXISTS attendancestatus CASCADE;
+DROP TYPE IF EXISTS dayofweek CASCADE;
+
+-- Step 2: Drop all tables in reverse dependency order
 DROP TABLE IF EXISTS teacher_reviews CASCADE;
 DROP TABLE IF EXISTS notices CASCADE;
 DROP TABLE IF EXISTS study_materials CASCADE;

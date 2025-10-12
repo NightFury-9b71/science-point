@@ -53,7 +53,23 @@ def reset_neon_database():
                 print("❌ Operation cancelled")
                 return
 
-            print("\n🗑️  Dropping all tables...")
+            print("\n🗑️  Dropping enum types and all tables...")
+
+            # Drop enum types first (they persist independently of tables)
+            drop_enums_sql = """
+            DROP TYPE IF EXISTS userrole CASCADE;
+            DROP TYPE IF EXISTS attendancestatus CASCADE;
+            DROP TYPE IF EXISTS dayofweek CASCADE;
+            """
+
+            # Execute enum drop commands
+            for statement in drop_enums_sql.strip().split(';'):
+                if statement.strip():
+                    try:
+                        conn.execute(text(statement.strip()))
+                        print(f"✓ Dropped enum: {statement.strip().split()[2]}")
+                    except Exception as e:
+                        print(f"⚠️  Could not drop enum (might not exist): {e}")
 
             # Drop all tables in reverse dependency order
             # This handles foreign key constraints properly
