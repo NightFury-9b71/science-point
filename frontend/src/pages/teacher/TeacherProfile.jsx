@@ -6,6 +6,7 @@ import { useTeacherProfile, useTeacherUploadPhoto, useTeacherDeletePhoto } from 
 import { useState } from 'react'
 import { toast } from 'sonner'
 import cloudinaryService from '../../services/cloudinaryService.js'
+import config from '../../config/index.js'
 
 function TeacherProfile() {
   const { user, updateUser } = useAuth()
@@ -57,9 +58,11 @@ function TeacherProfile() {
       return
     }
     
-    // Validate file size (5MB max)
-    if (file.size > 5 * 1024 * 1024) {
-      toast.error('File size must be less than 5MB')
+    // Validate file size using config
+    const maxSize = config.ui.fileUploadMaxSize
+    if (file.size > maxSize) {
+      const maxSizeMB = (maxSize / 1024 / 1024).toFixed(0)
+      toast.error(`File size must be less than ${maxSizeMB}MB`)
       return
     }
     

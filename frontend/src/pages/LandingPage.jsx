@@ -143,7 +143,7 @@ const LandingPage = () => {
           </div>
           <div className="bg-white/80 backdrop-blur-sm rounded-2xl p-8 shadow-lg max-w-4xl mx-auto mb-8">
             <p className="text-xl text-gray-700 mb-6">
-              <span className="font-semibold text-slate-600">৬ম থেকে ১০ম শ্রেণী</span> (মাধ্যমিক) এবং 
+              <span className="font-semibold text-slate-600">৬ষ্ঠ থেকে ১০ম শ্রেণী</span> (মাধ্যমিক) এবং 
               <span className="font-semibold text-slate-600"> ১১শ থেকে ১২শ শ্রেণী</span> (উচ্চ মাধ্যমিক) শিক্ষার্থীদের জন্য
             </p>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6 text-center mb-8">
@@ -227,7 +227,7 @@ const LandingPage = () => {
             <div className="bg-white p-8 rounded-2xl shadow-lg border-l-4 border-green-400">
               <h3 className="text-2xl font-bold text-gray-900 mb-4 flex items-center">
                 <BookOpen className="h-6 w-6 text-green-600 mr-2" />
-                মাধ্যমিক (৬ম - ১০ম শ্রেণী)
+                মাধ্যমিক (৬ষ্ঠ - ১০ম শ্রেণী)
               </h3>
               <div className="space-y-3 mb-6">
                 <div className="flex items-center space-x-2">
@@ -368,7 +368,7 @@ const LandingPage = () => {
               </div>
               <p className="text-gray-400">
                 মীরসরাইয়ের বিশ্বস্ত কোচিং সেন্টার<br/>
-                ৬ম থেকে ১২শ শ্রেণীর শিক্ষার্থীদের জন্য
+                ৬ষ্ঠ থেকে ১২শ শ্রেণীর শিক্ষার্থীদের জন্য
               </p>
             </div>
             
@@ -385,7 +385,7 @@ const LandingPage = () => {
             <div className="text-center md:text-right">
               <h3 className="text-lg font-semibold mb-4 text-slate-400">কোর্স সমূহ</h3>
               <p className="text-gray-400 text-sm">
-                ৬ম - ১০ম শ্রেণী (মাধ্যমিক)<br/>
+                ৬ষ্ঠ - ১০ম শ্রেণী (মাধ্যমিক)<br/>
                 ১১শ - ১২শ শ্রেণী (উচ্চ মাধ্যমিক)<br/>
                 গণিত ও বিজ্ঞানে বিশেষত্ব<br/>
                 বোর্ড পরীক্ষার প্রস্তুতি

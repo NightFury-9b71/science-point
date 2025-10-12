@@ -43,14 +43,37 @@ class CloudinaryService {
     }
 
     try {
+      // Add timeout to prevent hanging uploads
+      const controller = new AbortController()
+      const timeoutId = setTimeout(() => controller.abort(), 300000) // 5 minutes timeout
+
       const response = await fetch(this.uploadUrl, {
         method: 'POST',
-        body: formData
+        body: formData,
+        signal: controller.signal
       })
 
+      clearTimeout(timeoutId)
+
       if (!response.ok) {
-        const errorData = await response.json()
-        throw new Error(errorData.error?.message || 'Upload failed')
+        let errorMessage = 'Upload failed'
+        try {
+          const errorData = await response.json()
+          errorMessage = errorData.error?.message || errorMessage
+          
+          // Handle specific Cloudinary errors
+          if (errorData.error?.message?.includes('File size too large')) {
+            errorMessage = 'File is too large. Please select a smaller file.'
+          } else if (errorData.error?.message?.includes('Invalid file format')) {
+            errorMessage = 'Unsupported file format. Please select PDF, image, or document files.'
+          } else if (errorData.error?.message?.includes('Upload preset')) {
+            errorMessage = 'Upload configuration error. Please contact the administrator.'
+          }
+        } catch (parseError) {
+          // If we can't parse the error response, use status text
+          errorMessage = response.statusText || errorMessage
+        }
+        throw new Error(errorMessage)
       }
 
       const result = await response.json()
@@ -66,6 +89,14 @@ class CloudinaryService {
       }
     } catch (error) {
       console.error('Cloudinary upload error:', error)
+      
+      // Handle specific error types
+      if (error.name === 'AbortError') {
+        throw new Error('Upload timed out. Please try again with a smaller file or check your connection.')
+      } else if (error.message?.includes('Failed to fetch') || error.message?.includes('NetworkError') || error.name === 'TypeError') {
+        throw new Error('Network error. Please check your connection and try again.')
+      }
+      
       throw error
     }
   }
@@ -153,6 +184,43 @@ class CloudinaryService {
 
     // Remove trailing comma
     transformationString = transformationString.replace(/,$/, '')
+
+    return `${baseUrl}${transformationString}/${publicId}`
+  }
+
+  /**
+   * Generate Cloudinary download URL
+   * @param {string} publicId - Public ID of the file
+   * @param {string} resourceType - Resource type (image, video, raw). If not provided, will be auto-detected
+   * @param {string} filename - Optional filename for download
+   * @returns {string} Download URL
+   */
+  generateDownloadUrl(publicId, resourceType = null, filename = null) {
+    // For study materials, use 'image' since Cloudinary stores PDFs and documents as images
+    // Based on database records showing image/upload in URLs
+    if (!resourceType) {
+      if (publicId.includes('study-materials') || publicId.includes('study_materials')) {
+        // Study materials are stored as 'image' type by Cloudinary
+        resourceType = 'image'
+      } else if (publicId.match(/\.(jpg|jpeg|png|gif|webp|bmp|tiff?|svg)$/i)) {
+        resourceType = 'image'
+      } else if (publicId.match(/\.(mp4|avi|mov|wmv|flv|webm|mkv|mp3|wav|ogg)$/i)) {
+        resourceType = 'video'
+      } else {
+        // Default to raw for other files
+        resourceType = 'raw'
+      }
+    }
+
+    const baseUrl = `https://res.cloudinary.com/${this.cloudName}/${resourceType}/upload/`
+
+    // Add fl_attachment to force download
+    let transformationString = 'fl_attachment'
+
+    // Add filename if provided
+    if (filename) {
+      transformationString += `,fn_${encodeURIComponent(filename)}`
+    }
 
     return `${baseUrl}${transformationString}/${publicId}`
   }

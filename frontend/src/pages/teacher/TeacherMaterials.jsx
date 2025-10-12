@@ -7,6 +7,7 @@ import { useAuth } from '../../contexts/AuthContext'
 import { useTeacherSubjects, useTeacherMaterials, useUploadStudyMaterial, useUpdateStudyMaterial, useDeleteStudyMaterial } from '../../services/queries'
 import config from '../../config/index.js'
 import cloudinaryService from '../../services/cloudinaryService'
+import { toast } from 'sonner'
 
 const TeacherMaterials = () => {
   const navigate = useNavigate()
@@ -69,10 +70,12 @@ const TeacherMaterials = () => {
   const handleFileChange = (e) => {
     const file = e.target.files[0]
     if (file) {
-      // Validate file size (100MB limit to match backend)
-      const maxSize = 100 * 1024 * 1024 // 100MB
+      // Validate file size using config
+      const maxSize = config.ui.fileUploadMaxSize
       if (file.size > maxSize) {
-        alert(`File size must be less than 100MB. Selected file is ${(file.size / 1024 / 1024).toFixed(2)}MB.`)
+        const maxSizeMB = (maxSize / 1024 / 1024).toFixed(0)
+        const fileSizeMB = (file.size / 1024 / 1024).toFixed(2)
+        toast.error(`File size must be less than ${maxSizeMB}MB. Selected file is ${fileSizeMB}MB.`)
         return
       }
 
@@ -86,7 +89,7 @@ const TeacherMaterials = () => {
       ]
       
       if (!allowedTypes.includes(file.type)) {
-        alert('Please select a valid file type: PDF, Images (JPG, PNG, GIF, WebP), or Documents (DOC, DOCX, TXT)')
+        toast.error('Please select a valid file type: PDF, Images (JPG, PNG, GIF, WebP), or Documents (DOC, DOCX, TXT)')
         return
       }
 
@@ -98,7 +101,18 @@ const TeacherMaterials = () => {
     e.preventDefault()
 
     if (!uploadForm.file || !uploadForm.title || !selectedSubject) {
-      alert('Please fill in all required fields')
+      toast.error('Please fill in all required fields')
+      return
+    }
+
+    // Check Cloudinary configuration
+    if (!config.cloudinary.apiKey || !config.cloudinary.cloudName || !config.cloudinary.uploadPreset) {
+      toast.error('File upload service is not properly configured. Please contact the administrator.')
+      console.error('Cloudinary configuration missing:', {
+        apiKey: !!config.cloudinary.apiKey,
+        cloudName: !!config.cloudinary.cloudName,
+        uploadPreset: !!config.cloudinary.uploadPreset
+      })
       return
     }
 
@@ -107,15 +121,40 @@ const TeacherMaterials = () => {
 
     try {
       // Upload file to Cloudinary first
+      console.log('Starting Cloudinary upload for file:', uploadForm.file.name, 'Size:', uploadForm.file.size, 'Type:', uploadForm.file.type)
+      setUploadProgress(10) // Show initial progress
       const cloudinaryResult = await cloudinaryService.uploadFile(
         uploadForm.file,
         {
           folder: `science-point/study-materials/teacher-${teacherId}`
-        },
-        (progress) => setUploadProgress(progress)
+        }
       )
+      setUploadProgress(80) // Show upload completed
+      console.log('Cloudinary upload successful:', cloudinaryResult)
+
+      // Validate Cloudinary result
+      if (!cloudinaryResult.url || !cloudinaryResult.publicId) {
+        console.error('Invalid Cloudinary response:', cloudinaryResult)
+        throw new Error('File upload service returned invalid response')
+      }
+
+      // Validate file was actually uploaded by checking URL format
+      if (!cloudinaryResult.url.includes('cloudinary.com') || !cloudinaryResult.url.includes('res.cloudinary.com')) {
+        console.error('Invalid Cloudinary URL format:', cloudinaryResult.url)
+        throw new Error('File upload service returned invalid URL')
+      }
 
       // Then send metadata to backend
+      console.log('Sending metadata to backend:', {
+        title: uploadForm.title,
+        subject_id: selectedSubject.id,
+        file_url: cloudinaryResult.url,
+        file_path: cloudinaryResult.publicId,
+        file_type: uploadForm.file.type,
+        file_size: uploadForm.file.size
+      })
+      setUploadProgress(90) // Show backend upload starting
+
       const materialData = {
         title: uploadForm.title,
         description: uploadForm.description || '',
@@ -127,10 +166,29 @@ const TeacherMaterials = () => {
         is_public: uploadForm.is_public
       }
 
-      await uploadMutation.mutateAsync({
-        formData: materialData,
-        teacherId
-      })
+      try {
+        await uploadMutation.mutateAsync({
+          formData: materialData,
+          teacherId
+        })
+
+        console.log('Backend upload successful')
+        setUploadProgress(100) // Show completion
+      } catch (backendError) {
+        console.error('Backend upload failed:', backendError)
+        
+        // Try to clean up the Cloudinary file since backend upload failed
+        try {
+          console.log('Attempting to clean up Cloudinary file:', cloudinaryResult.publicId)
+          await cloudinaryService.deleteFile(cloudinaryResult.publicId)
+          console.log('Successfully cleaned up Cloudinary file')
+        } catch (cleanupError) {
+          console.warn('Failed to clean up Cloudinary file:', cleanupError)
+        }
+        
+        // Re-throw the backend error
+        throw backendError
+      }
 
       setUploadForm({
         title: '',
@@ -140,6 +198,8 @@ const TeacherMaterials = () => {
       })
       setShowUploadForm(false)
       setUploadProgress(0)
+      
+      toast.success('Study material uploaded successfully!')
     } catch (error) {
       console.error('Upload failed:', error)
       
@@ -148,12 +208,25 @@ const TeacherMaterials = () => {
       if (error.message?.includes('network') || error.message?.includes('fetch')) {
         errorMessage = 'Network error. Please check your connection and try again.'
       } else if (error.message?.includes('size') || error.message?.includes('large')) {
-        errorMessage = 'File is too large. Please select a smaller file (max 100MB).'
+        const maxSizeMB = (config.ui.fileUploadMaxSize / 1024 / 1024).toFixed(0)
+        errorMessage = `File is too large. Please select a smaller file (max ${maxSizeMB}MB).`
       } else if (error.message?.includes('format') || error.message?.includes('type')) {
         errorMessage = 'Unsupported file format. Please select PDF, image, or document files.'
+      } else if (error.message?.includes('cloudinary') || error.message?.includes('upload')) {
+        errorMessage = 'File upload service is currently unavailable. Please try again later.'
+      } else if (error.message?.includes('preset') || error.message?.includes('authentication')) {
+        errorMessage = 'Upload configuration error. Please contact the administrator.'
+      } else if (error.message?.includes('timeout')) {
+        errorMessage = 'Upload timed out. Please try again with a smaller file or check your connection.'
+      } else if (error.response?.status === 413) {
+        errorMessage = 'File is too large for the server. Please contact the administrator.'
+      } else if (error.response?.status === 415) {
+        errorMessage = 'Unsupported file format. Please select PDF, image, or document files.'
+      } else if (error.response?.status >= 500) {
+        errorMessage = 'Server error. Please try again later.'
       }
       
-      alert(errorMessage)
+      toast.error(errorMessage)
     } finally {
       setIsUploading(false)
       setUploadProgress(0)
@@ -175,7 +248,18 @@ const TeacherMaterials = () => {
     e.preventDefault()
 
     if (!editForm.title) {
-      alert('Title is required')
+      toast.error('Title is required')
+      return
+    }
+
+    // Check Cloudinary configuration if uploading a new file
+    if (editForm.file && (!config.cloudinary.apiKey || !config.cloudinary.cloudName || !config.cloudinary.uploadPreset)) {
+      toast.error('File upload service is not properly configured. Please contact the administrator.')
+      console.error('Cloudinary configuration missing:', {
+        apiKey: !!config.cloudinary.apiKey,
+        cloudName: !!config.cloudinary.cloudName,
+        uploadPreset: !!config.cloudinary.uploadPreset
+      })
       return
     }
 
@@ -188,6 +272,7 @@ const TeacherMaterials = () => {
 
       // Handle file replacement if a new file is provided
       if (editForm.file) {
+        console.log('Starting Cloudinary upload for replacement file:', editForm.file.name)
         // Upload new file to Cloudinary
         const cloudinaryResult = await cloudinaryService.uploadFile(
           editForm.file,
@@ -195,6 +280,7 @@ const TeacherMaterials = () => {
             folder: `science-point/study-materials/teacher-${teacherId}`
           }
         )
+        console.log('Cloudinary upload successful for replacement:', cloudinaryResult)
 
         // Delete old file from Cloudinary if it exists
         if (editingMaterial.file_path && editingMaterial.file_path.startsWith('science-point/')) {
@@ -220,6 +306,8 @@ const TeacherMaterials = () => {
 
       setShowEditForm(false)
       setEditingMaterial(null)
+      
+      toast.success('Study material updated successfully!')
     } catch (error) {
       console.error('Update failed:', error)
       
@@ -228,12 +316,25 @@ const TeacherMaterials = () => {
       if (error.message?.includes('network') || error.message?.includes('fetch')) {
         errorMessage = 'Network error. Please check your connection and try again.'
       } else if (error.message?.includes('size') || error.message?.includes('large')) {
-        errorMessage = 'File is too large. Please select a smaller file (max 100MB).'
+        const maxSizeMB = (config.ui.fileUploadMaxSize / 1024 / 1024).toFixed(0)
+        errorMessage = `File is too large. Please select a smaller file (max ${maxSizeMB}MB).`
       } else if (error.message?.includes('format') || error.message?.includes('type')) {
         errorMessage = 'Unsupported file format. Please select PDF, image, or document files.'
+      } else if (error.message?.includes('cloudinary') || error.message?.includes('upload')) {
+        errorMessage = 'File upload service is currently unavailable. Please try again later.'
+      } else if (error.message?.includes('preset') || error.message?.includes('authentication')) {
+        errorMessage = 'Upload configuration error. Please contact the administrator.'
+      } else if (error.message?.includes('timeout')) {
+        errorMessage = 'Upload timed out. Please try again with a smaller file or check your connection.'
+      } else if (error.response?.status === 413) {
+        errorMessage = 'File is too large for the server. Please contact the administrator.'
+      } else if (error.response?.status === 415) {
+        errorMessage = 'Unsupported file format. Please select PDF, image, or document files.'
+      } else if (error.response?.status >= 500) {
+        errorMessage = 'Server error. Please try again later.'
       }
       
-      alert(errorMessage)
+      toast.error(errorMessage)
     }
   }
 
@@ -272,9 +373,9 @@ const TeacherMaterials = () => {
 
         // Success message
         if (cloudinaryDeleted && backendDeleted) {
-          alert('Study material deleted successfully from both storage and database.')
+          toast.success('Study material deleted successfully from both storage and database.')
         } else if (backendDeleted) {
-          alert('Study material deleted successfully. Note: File may still exist in cloud storage.')
+          toast.success('Study material deleted successfully. Note: File may still exist in cloud storage.')
         }
 
         setShowDeleteConfirm(false)
@@ -296,18 +397,25 @@ const TeacherMaterials = () => {
           errorMessage = 'You do not have permission to delete this material.'
         }
 
-        alert(errorMessage)
+        toast.error(errorMessage)
       }
     }
   }
 
   const handleDownload = (material) => {
-    // Use Cloudinary URL directly for download
-    if (material.file_url) {
+    // Generate Cloudinary download URL with attachment flag
+    if (material.file_path && material.file_path.startsWith('science-point/')) {
+      const downloadUrl = cloudinaryService.generateDownloadUrl(material.file_path, null, material.title)
+      console.log('Generated download URL:', downloadUrl, 'for material:', material.title, 'file_path:', material.file_path)
+      window.open(downloadUrl, '_blank')
+    } else if (material.file_url) {
+      // Fallback to regular Cloudinary URL if public_id not available
+      console.log('Using fallback file_url:', material.file_url, 'for material:', material.title)
       window.open(material.file_url, '_blank')
     } else {
       // Fallback to old local path if Cloudinary URL not available
       const downloadUrl = `${config.frontend.baseURL}/uploads/${material.file_path}`
+      console.log('Using local path:', downloadUrl, 'for material:', material.title)
       window.open(downloadUrl, '_blank')
     }
   }
@@ -367,7 +475,7 @@ const TeacherMaterials = () => {
               <option value="">Select Subject</option>
               {mySubjects.map((subject) => (
                 <option key={subject.id} value={subject.id}>
-                  {subject.name} ({subject.code})
+                  {subject.name} - {subject.class_assigned?.name || 'Unknown Class'}
                 </option>
               ))}
             </select>
@@ -406,7 +514,7 @@ const TeacherMaterials = () => {
                       </span>
                       <div className="flex items-center text-xs text-gray-500">
                         <BookOpen className="h-3 w-3 mr-1" />
-                        Subject {material.subject_id}
+                        {material.subject ? `${material.subject.name} (${material.subject.class_assigned?.name || 'Unknown Class'})` : `Subject ${material.subject_id}`}
                       </div>
                     </div>
                     
@@ -529,7 +637,7 @@ const TeacherMaterials = () => {
                   </p>
                 )}
                 <p className="text-xs text-gray-500 mt-1">
-                  Supported formats: PDF, Images (JPG, PNG, GIF, WebP), Documents (DOC, DOCX, TXT). Maximum size: 100MB
+                  Supported formats: PDF, Images (JPG, PNG, GIF, WebP), Documents (DOC, DOCX, TXT). Maximum size: {Math.round(config.ui.fileUploadMaxSize / 1024 / 1024)}MB
                 </p>
               </div>
 
@@ -637,10 +745,13 @@ const TeacherMaterials = () => {
                   onChange={(e) => {
                     const file = e.target.files[0]
                     if (file) {
-                      // Validate file size (100MB limit to match backend)
-                      const maxSize = 100 * 1024 * 1024 // 100MB
+                      // Validate file size using config
+                      const maxSize = config.ui.fileUploadMaxSize
+                      console.log('Config fileUploadMaxSize:', maxSize, 'Environment variable:', import.meta.env.VITE_FILE_UPLOAD_MAX_SIZE)
                       if (file.size > maxSize) {
-                        alert(`File size must be less than 100MB. Selected file is ${(file.size / 1024 / 1024).toFixed(2)}MB.`)
+                        const maxSizeMB = (maxSize / 1024 / 1024).toFixed(0)
+                        const fileSizeMB = (file.size / 1024 / 1024).toFixed(2)
+                        toast.error(`File size must be less than ${maxSizeMB}MB. Selected file is ${fileSizeMB}MB.`)
                         return
                       }
 
@@ -654,7 +765,7 @@ const TeacherMaterials = () => {
                       ]
                       
                       if (!allowedTypes.includes(file.type)) {
-                        alert('Please select a valid file type: PDF, Images (JPG, PNG, GIF, WebP), or Documents (DOC, DOCX, TXT)')
+                        toast.error('Please select a valid file type: PDF, Images (JPG, PNG, GIF, WebP), or Documents (DOC, DOCX, TXT)')
                         return
                       }
                     }
@@ -669,7 +780,7 @@ const TeacherMaterials = () => {
                 )}
                 {!editForm.file && (
                   <p className="text-xs text-gray-500 mt-1">
-                    Leave empty to keep current file. Supported formats: PDF, Images (JPG, PNG, GIF, WebP), Documents (DOC, DOCX, TXT). Maximum size: 100MB
+                    Leave empty to keep current file. Supported formats: PDF, Images (JPG, PNG, GIF, WebP), Documents (DOC, DOCX, TXT). Maximum size: {Math.round(config.ui.fileUploadMaxSize / 1024 / 1024)}MB
                   </p>
                 )}
               </div>

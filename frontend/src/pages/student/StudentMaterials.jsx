@@ -4,6 +4,7 @@ import Button from '../../components/Button'
 import { useStudentMaterials } from '../../services/queries'
 import { useAuth } from '../../contexts/AuthContext'
 import config from '../../config/index.js'
+import cloudinaryService from '../../services/cloudinaryService'
 
 function StudentMaterials() {
   const { user, isLoading: authLoading } = useAuth()
@@ -38,9 +39,21 @@ function StudentMaterials() {
   }
 
   const handleDownload = (material) => {
-    // Open the file in a new tab/window for download from frontend public folder
-    const downloadUrl = `${config.frontend.baseURL}/uploads/${material.file_path}`
-    window.open(downloadUrl, '_blank')
+    // Generate Cloudinary download URL with attachment flag
+    if (material.file_path && material.file_path.startsWith('science-point/')) {
+      const downloadUrl = cloudinaryService.generateDownloadUrl(material.file_path, null, material.title)
+      console.log('Generated download URL:', downloadUrl, 'for material:', material.title, 'file_path:', material.file_path)
+      window.open(downloadUrl, '_blank')
+    } else if (material.file_url) {
+      // Fallback to regular Cloudinary URL if public_id not available
+      console.log('Using fallback file_url:', material.file_url, 'for material:', material.title)
+      window.open(material.file_url, '_blank')
+    } else {
+      // Fallback to old local path if Cloudinary URL not available
+      const downloadUrl = `${config.frontend.baseURL}/uploads/${material.file_path}`
+      console.log('Using local path:', downloadUrl, 'for material:', material.title)
+      window.open(downloadUrl, '_blank')
+    }
   }
 
   const getFileSize = (bytes) => {
