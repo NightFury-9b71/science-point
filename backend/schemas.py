@@ -97,7 +97,10 @@ class StudyMaterialUpdate(BaseModel):
     title: Optional[str] = None
     description: Optional[str] = None
     is_public: Optional[bool] = None
-    file: Optional[UploadFile] = None
+    file_url: Optional[str] = None
+    file_path: Optional[str] = None
+    file_type: Optional[str] = None
+    file_size: Optional[int] = None
 
 class NoticeUpdate(BaseModel):
     title: Optional[str] = None

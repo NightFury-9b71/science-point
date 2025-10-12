@@ -149,6 +149,7 @@ class SubjectCreate(SubjectBase):
 class SubjectRead(SubjectBase):
     id: int
     class_id: int
+    class_assigned: Optional[ClassRead] = None
 
 # Class Schedule Model
 class DayOfWeek(str, Enum):
@@ -308,6 +309,7 @@ class StudyMaterialRead(StudyMaterialBase):
     subject_id: int
     created_by_id: int
     created_at: datetime
+    subject: Optional[SubjectRead] = None
 
 class NoticeBase(SQLModel):
     title: str = Field(max_length=200)

@@ -1,7 +1,6 @@
 from fastapi import FastAPI, HTTPException, Depends, status, UploadFile, File, Form
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
-from fastapi.staticfiles import StaticFiles
 from sqlmodel import Session, select
 from sqlalchemy import func, or_, and_
 from sqlalchemy.orm import selectinload
@@ -44,7 +43,7 @@ ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 30
 
 # File upload settings
-MAX_UPLOAD_SIZE = int(os.getenv("MAX_UPLOAD_SIZE", 100 * 1024 * 1024))  # Default 100MB
+MAX_UPLOAD_SIZE = int(os.getenv("MAX_UPLOAD_SIZE", 500 * 1024 * 1024))  # Default 500MB
 
 # Security
 security = HTTPBearer()
@@ -67,9 +66,6 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
-
-# Mount static files directory for uploads
-app.mount("/uploads", StaticFiles(directory="uploads"), name="uploads")
 
 # Create tables on startup
 @app.on_event("startup")
@@ -2382,9 +2378,9 @@ def get_teacher_subjects(teacher_id: int, session: Session = Depends(get_session
     if not subject_ids:
         return []
     
-    # Get the actual subject objects
+    # Get the actual subject objects with class information
     subjects = session.exec(
-        select(Subject).where(Subject.id.in_(subject_ids))
+        select(Subject).options(selectinload(Subject.class_assigned)).where(Subject.id.in_(subject_ids))
     ).all()
     
     return subjects
@@ -2432,8 +2428,10 @@ def get_teacher_study_materials(teacher_id: int, session: Session = Depends(get_
     if not teacher:
         raise HTTPException(status_code=404, detail="Teacher not found")
     
-    # Get study materials created by this teacher
-    statement = select(StudyMaterial).where(
+    # Get study materials created by this teacher with subject and class information
+    statement = select(StudyMaterial).options(
+        selectinload(StudyMaterial.subject).selectinload(Subject.class_assigned)
+    ).where(
         StudyMaterial.created_by_id == teacher.user_id
     ).order_by(StudyMaterial.created_at.desc())
     materials = session.exec(statement).all()
@@ -2443,14 +2441,7 @@ def get_teacher_study_materials(teacher_id: int, session: Session = Depends(get_
 @app.post("/teacher/{teacher_id}/study-materials", response_model=StudyMaterialRead)
 def upload_teacher_study_material(
     teacher_id: int,
-    title: str = Form(...),
-    description: str = Form(""),
-    subject_id: int = Form(...),
-    file_url: str = Form(...),
-    file_path: str = Form(...),
-    file_type: str = Form(...),
-    file_size: int = Form(...),
-    is_public: bool = Form(True),
+    material_data: StudyMaterialCreate,
     session: Session = Depends(get_session),
     current_user: User = Depends(require_teacher)
 ):
@@ -2464,20 +2455,20 @@ def upload_teacher_study_material(
     teacher_subjects = get_teacher_subjects(teacher_id, session)
     subject_ids = [subject.id for subject in teacher_subjects]
     
-    if subject_id not in subject_ids:
+    if material_data.subject_id not in subject_ids:
         raise HTTPException(status_code=403, detail="Access denied. You can only upload materials for subjects you teach.")
     
     # Create database record with Cloudinary data
     db_material = StudyMaterial(
-        title=title,
-        description=description,
-        file_path=file_path,  # Store Cloudinary public ID
-        file_type=file_type,
-        file_size=file_size,
-        subject_id=subject_id,
+        title=material_data.title,
+        description=material_data.description,
+        file_path=material_data.file_path,  # Store Cloudinary public ID
+        file_type=material_data.file_type,
+        file_size=material_data.file_size,
+        subject_id=material_data.subject_id,
         created_by_id=current_user.id,
-        is_public=is_public,
-        file_url=file_url  # Store Cloudinary URL
+        is_public=material_data.is_public,
+        file_url=material_data.file_url  # Store Cloudinary URL
     )
     
     session.add(db_material)
@@ -2490,13 +2481,7 @@ def upload_teacher_study_material(
 def update_teacher_study_material(
     teacher_id: int,
     material_id: int,
-    title: Optional[str] = Form(None),
-    description: Optional[str] = Form(None),
-    file_url: Optional[str] = Form(None),
-    file_path: Optional[str] = Form(None),
-    file_type: Optional[str] = Form(None),
-    file_size: Optional[int] = Form(None),
-    is_public: Optional[bool] = Form(None),
+    material_data: StudyMaterialUpdate,
     session: Session = Depends(get_session),
     current_user: User = Depends(require_teacher)
 ):
@@ -2516,19 +2501,19 @@ def update_teacher_study_material(
         raise HTTPException(status_code=403, detail="Access denied. You can only update your own materials.")
     
     # Update metadata fields if provided
-    if title is not None:
-        material.title = title
-    if description is not None:
-        material.description = description
-    if is_public is not None:
-        material.is_public = is_public
+    if material_data.title is not None:
+        material.title = material_data.title
+    if material_data.description is not None:
+        material.description = material_data.description
+    if material_data.is_public is not None:
+        material.is_public = material_data.is_public
     
     # Handle file replacement if new file data is provided
-    if file_url and file_path and file_type and file_size is not None:
-        material.file_url = file_url
-        material.file_path = file_path
-        material.file_type = file_type
-        material.file_size = file_size
+    if material_data.file_url and material_data.file_path and material_data.file_type and material_data.file_size is not None:
+        material.file_url = material_data.file_url
+        material.file_path = material_data.file_path
+        material.file_type = material_data.file_type
+        material.file_size = material_data.file_size
     
     session.add(material)
     session.commit()
