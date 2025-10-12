@@ -165,22 +165,30 @@ The system includes comprehensive mock data for testing and development:
 - **Runtime Validation**: Pydantic validation at runtime
 - **IDE Support**: Excellent autocomplete and error detection
 
-## Example Usage
+## Demo Credentials
 
-### Quick Setup with Mock Data:
-```bash
-# 1. Start the server
-python main.py
+The seeded mock data includes the following demo accounts for testing:
 
-# 2. Seed with mock data
-curl -X POST http://localhost:8000/admin/seed-data
+### Admin Users
+- **Username**: `admin` / **Password**: `admin123`
+- **Username**: `principal` / **Password**: `principal123`
 
-# 3. Check what was created
-curl http://localhost:8000/admin/data-stats
+### Teacher Users
+- **Username**: `math_teacher` / **Password**: `teacher123`
+- **Username**: `physics_teacher` / **Password**: `teacher123`
+- **Username**: `chemistry_teacher` / **Password**: `teacher123`
+- **Username**: `biology_teacher` / **Password**: `teacher123`
+- **Username**: `english_teacher` / **Password**: `teacher123`
 
-# 4. View dashboard
-curl http://localhost:8000/admin/dashboard
-```
+### Student Users
+- **Username**: `student001` / **Password**: `student123`
+- **Username**: `student002` / **Password**: `student123`
+- **Username**: `student003` / **Password**: `student123`
+- **Username**: `student004` / **Password**: `student123`
+- **Username**: `student005` / **Password**: `student123`
+- **Username**: `student006` / **Password**: `student123`
+- **Username**: `student007` / **Password**: `student123`
+- **Username**: `student008` / **Password**: `student123`
 
 ### Creating a Student:
 ```json

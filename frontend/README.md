@@ -105,13 +105,30 @@ The application uses environment variables for configuration. Copy `.env.example
 - Changes to `.env` require a development server restart
 - Never commit `.env` files to version control
 
-## Usage
+## Demo Credentials
 
-### Role Switching
-Use the navigation buttons in the header to switch between different user roles:
-- **Admin**: Complete system management
-- **Teacher**: Class and student management  
-- **Student**: Personal dashboard and resources
+The application includes seeded demo data for testing. Use these credentials to explore different user roles:
+
+### Admin Users
+- **Username**: `admin` / **Password**: `admin123`
+- **Username**: `principal` / **Password**: `principal123`
+
+### Teacher Users
+- **Username**: `math_teacher` / **Password**: `teacher123`
+- **Username**: `physics_teacher` / **Password**: `teacher123`
+- **Username**: `chemistry_teacher` / **Password**: `teacher123`
+- **Username**: `biology_teacher` / **Password**: `teacher123`
+- **Username**: `english_teacher` / **Password**: `teacher123`
+
+### Student Users
+- **Username**: `student001` / **Password**: `student123`
+- **Username**: `student002` / **Password**: `student123`
+- **Username**: `student003` / **Password**: `student123`
+- **Username**: `student004` / **Password**: `student123`
+- **Username**: `student005` / **Password**: `student123`
+- **Username**: `student006` / **Password**: `student123`
+- **Username**: `student007` / **Password**: `student123`
+- **Username**: `student008` / **Password**: `student123`
 
 ### Admin Features
 - View dashboard statistics
