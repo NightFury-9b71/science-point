@@ -1854,7 +1854,16 @@ def reset_all_data(confirm: bool = False, session: Session = Depends(get_session
         
     except Exception as e:
         session.rollback()
-        raise HTTPException(status_code=500, detail=f"Error resetting data: {str(e)}")
+        error_msg = str(e)
+        if "target_role" in error_msg and "does not exist" in error_msg:
+            raise HTTPException(
+                status_code=500,
+                detail="Database schema mismatch: The 'target_role' column is missing from the notices table. " +
+                       "Please run this SQL on your PostgreSQL database: ALTER TABLE notices ADD COLUMN target_role VARCHAR(7); " +
+                       "Or redeploy the application to recreate tables."
+            )
+        else:
+            raise HTTPException(status_code=500, detail=f"Error resetting data: {error_msg}")
 
 @app.post("/admin/cleanup-duplicate-results")
 def cleanup_duplicate_exam_results(session: Session = Depends(get_session), current_user: User = Depends(require_admin)):
