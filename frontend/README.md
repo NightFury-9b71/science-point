@@ -105,30 +105,9 @@ The application uses environment variables for configuration. Copy `.env.example
 - Changes to `.env` require a development server restart
 - Never commit `.env` files to version control
 
-## Demo Credentials
+## Demo data
 
-The application includes seeded demo data for testing. Use these credentials to explore different user roles:
-
-### Admin Users
-- **Username**: `admin` / **Password**: `admin123`
-- **Username**: `principal` / **Password**: `principal123`
-
-### Teacher Users
-- **Username**: `math_teacher` / **Password**: `teacher123`
-- **Username**: `physics_teacher` / **Password**: `teacher123`
-- **Username**: `chemistry_teacher` / **Password**: `teacher123`
-- **Username**: `biology_teacher` / **Password**: `teacher123`
-- **Username**: `english_teacher` / **Password**: `teacher123`
-
-### Student Users
-- **Username**: `student001` / **Password**: `student123`
-- **Username**: `student002` / **Password**: `student123`
-- **Username**: `student003` / **Password**: `student123`
-- **Username**: `student004` / **Password**: `student123`
-- **Username**: `student005` / **Password**: `student123`
-- **Username**: `student006` / **Password**: `student123`
-- **Username**: `student007` / **Password**: `student123`
-- **Username**: `student008` / **Password**: `student123`
+This frontend no longer includes hardcoded demo credentials. Seeded demo accounts (used for local development and testing) are documented in the backend mock data and README. See `../backend/README.md` for details on seeded users and how to reset the development database.
 
 ### Admin Features
 - View dashboard statistics
