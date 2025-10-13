@@ -177,9 +177,8 @@ export const adminAPI = {
   createClassSchedule: (scheduleData) => api.post('/admin/class-schedules', scheduleData),
   deleteClassSchedule: (scheduleId) => api.delete(`/admin/class-schedules/${scheduleId}`),
 
-  // Data Management
-  seedData: () => api.post('/admin/seed-data'),
-  resetData: (confirm = false) => api.post(`/admin/reset-data?confirm=${confirm}`),
+  // Data Management (seeding/reset endpoints have been disabled)
+  // seedData and resetData removed to prevent calls to disabled admin endpoints
   recreateTables: () => api.post('/admin/recreate-tables'),
   getDataStats: () => api.get('/admin/data-stats'),
 

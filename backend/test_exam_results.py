@@ -5,6 +5,8 @@ Test script to verify exam result creation with Bangladesh GPA system
 import requests
 import json
 import time
+import subprocess
+import os
 
 BASE_URL = "http://localhost:8000"
 
@@ -35,42 +37,26 @@ def login_and_get_token(username="admin", password="admin123"):
 
 def seed_database(token):
     """Seed the database with mock data"""
-    headers = {
-        "Content-Type": "application/json",
-        "Authorization": f"Bearer {token}"
-    }
-    
-    # First reset the database
+    # Run local reset and seed scripts instead of HTTP endpoints
+    repo_root = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
+    reset_script = os.path.join(repo_root, 'reset_neon_db.py')
+    seed_script = os.path.join(repo_root, 'seed_data.py')
+
     try:
-        reset_response = requests.post(
-            BASE_URL + "/admin/reset-data?confirm=true",
-            headers=headers,
-            timeout=30
-        )
-        if reset_response.status_code != 200:
-            print(f"❌ Failed to reset database: {reset_response.text}")
-            return False
-        print("✅ Database reset successfully!")
-    except Exception as e:
-        print(f"❌ Exception resetting database: {str(e)}")
+        print("🔁 Running local reset script...")
+        subprocess.check_call(["python", reset_script], cwd=repo_root)
+        print("✅ Local reset completed")
+    except subprocess.CalledProcessError as e:
+        print(f"❌ Local reset script failed: {e}")
         return False
-    
-    # Now seed the database
+
     try:
-        response = requests.post(
-            BASE_URL + "/admin/seed-data",
-            headers=headers,
-            timeout=60
-        )
-        
-        if response.status_code == 200:
-            print("✅ Database seeded successfully!")
-            return True
-        else:
-            print(f"❌ Failed to seed database: {response.text}")
-            return False
-    except Exception as e:
-        print(f"❌ Exception seeding database: {str(e)}")
+        print("🌱 Running local seed script...")
+        subprocess.check_call(["python", seed_script], cwd=repo_root)
+        print("✅ Local seed completed")
+        return True
+    except subprocess.CalledProcessError as e:
+        print(f"❌ Local seed script failed: {e}")
         return False
 
 def test_exam_result_creation():
