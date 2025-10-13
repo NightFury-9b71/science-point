@@ -80,20 +80,7 @@ const LoginPage = () => {
     }
   }
 
-  const demoCredentials = {
-    admin: { email: 'admin', password: 'admin123' },
-    teacher: { email: 'math_teacher', password: 'teacher123' },
-    student: { email: 'student001', password: 'student123' }
-  }
-
-  const fillDemoCredentials = (role) => {
-    const credentials = demoCredentials[role]
-    setFormData({
-      email: credentials.email,
-      password: credentials.password
-    })
-    setErrors({})
-  }
+  // Demo credentials removed
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50 flex flex-col">
@@ -212,26 +199,7 @@ const LoginPage = () => {
               </Button>
             </Form>
 
-            {/* Demo Credentials */}
-            <div className="mt-8 pt-6 border-t border-gray-200">
-              <p className="text-sm text-gray-600 text-center mb-4">
-                Demo Credentials (Click to auto-fill):
-              </p>
-              <div className="space-y-2">
-                {Object.entries(demoCredentials).map(([role, credentials]) => (
-                  <button
-                    key={role}
-                    type="button"
-                    onClick={() => fillDemoCredentials(role)}
-                    className="w-full text-left p-2 text-sm bg-gray-50 hover:bg-gray-100 rounded border transition-colors"
-                  >
-                    <div className="font-medium text-gray-900 capitalize">{role}</div>
-                    <div className="text-gray-600">Username: {credentials.email}</div>
-                    <div className="text-gray-500 text-xs">Password: {credentials.password}</div>
-                  </button>
-                ))}
-              </div>
-            </div>
+            {/* Demo credentials removed */}
           </Card>
 
           {/* Footer Links */}

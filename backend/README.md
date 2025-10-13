@@ -165,30 +165,13 @@ The system includes comprehensive mock data for testing and development:
 - **Runtime Validation**: Pydantic validation at runtime
 - **IDE Support**: Excellent autocomplete and error detection
 
-## Demo Credentials
+#### Data management (deployment note)
 
-The seeded mock data includes the following demo accounts for testing:
+- The HTTP endpoints to seed or reset the database (`POST /admin/seed-data` and `POST /admin/reset-data`) have been disabled in this deployment for security. Use the provided backend scripts for local development:
+  - `python seed_data.py` — Seed database locally (script-based seeding)
+  - `python reset_neon_db.py` — Reset a Neon/PostgreSQL database (script-based)
 
-### Admin Users
-- **Username**: `admin` / **Password**: `admin123`
-- **Username**: `principal` / **Password**: `principal123`
-
-### Teacher Users
-- **Username**: `math_teacher` / **Password**: `teacher123`
-- **Username**: `physics_teacher` / **Password**: `teacher123`
-- **Username**: `chemistry_teacher` / **Password**: `teacher123`
-- **Username**: `biology_teacher` / **Password**: `teacher123`
-- **Username**: `english_teacher` / **Password**: `teacher123`
-
-### Student Users
-- **Username**: `student001` / **Password**: `student123`
-- **Username**: `student002` / **Password**: `student123`
-- **Username**: `student003` / **Password**: `student123`
-- **Username**: `student004` / **Password**: `student123`
-- **Username**: `student005` / **Password**: `student123`
-- **Username**: `student006` / **Password**: `student123`
-- **Username**: `student007` / **Password**: `student123`
-- **Username**: `student008` / **Password**: `student123`
+If you require programmatic seeding in a development environment, run the scripts directly or enable seeding behind a secure admin-only mechanism.
 
 ### Creating a Student:
 ```json

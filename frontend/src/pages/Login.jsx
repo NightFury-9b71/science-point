@@ -103,29 +103,7 @@ const Login = () => {
             </Button>
           </form>
 
-          {/* Demo Credentials */}
-          <div className="mt-6 p-4 bg-gray-50 rounded-lg">
-            <p className="text-xs font-medium text-gray-700 mb-2 text-center">
-              Demo Credentials
-            </p>
-            <div className="space-y-2 text-xs text-gray-600">
-              <div className="grid grid-cols-1 gap-1">
-                <div className="font-medium text-blue-600">Admin:</div>
-                <div>• Username: <code className="bg-white px-1 rounded">admin</code> / Password: <code className="bg-white px-1 rounded">admin123</code></div>
-                <div>• Username: <code className="bg-white px-1 rounded">principal</code> / Password: <code className="bg-white px-1 rounded">principal123</code></div>
-              </div>
-              <div className="grid grid-cols-1 gap-1">
-                <div className="font-medium text-green-600">Teacher:</div>
-                <div>• Username: <code className="bg-white px-1 rounded">math_teacher</code> / Password: <code className="bg-white px-1 rounded">teacher123</code></div>
-                <div>• Username: <code className="bg-white px-1 rounded">physics_teacher</code> / Password: <code className="bg-white px-1 rounded">teacher123</code></div>
-              </div>
-              <div className="grid grid-cols-1 gap-1">
-                <div className="font-medium text-purple-600">Student:</div>
-                <div>• Username: <code className="bg-white px-1 rounded">student001</code> / Password: <code className="bg-white px-1 rounded">student123</code></div>
-                <div>• Username: <code className="bg-white px-1 rounded">student002</code> / Password: <code className="bg-white px-1 rounded">student123</code></div>
-              </div>
-            </div>
-          </div>
+          {/* Demo credentials removed */}
         </Card>
       </div>
     </div>
