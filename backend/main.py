@@ -42,6 +42,7 @@ pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 SECRET_KEY = os.getenv("SECRET_KEY", "your-secret-key-here-change-in-production")
 ALGORITHM = os.getenv("ALGORITHM", "HS256")  # Default algorithm
 ACCESS_TOKEN_EXPIRE_MINUTES = int(os.getenv("ACCESS_TOKEN_EXPIRE_MINUTES", 30))  # Default 30 minutes
+REMEMBER_ME_TOKEN_EXPIRE_MINUTES = int(os.getenv("REMEMBER_ME_TOKEN_EXPIRE_MINUTES", 21600))  # 15 days = 21,600 minutes
 
 # File upload settings
 MAX_UPLOAD_SIZE = int(os.getenv("MAX_UPLOAD_SIZE", 500 * 1024 * 1024))  # Default 500MB
@@ -319,7 +320,13 @@ def login(login_data: LoginRequest, session: Session = Depends(get_session)):
             detail="Incorrect username or password",
             headers={"WWW-Authenticate": "Bearer"},
         )
-    access_token_expires = timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
+    
+    # Set token expiration based on remember_me parameter
+    if login_data.remember_me:
+        access_token_expires = timedelta(minutes=REMEMBER_ME_TOKEN_EXPIRE_MINUTES)
+    else:
+        access_token_expires = timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
+    
     access_token = create_access_token(
         data={"sub": user.username}, expires_delta=access_token_expires
     )

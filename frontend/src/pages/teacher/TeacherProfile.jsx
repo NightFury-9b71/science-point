@@ -648,52 +648,10 @@ function TeacherProfile() {
                     <div className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-0.5">
                       Monthly Salary
                     </div>
-                    <div className="font-semibold text-gray-900">₹{profile.salary?.toLocaleString() || 'N/A'}</div>
+                    <div className="font-semibold text-gray-900">৳{profile.salary?.toLocaleString() || 'N/A'}</div>
                   </div>
                 </div>
                 <div className="w-3 h-3 bg-green-500 rounded-full animate-pulse"></div>
-              </div>
-            </div>
-          </Card.Content>
-        </Card>
-
-        {/* Subjects Taught */}
-        <Card className="lg:col-span-2 shadow-md hover:shadow-lg transition-shadow duration-200">
-          <Card.Header className="border-b border-gray-100 pb-4">
-            <Card.Title className="text-lg font-semibold flex items-center gap-2">
-              <div className="w-8 h-8 bg-blue-100 rounded-lg flex items-center justify-center">
-                <BookOpen className="h-4 w-4 text-blue-600" />
-              </div>
-              Teaching Information
-            </Card.Title>
-          </Card.Header>
-          <Card.Content className="pt-6">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div>
-                <h4 className="text-sm font-semibold text-gray-900 mb-3 flex items-center gap-2">
-                  <BookOpen className="h-4 w-4 text-blue-600" />
-                  Subjects Taught
-                </h4>
-                <div className="flex flex-wrap gap-2">
-                  {profile.subjects?.map((subject, index) => (
-                    <span key={index} className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-blue-100 text-blue-800">
-                      {subject.name}
-                    </span>
-                  )) || <span className="text-gray-500 text-sm">No subjects assigned</span>}
-                </div>
-              </div>
-              <div>
-                <h4 className="text-sm font-semibold text-gray-900 mb-3 flex items-center gap-2">
-                  <School className="h-4 w-4 text-green-600" />
-                  Classes Assigned
-                </h4>
-                <div className="flex flex-wrap gap-2">
-                  {profile.classes?.map((classItem, index) => (
-                    <span key={index} className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-green-100 text-green-800">
-                      {classItem.name}
-                    </span>
-                  )) || <span className="text-gray-500 text-sm">No classes assigned</span>}
-                </div>
               </div>
             </div>
           </Card.Content>

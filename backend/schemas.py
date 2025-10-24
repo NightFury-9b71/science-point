@@ -11,6 +11,7 @@ from models import UserRole, UserCreate
 class LoginRequest(BaseModel):
     username: str  # Can be username or email
     password: str
+    remember_me: Optional[bool] = False  # Default to False if not provided
 
 class Token(BaseModel):
     access_token: str
