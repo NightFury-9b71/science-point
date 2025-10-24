@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { ArrowLeft, CheckCircle, XCircle, X } from 'lucide-react'
+import { ArrowLeft, CheckCircle, XCircle, X, Download, FileText } from 'lucide-react'
 import { toast } from 'sonner'
 import Card from '../../components/Card'
 import Button from '../../components/Button'
@@ -326,6 +326,316 @@ const TeacherAttendance = () => {
     toast.success('Cleared all attendance marks')
   }
 
+  const handleExportAttendance = () => {
+    if (!selectedClass || !selectedDate || Object.keys(attendance).length === 0) {
+      toast.error('No attendance data to export')
+      return
+    }
+
+    const selectedClassName = myClasses.find(cls => cls.id === parseInt(selectedClass))?.name || 'Unknown Class'
+    const presentCount = Object.values(attendance).filter(data => data?.status === 'present').length
+    
+    // Create a new window for PDF generation
+    const printWindow = window.open('', '_blank')
+    
+    const htmlContent = `
+      <!DOCTYPE html>
+      <html>
+        <head>
+          <title>Attendance Report - ${selectedClassName} - ${selectedDate}</title>
+          <style>
+            body {
+              font-family: 'Times New Roman', serif;
+              margin: 0;
+              padding: 20px;
+              color: #000;
+              background: #fff;
+              line-height: 1.4;
+              font-size: 12px;
+            }
+            .header {
+              text-align: center;
+              border-bottom: 2px solid #000;
+              padding-bottom: 15px;
+              margin-bottom: 25px;
+            }
+            .header h1 {
+              margin: 0;
+              font-size: 18px;
+              font-weight: bold;
+              text-transform: uppercase;
+            }
+            .header h2 {
+              margin: 5px 0 0 0;
+              font-size: 14px;
+              font-weight: normal;
+            }
+            .info-section {
+              margin-bottom: 20px;
+              border: 1px solid #000;
+              padding: 15px;
+            }
+            .info-title {
+              font-weight: bold;
+              text-transform: uppercase;
+              margin-bottom: 10px;
+              font-size: 12px;
+              text-decoration: underline;
+            }
+            .info-content {
+              font-size: 12px;
+              line-height: 1.3;
+              display: flex;
+              justify-content: space-around;
+              align-items: center;
+              flex-wrap: wrap;
+              gap: 15px;
+            }
+            .info-content span {
+              font-weight: bold;
+              white-space: nowrap;
+            }
+            table {
+              width: 100%;
+              border-collapse: collapse;
+              margin: 20px 0;
+              border: 1px solid #000;
+            }
+            th, td {
+              border: 1px solid #000;
+              padding: 8px 10px;
+              text-align: center;
+              font-size: 11px;
+            }
+            th {
+              background-color: #f0f0f0;
+              font-weight: bold;
+              text-transform: uppercase;
+            }
+            td:nth-child(2) {
+              text-align: center;
+            }
+            tr:nth-child(even) {
+              background-color: #f8f9fa;
+            }
+            tr:hover {
+              background-color: #e9ecef;
+            }
+            .status-present { 
+              color: green;
+              font-weight: bold;
+            }
+            .status-absent { 
+              color: red;
+              font-weight: bold;
+            }
+            .status-late { 
+              color: orange;
+              font-weight: bold;
+            }
+            .summary {
+              margin-top: 30px;
+              display: flex;
+              justify-content: center;
+              gap: 20px;
+            }
+            .summary-card {
+              background: linear-gradient(135deg, #ffffff 0%, #E3F2FD 100%);
+              padding: 20px;
+              border-radius: 12px;
+              text-align: center;
+              border: 2px solid #2196F3;
+              box-shadow: 0 4px 12px rgba(33, 150, 243, 0.15);
+              transition: transform 0.2s ease;
+            }
+            .summary-number {
+              font-size: 32px;
+              font-weight: 700;
+              color: #1565C0;
+              margin-bottom: 5px;
+            }
+            .summary-label {
+              font-size: 14px;
+              color: #6c757d;
+              font-weight: 500;
+              text-transform: uppercase;
+              letter-spacing: 0.5px;
+            }
+            .footer {
+              margin-top: 40px;
+              text-align: center;
+              color: #6c757d;
+              font-size: 12px;
+              border-top: 2px solid #dee2e6;
+              padding-top: 20px;
+              background: #f8f9fa;
+              margin-left: -20px;
+              margin-right: -20px;
+              padding-left: 20px;
+              padding-right: 20px;
+            }
+            .text-center { text-align: center; }
+            .student-name {
+              font-weight: 600;
+              color: #495057;
+            }
+            .serial-number {
+              font-weight: 700;
+              color: #6c757d;
+              background: #f8f9fa;
+              width: 30px;
+              height: 30px;
+              border-radius: 50%;
+              display: inline-flex;
+              align-items: center;
+              justify-content: center;
+              font-size: 12px;
+            }
+            .overview {
+              margin-top: 25px;
+              border: 1px solid #000;
+              padding: 15px;
+            }
+            .overview-title {
+              font-weight: bold;
+              text-transform: uppercase;
+              margin-bottom: 10px;
+              text-decoration: underline;
+            }
+            .overview-grid {
+              display: grid;
+              grid-template-columns: repeat(4, 1fr);
+              gap: 10px;
+              margin-top: 10px;
+            }
+            .overview-item {
+              text-align: center;
+              padding: 8px;
+              border: 1px solid #ccc;
+            }
+            .overview-number {
+              font-size: 16px;
+              font-weight: bold;
+              display: block;
+            }
+            .overview-label {
+              font-size: 10px;
+              margin-top: 3px;
+            }
+            .footer {
+              margin-top: 30px;
+              text-align: center;
+              font-size: 10px;
+              border-top: 1px solid #000;
+              padding-top: 10px;
+            }
+            @media print {
+              body { margin: 0; }
+              .overview-item { break-inside: avoid; }
+            }
+          </style>
+        </head>
+        <body>
+          <div class="header">
+            <h1>Science Point Coaching</h1>
+            <h2>Attendance Report</h2>
+          </div>
+          
+          <div class="info-section">
+            <div class="info-title">Report Details</div>
+            <div class="info-content">
+              <span>Class: ${selectedClassName}</span>
+              <span>Date: ${new Date(selectedDate).toLocaleDateString()}</span>
+              <span>Teacher: ${user?.full_name || 'N/A'}</span>
+              <span>Generated: ${new Date().toLocaleDateString()}</span>
+            </div>
+          </div>
+
+          <table>
+            <thead>
+              <tr>
+                <th style="width: 8%;">S.No.</th>
+                <th style="width: 35%;">Student Name</th>
+                <th style="width: 20%;">Roll Number</th>
+                <th style="width: 15%;">Status</th>
+                <th style="width: 22%;">Remarks</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${classStudents.map((student, index) => {
+                const studentAttendance = attendance[student.id]
+                const status = studentAttendance?.status || 'absent'
+                
+                // Safely get student data with fallbacks
+                const studentName = student.user?.full_name || 
+                                  student.user?.name || 
+                                  student.full_name || 
+                                  student.name || 
+                                  'Unknown Student'
+                const rollNumber = student.roll_number || 'N/A'
+                
+                  return `
+                    <tr>
+                      <td class="text-center"><span class="serial-number">${index + 1}</span></td>
+                      <td><span class="student-name">${studentName}</span></td>
+                      <td class="text-center">${rollNumber}</td>
+                      <td class="text-center"><span class="status-${status}">${status.toUpperCase()}</span></td>
+                      <td>${studentAttendance?.remarks || '-'}</td>
+                    </tr>
+                  `
+              }).join('')}
+            </tbody>
+          </table>
+
+          <div class="overview">
+            <div class="overview-title">Attendance Overview</div>
+            <div class="overview-grid">
+              <div class="overview-item">
+                <span class="overview-number">${classStudents.length}</span>
+                <div class="overview-label">Total Students</div>
+              </div>
+              <div class="overview-item">
+                <span class="overview-number">${presentCount}</span>
+                <div class="overview-label">Present</div>
+              </div>
+              <div class="overview-item">
+                <span class="overview-number">${classStudents.length - presentCount}</span>
+                <div class="overview-label">Absent</div>
+              </div>
+              <div class="overview-item">
+                <span class="overview-number">${(() => {
+                  const attendanceRate = presentCount > 0 ? ((presentCount / classStudents.length) * 100) : 0;
+                  if (attendanceRate >= 95) return 'A+';
+                  if (attendanceRate >= 90) return 'A';
+                  if (attendanceRate >= 85) return 'B+';
+                  if (attendanceRate >= 80) return 'B';
+                  if (attendanceRate >= 75) return 'C+';
+                  if (attendanceRate >= 70) return 'C';
+                  return 'F';
+                })()}</span>
+                <div class="overview-label">Grade</div>
+              </div>
+            </div>
+          </div>
+
+          <div class="footer">
+            <p>Science Point Coaching Management System</p>
+            <p>Report generated on ${new Date().toLocaleDateString()} by ${user?.full_name || 'Teacher'}</p>
+          </div>
+        </body>
+      </html>
+    `
+    
+    printWindow.document.write(htmlContent)
+    printWindow.document.close()
+    
+    // Wait for content to load then print
+    setTimeout(() => {
+      printWindow.print()
+      toast.success('PDF export initiated! Please check your browser print dialog.')
+    }, 500)
+  }
+
   return (
     <div className="space-y-4 sm:space-y-6">
       {/* Header */}
@@ -437,7 +747,7 @@ const TeacherAttendance = () => {
             </div>
           )}
           
-          <div className="flex justify-center">
+          <div className="flex justify-center space-x-4">
             <Button
               onClick={() => setShowSubmitModal(true)}
               disabled={!selectedClass || Object.keys(attendance).length === 0}
@@ -445,6 +755,16 @@ const TeacherAttendance = () => {
             >
               {isEditMode ? 'Update Attendance' : 'Submit Attendance'} ({Object.keys(attendance).length} marked)
             </Button>
+            {selectedClass && Object.keys(attendance).length > 0 && (
+              <Button
+                onClick={handleExportAttendance}
+                variant="outline"
+                className="px-6 py-3 text-base font-medium"
+              >
+                <FileText className="h-4 w-4 mr-2" />
+                Export PDF
+              </Button>
+            )}
           </div>
         </div>
       </Card>

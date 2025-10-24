@@ -1390,7 +1390,11 @@ def get_exam_results(
     session: Session = Depends(get_session),
     current_user: User = Depends(require_teacher_or_admin)
 ):
-    statement = select(ExamResult)
+    statement = select(ExamResult).options(
+        selectinload(ExamResult.student).selectinload(Student.user),
+        selectinload(ExamResult.exam).selectinload(Exam.subject),
+        selectinload(ExamResult.exam).selectinload(Exam.class_assigned)
+    )
     if exam_id:
         statement = statement.where(ExamResult.exam_id == exam_id)
     if student_id:
@@ -2320,8 +2324,10 @@ def get_teacher_students(teacher_id: int, session: Session = Depends(get_session
     
     class_ids = [cls.id for cls in teacher_classes]
     
-    # Get all students in those classes
-    statement = select(Student).where(Student.class_id.in_(class_ids))
+    # Get all students in those classes with user relationship
+    statement = select(Student).options(
+        selectinload(Student.user)
+    ).where(Student.class_id.in_(class_ids))
     students = session.exec(statement).all()
     
     return students

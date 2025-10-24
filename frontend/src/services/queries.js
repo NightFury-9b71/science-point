@@ -107,10 +107,19 @@ export const useExamResults = (params = {}) => {
       const resultsRes = await adminAPI.getExamResults(params)
       const results = resultsRes.data
       
-      // Transform results data (keep student_id for later enrichment)
+      // Log the raw response for debugging
+      console.log('Raw API response for exam results:', {
+        params,
+        responseData: results,
+        firstResult: results[0],
+        resultCount: results.length
+      })
+      
+      // Transform results data (keep both field variants for compatibility)
       return results.map(result => ({
         ...result,
-        obtained_marks: result.marks_obtained, // Backend uses 'marks_obtained', frontend expects 'obtained_marks'
+        obtained_marks: result.marks_obtained || result.obtained_marks || 0, // Ensure we have obtained_marks
+        marks_obtained: result.marks_obtained || result.obtained_marks || 0, // Ensure we have marks_obtained  
         student_id: result.student_id // Keep student_id for component-level enrichment
       }))
     },

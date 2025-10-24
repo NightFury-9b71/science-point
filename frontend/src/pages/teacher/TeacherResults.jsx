@@ -1,13 +1,13 @@
 import React, { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { ArrowLeft, Plus, Search, Eye, Download, Upload, AlertCircle } from 'lucide-react'
+import { ArrowLeft, Plus, Search, Eye, Download, Upload, AlertCircle, FileText } from 'lucide-react'
 import { toast } from 'sonner'
 import Card from '../../components/Card'
 import Button from '../../components/Button'
 import Modal from '../../components/Modal'
 import { Input, Select } from '../../components/Form'
 import { useAuth } from '../../contexts/AuthContext'
-import { useTeacherExams, useTeacherClasses, useTeacherSubjects, useExamResults, useCreateResult, useUpdateResult } from '../../services/queries'
+import { useTeacherExams, useTeacherClasses, useTeacherSubjects, useTeacherStudents, useExamResults, useCreateResult, useUpdateResult } from '../../services/queries'
 
 const TeacherResults = () => {
   const navigate = useNavigate()
@@ -16,6 +16,7 @@ const TeacherResults = () => {
   const { data: myExams = [], isLoading: examsLoading } = useTeacherExams(teacherId)
   const { data: myClasses = [] } = useTeacherClasses(teacherId)
   const { data: mySubjects = [] } = useTeacherSubjects(teacherId)
+  const { data: myStudents = [] } = useTeacherStudents(teacherId)
   
   // State for selected exam and results
   const [selectedExamId, setSelectedExamId] = useState('')
@@ -40,8 +41,15 @@ const TeacherResults = () => {
     remarks: ''
   })
 
-  // Get selected exam details
-  const selectedExam = myExams.find(exam => exam.id === parseInt(selectedExamId))
+  // Get selected exam details with correct field names
+  const selectedExam = selectedExamId ? myExams.find(exam => exam.id === parseInt(selectedExamId)) : null
+  
+  // Create consistent field accessors
+  const examTitle = selectedExam?.name || selectedExam?.title || 'Unknown Exam'
+  const examSubject = selectedExam?.subject?.name || 'N/A'
+  const examClass = selectedExam?.class_assigned?.name || selectedExam?.class?.name || 'N/A'
+  const totalMarks = selectedExam?.max_marks || selectedExam?.total_marks || 100
+  const examDate = selectedExam?.exam_date ? new Date(selectedExam.exam_date).toLocaleDateString() : 'N/A'
 
   const handleCreateResult = async (e) => {
     e.preventDefault()
@@ -76,8 +84,8 @@ const TeacherResults = () => {
       return
     }
     
-    if (selectedExam && marksObtained > selectedExam.total_marks) {
-      toast.error(`Marks cannot exceed maximum marks (${selectedExam.total_marks})`)
+    if (selectedExam && marksObtained > totalMarks) {
+      toast.error(`Marks cannot exceed maximum marks (${totalMarks})`)
       return
     }
     
@@ -119,29 +127,37 @@ const TeacherResults = () => {
     setSelectedResult(result)
     setResultForm({
       student_id: result.student_id,
-      obtained_marks: result.obtained_marks.toString(),
+      obtained_marks: (result.marks_obtained || result.obtained_marks || 0).toString(),
       remarks: result.remarks || ''
     })
     setShowEditModal(true)
   }
 
-  const handleExportResults = () => {
+  const handleExportResults = (format = 'csv') => {
     if (!selectedExam || examResults.length === 0) {
       toast.error('No results to export')
       return
     }
 
+    if (format === 'pdf') {
+      exportToPDF()
+    } else {
+      exportToCSV()
+    }
+  }
+
+  const exportToCSV = () => {
     // Create CSV content
     const headers = ['Student Name', 'Roll Number', 'Obtained Marks', 'Total Marks', 'Percentage', 'Grade', 'Remarks']
     const csvContent = [
       headers.join(','),
       ...examResults.map(result => [
-        `"${result.student?.name || 'N/A'}"`,
+        `"${result.student?.user?.full_name || 'N/A'}"`,
         `"${result.student?.roll_number || 'N/A'}"`,
-        result.obtained_marks,
-        selectedExam.total_marks,
-        `${((result.obtained_marks / selectedExam.total_marks) * 100).toFixed(2)}%`,
-        calculateGrade(result.obtained_marks, selectedExam.total_marks),
+        result.marks_obtained || result.obtained_marks || 0,
+        totalMarks,
+        `${(((result.marks_obtained || result.obtained_marks || 0) / totalMarks) * 100).toFixed(2)}%`,
+        calculateGrade(result.marks_obtained || result.obtained_marks || 0, totalMarks),
         `"${result.remarks || ''}"`
       ].join(','))
     ].join('\n')
@@ -151,10 +167,352 @@ const TeacherResults = () => {
     const url = window.URL.createObjectURL(blob)
     const a = document.createElement('a')
     a.href = url
-    a.download = `${selectedExam.title}_Results.csv`
+    a.download = `${examTitle}_Results.csv`
     a.click()
     window.URL.revokeObjectURL(url)
-    toast.success('Results exported successfully!')
+    toast.success('Results exported to CSV successfully!')
+  }
+
+  const exportToPDF = () => {
+    if (!selectedExam || !examResults.length) {
+      toast.error('No exam or results data available for export')
+      return
+    }
+
+    // Debug logging for PDF data
+    console.log('PDF Export Debug:', {
+      examResults,
+      selectedExam,
+      firstResult: examResults[0],
+      studentData: examResults[0]?.student,
+      allResultKeys: examResults[0] ? Object.keys(examResults[0]) : [],
+      studentKeys: examResults[0]?.student ? Object.keys(examResults[0].student) : []
+    })
+
+    // Create a new window for PDF generation
+    const printWindow = window.open('', '_blank')
+    
+    // Safely get exam details with fallbacks
+    const examTitle = selectedExam?.name || selectedExam?.title || 'Unknown Exam'
+    const examSubject = selectedExam?.subject?.name || 'N/A'
+    const examClass = selectedExam?.class_assigned?.name || selectedExam?.class?.name || 'N/A'
+    const totalMarks = selectedExam?.max_marks || selectedExam?.total_marks || 100
+    const examDate = selectedExam?.exam_date ? new Date(selectedExam.exam_date).toLocaleDateString() : 'N/A'
+    
+    const htmlContent = `
+      <!DOCTYPE html>
+      <html>
+        <head>
+          <title>${examTitle} - Results Report</title>
+          <style>
+            body {
+              font-family: 'Times New Roman', serif;
+              margin: 0;
+              padding: 20px;
+              color: #000;
+              background: #fff;
+              line-height: 1.4;
+              font-size: 12px;
+            }
+            .header {
+              text-align: center;
+              border-bottom: 2px solid #000;
+              padding-bottom: 15px;
+              margin-bottom: 25px;
+            }
+            .header h1 {
+              margin: 0;
+              font-size: 18px;
+              font-weight: bold;
+              text-transform: uppercase;
+            }
+            .header h2 {
+              margin: 5px 0 0 0;
+              font-size: 14px;
+              font-weight: normal;
+            }
+            .info-section {
+              margin-bottom: 20px;
+              border: 1px solid #000;
+              padding: 15px;
+            }
+            .info-title {
+              font-weight: bold;
+              text-transform: uppercase;
+              margin-bottom: 10px;
+              font-size: 12px;
+              text-decoration: underline;
+            }
+            .info-content {
+              font-size: 12px;
+              line-height: 1.3;
+              display: flex;
+              justify-content: space-around;
+              align-items: center;
+              flex-wrap: wrap;
+              gap: 15px;
+            }
+            .info-content span {
+              font-weight: bold;
+              white-space: nowrap;
+            }
+              border-collapse: separate;
+              border-spacing: 0;
+            }
+            .info-item {
+              display: table-row;
+            }
+            .info-item .info-value {
+              display: table-cell;
+              background: white;
+              padding: 15px 20px;
+              border: 1px solid #2196F3;
+              font-weight: 600;
+              color: #1565C0;
+              font-size: 16px;
+              text-align: center;
+              vertical-align: middle;
+            }
+            .info-item:first-child .info-value {
+              border-top-left-radius: 8px;
+              border-top-right-radius: 8px;
+            }
+            .info-item:last-child .info-value {
+              border-bottom-left-radius: 8px;
+              border-bottom-right-radius: 8px;
+            }
+            table {
+              width: 100%;
+              border-collapse: collapse;
+              margin: 20px 0;
+              border: 1px solid #000;
+            }
+            th, td {
+              border: 1px solid #000;
+              padding: 8px 10px;
+              text-align: center;
+              font-size: 11px;
+            }
+            th {
+              background-color: #f0f0f0;
+              font-weight: bold;
+              text-transform: uppercase;
+            }
+            td:nth-child(2) {
+              text-align: center;
+            }
+            .overview {
+              margin-top: 25px;
+              border: 1px solid #000;
+              padding: 15px;
+            }
+            .overview-title {
+              font-weight: bold;
+              text-transform: uppercase;
+              margin-bottom: 10px;
+              text-decoration: underline;
+            }
+            .overview-grid {
+              display: grid;
+              grid-template-columns: repeat(4, 1fr);
+              gap: 10px;
+              margin-top: 10px;
+            }
+            .overview-item {
+              text-align: center;
+              padding: 8px;
+              border: 1px solid #ccc;
+            }
+            .overview-number {
+              font-size: 16px;
+              font-weight: bold;
+              display: block;
+            }
+            .overview-label {
+              font-size: 10px;
+              margin-top: 3px;
+            }
+            .footer {
+              margin-top: 30px;
+              text-align: center;
+              font-size: 10px;
+              border-top: 1px solid #000;
+              padding-top: 10px;
+            }
+            @media print {
+              body { margin: 0; }
+              .overview-item { break-inside: avoid; }
+            }
+          </style>
+        </head>
+        <body>
+          <div class="header">
+            <h1>Science Point Coaching</h1>
+            <h2>Examination Results Report</h2>
+          </div>
+          
+          <div class="info-section">
+            <div class="info-title">Examination Details</div>
+            <div class="info-content">
+              <span>Exam: ${examTitle}</span>
+              <span>Subject: ${examSubject}</span>
+              <span>Class: ${examClass}</span>
+              <span>Total Marks: ${totalMarks}</span>
+              <span>Date: ${examDate}</span>
+              <span>Generated: ${new Date().toLocaleDateString()}</span>
+            </div>
+          </div>
+
+          <table>
+            <thead>
+              <tr>
+                <th style="width: 8%;">Rank</th>
+                <th style="width: 30%;">Student Name</th>
+                <th style="width: 15%;">Roll Number</th>
+                <th style="width: 12%;">Obtained</th>
+                <th style="width: 10%;">Total</th>
+                <th style="width: 12%;">Percentage</th>
+                <th style="width: 13%;">Grade</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${examResults
+                .sort((a, b) => (b.marks_obtained || b.obtained_marks || 0) - (a.marks_obtained || a.obtained_marks || 0))
+                .map((result, index) => {
+                  const obtainedMarks = result.marks_obtained || result.obtained_marks || 0
+                  const percentage = totalMarks > 0 ? ((obtainedMarks / totalMarks) * 100).toFixed(2) : '0.00'
+                  const grade = calculateGrade(obtainedMarks, totalMarks)
+                  
+                  // Try to get student data with extensive fallbacks and logging
+                  let studentName = 'Unknown Student'
+                  let rollNumber = 'N/A'
+                  
+                  // Log the result structure for debugging
+                  console.log('Processing result for PDF:', {
+                    resultId: result.id,
+                    studentId: result.student_id,
+                    fullResult: result,
+                    studentObject: result.student,
+                    availableKeys: Object.keys(result),
+                    marks_obtained: result.marks_obtained,
+                    obtained_marks: result.obtained_marks,
+                    extractedMarks: obtainedMarks
+                  })
+                  
+                  // Try multiple paths for student name
+                  if (result.student?.user?.full_name) {
+                    studentName = result.student.user.full_name
+                  } else if (result.student?.user?.name) {
+                    studentName = result.student.user.name
+                  } else if (result.student?.full_name) {
+                    studentName = result.student.full_name
+                  } else if (result.student?.name) {
+                    studentName = result.student.name
+                  } else if (result.student_name) {
+                    studentName = result.student_name
+                  } else if (result.name) {
+                    studentName = result.name
+                  } else {
+                    // Fallback: try to find student in teacher's student list
+                    const teacherStudent = myStudents.find(s => s.id === result.student_id)
+                    if (teacherStudent?.user?.full_name) {
+                      studentName = teacherStudent.user.full_name
+                    } else if (teacherStudent?.name) {
+                      studentName = teacherStudent.name
+                    }
+                  }
+                  
+                  // Try multiple paths for roll number
+                  if (result.student?.roll_number) {
+                    rollNumber = result.student.roll_number
+                  } else if (result.roll_number) {
+                    rollNumber = result.roll_number
+                  } else if (result.student?.student_id) {
+                    rollNumber = result.student.student_id
+                  } else if (result.student_id) {
+                    rollNumber = `ID-${result.student_id}`
+                  } else {
+                    // Fallback: try to find student in teacher's student list
+                    const teacherStudent = myStudents.find(s => s.id === result.student_id)
+                    if (teacherStudent?.roll_number) {
+                      rollNumber = teacherStudent.roll_number
+                    }
+                  }
+                  
+                  return `
+                    <tr>
+                      <td class="text-center">
+                        <span class="rank-badge ${index < 3 ? `rank-${index + 1}` : ''}">${index + 1}</span>
+                      </td>
+                      <td class="student-name">${studentName}</td>
+                      <td class="text-center">${rollNumber}</td>
+                      <td class="text-center">
+                        <span class="marks-obtained">${obtainedMarks}</span>
+                      </td>
+                      <td class="text-center">${totalMarks}</td>
+                      <td class="text-center">
+                        <span class="percentage grade-${grade}">${percentage}%</span>
+                      </td>
+                      <td class="text-center">
+                        <span class="percentage grade-${grade}">${grade}</span>
+                      </td>
+                    </tr>
+                  `
+                }).join('')}
+            </tbody>
+          </table>
+
+          <div class="overview">
+            <div class="overview-title">Results Overview</div>
+            <div class="overview-grid">
+              <div class="overview-item">
+                <span class="overview-number">${examResults.length}</span>
+                <div class="overview-label">Total Students</div>
+              </div>
+              <div class="overview-item">
+                <span class="overview-number">${examResults.length > 0 ? (examResults.reduce((sum, r) => sum + (r.marks_obtained || r.obtained_marks || 0), 0) / examResults.length).toFixed(1) : '0'}</span>
+                <div class="overview-label">Average Marks</div>
+              </div>
+              <div class="overview-item">
+                <span class="overview-number">${examResults.filter(r => {
+                  const marks = r.marks_obtained || r.obtained_marks || 0;
+                  return totalMarks > 0 ? (marks / totalMarks) * 100 >= 40 : false;
+                }).length}</span>
+                <div class="overview-label">Passed</div>
+              </div>
+              <div class="overview-item">
+                <span class="overview-number">${(() => {
+                  const avgPercentage = examResults.length > 0 ? 
+                    (examResults.reduce((sum, r) => sum + (r.marks_obtained || r.obtained_marks || 0), 0) / examResults.length) / totalMarks * 100 : 0;
+                  if (avgPercentage >= 90) return 'A+';
+                  if (avgPercentage >= 80) return 'A';
+                  if (avgPercentage >= 70) return 'B+';
+                  if (avgPercentage >= 60) return 'B';
+                  if (avgPercentage >= 50) return 'C+';
+                  if (avgPercentage >= 40) return 'C';
+                  return 'F';
+                })()}</span>
+                <div class="overview-label">Class Grade</div>
+              </div>
+            </div>
+          </div>
+
+          <div class="footer">
+            <p>Science Point Coaching Management System</p>
+            <p>Report generated on ${new Date().toLocaleDateString()} by ${user?.full_name || 'Teacher'}</p>
+          </div>
+        </body>
+      </html>
+    `
+    
+    printWindow.document.write(htmlContent)
+    printWindow.document.close()
+    
+    // Wait for content to load then print
+    setTimeout(() => {
+      printWindow.print()
+      toast.success('PDF export initiated! Please check your browser\'s print dialog.')
+    }, 500)
   }
 
   const calculateGrade = (obtained, total) => {
@@ -170,20 +528,9 @@ const TeacherResults = () => {
 
   // Filter and sort results
   const filteredResults = examResults
-    .map(result => {
-      // Enrich result with student data from selected exam
-      const student = selectedExam?.students?.find(s => s.id === result.student_id) || null
-      return {
-        ...result,
-        student: student ? {
-          ...student,
-          name: student.name || 'Unknown Student'
-        } : null
-      }
-    })
     .filter(result => {
       const matchesSearch = !searchQuery || 
-        result.student?.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        result.student?.user?.full_name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
         result.student?.roll_number?.toLowerCase().includes(searchQuery.toLowerCase())
       
       return matchesSearch
@@ -191,16 +538,16 @@ const TeacherResults = () => {
     .sort((a, b) => {
       switch (sortBy) {
         case 'student_name':
-          return (a.student?.name || '').localeCompare(b.student?.name || '')
+          return (a.student?.user?.full_name || '').localeCompare(b.student?.user?.full_name || '')
         case 'roll_number':
           return (a.student?.roll_number || '').localeCompare(b.student?.roll_number || '')
         case 'marks_high':
-          return b.obtained_marks - a.obtained_marks
+          return (b.marks_obtained || b.obtained_marks || 0) - (a.marks_obtained || a.obtained_marks || 0)
         case 'marks_low':
-          return a.obtained_marks - b.obtained_marks
+          return (a.marks_obtained || a.obtained_marks || 0) - (b.marks_obtained || b.obtained_marks || 0)
         case 'percentage':
-          const percentA = (a.obtained_marks / (selectedExam?.total_marks || 100)) * 100
-          const percentB = (b.obtained_marks / (selectedExam?.total_marks || 100)) * 100
+          const percentA = ((a.marks_obtained || a.obtained_marks || 0) / (selectedExam?.total_marks || 100)) * 100
+          const percentB = ((b.marks_obtained || b.obtained_marks || 0) / (selectedExam?.total_marks || 100)) * 100
           return percentB - percentA
         default:
           return 0
@@ -224,6 +571,21 @@ const TeacherResults = () => {
     studentsInExam: selectedExam?.students?.length || 0,
     studentsWithoutResults: studentsWithoutResults?.length || 0
   })
+
+  // Detailed logging for examResults structure
+  if (examResults.length > 0) {
+    console.log('First examResult structure:', examResults[0])
+    console.log('Student data in first result:', examResults[0]?.student)
+    console.log('Available properties in result:', Object.keys(examResults[0] || {}))
+    console.log('Marks data:', {
+      marks_obtained: examResults[0]?.marks_obtained,
+      obtained_marks: examResults[0]?.obtained_marks,
+      rawValue: examResults[0]?.marks_obtained || examResults[0]?.obtained_marks
+    })
+    if (examResults[0]?.student) {
+      console.log('Available properties in student:', Object.keys(examResults[0].student || {}))
+    }
+  }
 
   if (!teacherId) {
     return (
@@ -262,12 +624,20 @@ const TeacherResults = () => {
           </Button>
           <h2 className="text-lg sm:text-xl font-semibold">Exam Results</h2>
         </div>
-                <div className="flex space-x-2">
+        <div className="flex space-x-2">
           {selectedExamId && examResults.length > 0 && (
-            <Button onClick={handleExportResults} size="sm" variant="outline">
-              <Download className="h-4 w-4 mr-1 sm:mr-2" />
-              <span className="hidden sm:inline">Export</span>
-            </Button>
+            <div className="relative inline-block text-left">
+              <div className="flex space-x-1">
+                <Button onClick={() => handleExportResults('csv')} size="sm" variant="outline">
+                  <Download className="h-4 w-4 mr-1 sm:mr-2" />
+                  <span className="hidden sm:inline">CSV</span>
+                </Button>
+                <Button onClick={() => handleExportResults('pdf')} size="sm" variant="outline">
+                  <FileText className="h-4 w-4 mr-1 sm:mr-2" />
+                  <span className="hidden sm:inline">PDF</span>
+                </Button>
+              </div>
+            </div>
           )}
           {selectedExamId && (
             <Button 
@@ -352,11 +722,11 @@ const TeacherResults = () => {
             <div className="bg-blue-50 p-4 rounded-lg">
               <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center space-y-2 sm:space-y-0">
                 <div>
-                  <h3 className="font-medium text-blue-900">{selectedExam.title}</h3>
+                  <h3 className="font-medium text-blue-900">{examTitle}</h3>
                   <p className="text-blue-700 text-sm">
-                    {selectedExam.subject?.name} • {selectedExam.class?.name} • 
-                    Total Marks: {selectedExam.total_marks} • 
-                    Date: {new Date(selectedExam.exam_date).toLocaleDateString()}
+                    {examSubject} • {examClass} • 
+                    Total Marks: {totalMarks} • 
+                    Date: {examDate}
                   </p>
                 </div>
                 <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4">
@@ -403,20 +773,20 @@ const TeacherResults = () => {
                   </div>
                   <div>
                     <div className="text-2xl font-bold text-green-600">
-                      {examResults.filter(r => (r.obtained_marks / selectedExam.total_marks) * 100 >= 40).length}
+                      {examResults.filter(r => ((r.marks_obtained || r.obtained_marks || 0) / totalMarks) * 100 >= 40).length}
                     </div>
                     <div className="text-sm text-gray-600">Passed</div>
                   </div>
                   <div>
                     <div className="text-2xl font-bold text-red-600">
-                      {examResults.filter(r => (r.obtained_marks / selectedExam.total_marks) * 100 < 40).length}
+                      {examResults.filter(r => ((r.marks_obtained || r.obtained_marks || 0) / totalMarks) * 100 < 40).length}
                     </div>
                     <div className="text-sm text-gray-600">Failed</div>
                   </div>
                   <div>
                     <div className="text-2xl font-bold text-purple-600">
                       {examResults.length > 0 
-                        ? ((examResults.reduce((sum, r) => sum + r.obtained_marks, 0) / examResults.length / selectedExam.total_marks) * 100).toFixed(1)
+                        ? ((examResults.reduce((sum, r) => sum + (r.marks_obtained || r.obtained_marks || 0), 0) / examResults.length / totalMarks) * 100).toFixed(1)
                         : 0}%
                     </div>
                     <div className="text-sm text-gray-600">Avg Score</div>
@@ -427,8 +797,9 @@ const TeacherResults = () => {
               {/* Results Table */}
               <div className="space-y-4">
                 {filteredResults.map((result) => {
-                  const percentage = ((result.obtained_marks / selectedExam.total_marks) * 100).toFixed(2)
-                  const grade = calculateGrade(result.obtained_marks, selectedExam.total_marks)
+                  const obtainedMarks = result.marks_obtained || result.obtained_marks || 0
+                  const percentage = ((obtainedMarks / totalMarks) * 100).toFixed(2)
+                  const grade = calculateGrade(obtainedMarks, totalMarks)
                   const passed = percentage >= 40
 
                   return (
@@ -437,7 +808,7 @@ const TeacherResults = () => {
                         <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start space-y-2 sm:space-y-0">
                           <div className="flex-1">
                             <h3 className="font-semibold text-gray-900 text-sm sm:text-base">
-                              {result.student?.name || 'Unknown Student'}
+                              {result.student?.user?.full_name || result.student?.name || 'Unknown Student'}
                             </h3>
                             <p className="text-gray-600 text-sm">
                               Roll: {result.student?.roll_number || 'N/A'}
@@ -454,7 +825,7 @@ const TeacherResults = () => {
                         <div className="grid grid-cols-2 sm:grid-cols-5 gap-4 text-xs sm:text-sm">
                           <div>
                             <span className="text-gray-500 block">Obtained</span>
-                            <span className="font-medium">{result.obtained_marks}/{selectedExam.total_marks}</span>
+                            <span className="font-medium">{obtainedMarks}/{totalMarks}</span>
                           </div>
                           <div>
                             <span className="text-gray-500 block">Percentage</span>
@@ -547,11 +918,11 @@ const TeacherResults = () => {
               required
             />
           <Input
-            label={`Obtained Marks (out of ${selectedExam?.total_marks || 0})`}
+            label={`Obtained Marks (out of ${totalMarks})`}
             type="number"
             step="0.5"
             min="0"
-            max={selectedExam?.total_marks || 100}
+            max={totalMarks}
             value={resultForm.obtained_marks}
             onChange={(e) => setResultForm({ ...resultForm, obtained_marks: e.target.value })}
             required
@@ -597,15 +968,15 @@ const TeacherResults = () => {
             <div className="bg-gray-50 p-3 rounded">
               <span className="text-sm font-medium text-gray-700">Student: </span>
               <span className="text-gray-900">
-                {selectedResult.student?.name} ({selectedResult.student?.roll_number})
+                {selectedResult.student?.user?.full_name || selectedResult.student?.name || 'Unknown Student'} ({selectedResult.student?.roll_number})
               </span>
             </div>
             <Input
-              label={`Obtained Marks (out of ${selectedExam?.total_marks || 0})`}
+              label={`Obtained Marks (out of ${totalMarks})`}
               type="number"
               step="0.5"
               min="0"
-              max={selectedExam?.total_marks || 100}
+              max={totalMarks}
               value={resultForm.obtained_marks}
               onChange={(e) => setResultForm({ ...resultForm, obtained_marks: e.target.value })}
               required

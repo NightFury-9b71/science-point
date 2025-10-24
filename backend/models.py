@@ -248,6 +248,7 @@ class ExamRead(ExamBase):
     subject_id: int
     class_id: int
     subject: Optional[SubjectRead] = None
+    class_assigned: Optional[ClassRead] = None
 
 class ExamResultBase(SQLModel):
     marks_obtained: float = Field(ge=0)
@@ -279,6 +280,7 @@ class ExamResultRead(ExamResultBase):
     exam_id: int
     student_id: int
     exam: Optional[ExamRead] = None
+    student: Optional[StudentRead] = None
 
 class StudyMaterialBase(SQLModel):
     title: str = Field(max_length=200)
