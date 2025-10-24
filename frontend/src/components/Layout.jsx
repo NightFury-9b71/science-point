@@ -1,0 +1,534 @@
+import React, { useState, useEffect, useMemo } from 'react'
+import { useNavigate, useLocation } from 'react-router-dom'
+import { Menu, X, LogOut, User, Settings, GraduationCap, BookOpen, Users, Calendar, Award, BarChart3, Home, Clock, Shield, UserCheck, Bell, FileText, Upload } from 'lucide-react'
+import { useAuth } from '../contexts/AuthContext'
+import { useTeacherNotices, useStudentNotices } from '../services/queries'
+import { noticeUtils } from '../utils/noticeUtils'
+import Button from './Button'
+
+const Layout = ({ children }) => {
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
+  const [userMenuOpen, setUserMenuOpen] = useState(false)
+  const navigate = useNavigate()
+  const location = useLocation()
+  const { user, logout } = useAuth()
+  
+  // Get notices count for notification bell
+  const teacherId = user?.teacher_id || user?.teacherId
+  const studentId = user?.student_id || user?.studentId
+  
+  const { data: teacherNotices = [] } = useTeacherNotices()
+  const { data: studentNotices = [] } = useStudentNotices(studentId)
+  
+  const noticesCount = user?.role === 'teacher' ? noticeUtils.getUnreadCount(teacherNotices) : user?.role === 'student' ? noticeUtils.getUnreadCount(studentNotices) : 0
+  
+  // Close menus when route changes
+  useEffect(() => {
+    setMobileMenuOpen(false)
+    setUserMenuOpen(false)
+  }, [location.pathname])
+
+  const handleLogout = () => {
+    logout()
+    navigate('/')
+  }
+
+  const getUserDisplayName = () => {
+    return user?.username || 'User'
+  }
+
+  const getRoleColor = () => {
+    switch (user?.role) {
+      case 'admin':
+        return 'text-red-600 bg-red-50 border-red-200'
+      case 'teacher':
+        return 'text-blue-600 bg-blue-50 border-blue-200'
+      case 'student':
+        return 'text-green-600 bg-green-50 border-green-200'
+      default:
+        return 'text-gray-600 bg-gray-50 border-gray-200'
+    }
+  }
+
+  // Navigation items based on user role - memoized to prevent re-renders
+  const navigationItems = useMemo(() => {
+    const currentPath = location.pathname
+    
+    if (user?.role === 'admin') {
+      return [
+        {
+          name: 'Dashboard',
+          href: '/admin-dashboard',
+          icon: Home,
+          current: currentPath === '/admin-dashboard' || currentPath === '/admin-dashboard/'
+        },
+        {
+          name: 'Students',
+          href: '/admin-dashboard/students',
+          icon: Users,
+          current: currentPath === '/admin-dashboard/students'
+        },
+        {
+          name: 'Teachers',
+          href: '/admin-dashboard/teachers',
+          icon: UserCheck,
+          current: currentPath === '/admin-dashboard/teachers'
+        },
+        {
+          name: 'Classes',
+          href: '/admin-dashboard/classes',
+          icon: BookOpen,
+          current: currentPath === '/admin-dashboard/classes'
+        },
+        {
+          name: 'Schedule',
+          href: '/admin-dashboard/schedule',
+          icon: Clock,
+          current: currentPath === '/admin-dashboard/schedule'
+        },
+        {
+          name: 'Performance',
+          href: '/admin-dashboard/performance',
+          icon: BarChart3,
+          current: currentPath === '/admin-dashboard/performance'
+        },
+        {
+          name: 'Subjects',
+          href: '/admin-dashboard/subjects',
+          icon: Award,
+          current: currentPath === '/admin-dashboard/subjects'
+        },
+        {
+          name: 'Notices',
+          href: '/admin-dashboard/notices',
+          icon: Bell,
+          current: currentPath === '/admin-dashboard/notices'
+        }
+      ]
+    }
+    
+    if (user?.role === 'teacher') {
+      return [
+        {
+          name: 'Dashboard',
+          href: '/teacher',
+          icon: Home,
+          current: currentPath === '/teacher'
+        },
+        {
+          name: 'My Classes',
+          href: '/teacher/classes',
+          icon: BookOpen,
+          current: currentPath === '/teacher/classes'
+        },
+        {
+          name: 'Schedule',
+          href: '/teacher/schedule',
+          icon: Clock,
+          current: currentPath === '/teacher/schedule'
+        },
+        {
+          name: 'Students',
+          href: '/teacher/students',
+          icon: Users,
+          current: currentPath === '/teacher/students'
+        },
+        {
+          name: 'Attendance',
+          href: '/teacher/attendance',
+          icon: Calendar,
+          current: currentPath === '/teacher/attendance'
+        },
+        {
+          name: 'Exams',
+          href: '/teacher/exams',
+          icon: Award,
+          current: currentPath === '/teacher/exams'
+        },
+        {
+          name: 'Results',
+          href: '/teacher/results',
+          icon: FileText,
+          current: currentPath === '/teacher/results'
+        },
+        {
+          name: 'Performance',
+          href: '/teacher/performance',
+          icon: BarChart3,
+          current: currentPath === '/teacher/performance'
+        },
+        {
+          name: 'Materials',
+          href: '/teacher/materials',
+          icon: Upload,
+          current: currentPath === '/teacher/materials'
+        },
+      ]
+    }
+
+    if (user?.role === 'student') {
+      return [
+        {
+          name: 'Dashboard',
+          href: '/student',
+          icon: Home,
+          current: currentPath === '/student' || currentPath === '/student/'
+        },
+        {
+          name: 'Results',
+          href: '/student/results',
+          icon: Award,
+          current: currentPath === '/student/results'
+        },
+        {
+          name: 'Schedule',
+          href: '/student/schedule',
+          icon: Clock,
+          current: currentPath === '/student/schedule'
+        },
+        {
+          name: 'Notices',
+          href: '/student/notices',
+          icon: Bell,
+          current: currentPath === '/student/notices'
+        },
+        {
+          name: 'Materials',
+          href: '/student/materials',
+          icon: FileText,
+          current: currentPath === '/student/materials'
+        }
+      ]
+    }
+    
+    return []
+  }, [user?.role, location.pathname])
+
+  return (
+    <div className="min-h-screen bg-gray-50">
+      {/* Header */}
+      <header className="bg-white shadow-sm border-b border-gray-200">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex justify-between items-center py-4">
+            {/* Logo */}
+            <button 
+              onClick={() => navigate('/')}
+              className="flex items-center space-x-2 hover:opacity-80 transition-opacity focus:outline-none focus:ring-2 focus:ring-blue-500 rounded-lg p-1"
+            >
+              <GraduationCap className="h-8 w-8 text-blue-600" />
+              <h1 className="text-xl font-bold text-gray-900">
+                Science Point
+              </h1>
+            </button>
+
+            {/* User Menu */}
+            <div className="flex items-center space-x-4">
+              {/* Notifications Bell - For Teachers and Students */}
+              {(user?.role === 'teacher' || user?.role === 'student') && (
+                <button
+                  onClick={() => {
+                    if (user?.role === 'teacher') {
+                      navigate('/teacher/notices')
+                    } else if (user?.role === 'student') {
+                      navigate('/student/notices')
+                    }
+                  }}
+                  className="relative p-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-full transition-colors"
+                >
+                  <Bell className="h-5 w-5" />
+                  {noticesCount > 0 && (
+                    <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs font-bold rounded-full h-5 w-5 flex items-center justify-center min-w-[20px]">
+                      {noticesCount > 99 ? '99+' : noticesCount}
+                    </span>
+                  )}
+                </button>
+              )}
+
+              {/* User Info */}
+              <div className="hidden sm:flex items-center space-x-3">
+                <div className="text-right">
+                  <div className="text-sm font-semibold text-gray-900 leading-tight">
+                    {getUserDisplayName()}
+                  </div>
+                  <div className={`text-xs font-medium ${getRoleColor()} leading-tight`}>
+                    {user?.role?.charAt(0).toUpperCase() + user?.role?.slice(1)}
+                  </div>
+                </div>
+              </div>
+
+              {/* Desktop User Menu */}
+              <div className="relative">
+                <button
+                  onClick={() => setUserMenuOpen(!userMenuOpen)}
+                  className="flex items-center p-1 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-full transition-colors"
+                >
+                  <div className="w-8 h-8 rounded-full overflow-hidden bg-gray-200 flex items-center justify-center">
+                    {user?.photo_url || (user?.photo_path && user.photo_path.startsWith('http')) ? (
+                      <img 
+                        src={user.photo_url || user.photo_path} 
+                        alt={`${user?.full_name || 'User'} profile`}
+                        className="w-full h-full object-cover"
+                      />
+                    ) : (
+                      <span className="text-gray-600 font-medium text-sm">
+                        {(user?.full_name || user?.username || 'U').charAt(0).toUpperCase()}
+                      </span>
+                    )}
+                  </div>
+                </button>
+                {userMenuOpen && (
+                  <div className="absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg border border-gray-200 py-1 z-50">
+                    <button
+                      className="w-full text-left px-4 py-3 text-sm text-gray-700 hover:bg-gray-100 flex items-center space-x-2 border-b border-gray-100"
+                      onClick={() => {
+                        setUserMenuOpen(false)
+                        // Navigate to profile based on user role
+                        if (user?.role === 'admin') {
+                          navigate('/admin-dashboard/profile')
+                        } else if (user?.role === 'teacher') {
+                          navigate('/teacher/profile')
+                        } else if (user?.role === 'student') {
+                          navigate('/student/profile')
+                        }
+                      }}
+                    >
+                      <User className="h-4 w-4" />
+                      <span>Profile</span>
+                    </button>
+                    <button
+                      onClick={handleLogout}
+                      className="w-full text-left px-4 py-3 text-sm text-red-700 hover:bg-red-50 flex items-center space-x-2"
+                    >
+                      <LogOut className="h-4 w-4" />
+                      <span>Sign Out</span>
+                    </button>
+                  </div>
+                )}
+              </div>
+
+              {/* Mobile Menu Button */}
+              <button
+                type="button"
+                className="p-2 rounded-md text-gray-600 hover:text-gray-900 hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500 lg:hidden"
+                onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+              >
+                {mobileMenuOpen ? (
+                  <X className="h-6 w-6" />
+                ) : (
+                  <Menu className="h-6 w-6" />
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+
+        {/* Mobile menu */}
+        <>
+          {/* Backdrop */}
+          <div 
+            className={`fixed inset-0 bg-black/50 z-40 lg:hidden transition-opacity duration-300 ${
+              mobileMenuOpen ? 'opacity-100' : 'opacity-0 pointer-events-none'
+            }`}
+            onClick={() => setMobileMenuOpen(false)}
+          />
+          {/* Mobile Menu */}
+          <div className={`fixed top-0 left-0 bottom-0 w-80 max-w-[90vw] bg-white border-r border-gray-200 shadow-xl z-50 lg:hidden transform transition-transform duration-300 ease-in-out ${
+            mobileMenuOpen ? 'translate-x-0' : '-translate-x-full'
+          }`}>
+            <div className="px-4 py-3 space-y-2 max-h-screen overflow-y-auto">
+              {/* Close Button */}
+              <div className="flex justify-end mb-2">
+                <button
+                  onClick={() => setMobileMenuOpen(false)}
+                  className="p-2 rounded-md text-gray-500 hover:text-gray-700 hover:bg-gray-100 transition-colors"
+                >
+                  <X className="h-5 w-5" />
+                </button>
+              </div>
+              
+              {/* User Profile Section */}
+              <div className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-lg p-4 mb-4 border border-blue-100">
+                <div className="flex items-center space-x-3">
+                  <div className="w-12 h-12 rounded-full overflow-hidden bg-gradient-to-br from-blue-100 to-blue-200 flex items-center justify-center ring-2 ring-blue-200">
+                    {user?.photo_url || (user?.photo_path && user.photo_path.startsWith('http')) ? (
+                      <img
+                        src={user.photo_url || user.photo_path}
+                        alt={`${user?.full_name || 'User'} profile`}
+                        className="w-full h-full object-cover"
+                      />
+                    ) : (
+                      <span className="text-blue-600 font-bold text-lg">
+                        {(user?.full_name || user?.username || 'U').charAt(0).toUpperCase()}
+                      </span>
+                    )}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <h3 className="text-base font-semibold text-gray-900 truncate">
+                      {getUserDisplayName()}
+                    </h3>
+                    <div className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium mt-1 ${getRoleColor()}`}>
+                      {user?.role?.charAt(0).toUpperCase() + user?.role?.slice(1)}
+                    </div>
+                  </div>
+                </div>
+              </div>
+              
+              {/* Mobile Navigation */}
+              {navigationItems.map((item) => {
+                const Icon = item.icon
+                return (
+                  <button
+                    key={item.name}
+                    onClick={(e) => {
+                      e.preventDefault()
+                      e.stopPropagation()
+                      navigate(item.href)
+                      setMobileMenuOpen(false)
+                    }}
+                    className={`w-full text-left px-3 py-2 text-sm rounded-md flex items-center space-x-2 transition-colors ${
+                      item.current
+                        ? 'bg-blue-50 text-blue-700 font-medium'
+                        : 'text-gray-700 hover:bg-gray-100'
+                    }`}
+                    type="button"
+                  >
+                    <Icon className="h-4 w-4" />
+                    <span>{item.name}</span>
+                  </button>
+                )
+              })}
+              
+              {navigationItems.length > 0 && <div className="border-t border-gray-200 my-2"></div>}
+              
+              {/* Notifications - For Teachers and Students */}
+              {(user?.role === 'teacher' || user?.role === 'student') && (
+                <button
+                  className="w-full text-left px-3 py-2 text-sm text-gray-700 hover:bg-gray-100 rounded-md flex items-center space-x-2"
+                  onClick={() => {
+                    setMobileMenuOpen(false)
+                    if (user?.role === 'teacher') {
+                      navigate('/teacher/notices')
+                    } else if (user?.role === 'student') {
+                      navigate('/student/notices')
+                    }
+                  }}
+                >
+                  <div className="relative">
+                    <Bell className="h-4 w-4" />
+                    {noticesCount > 0 && (
+                      <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs font-bold rounded-full h-4 w-4 flex items-center justify-center min-w-[16px]">
+                        {noticesCount > 99 ? '99+' : noticesCount}
+                      </span>
+                    )}
+                  </div>
+                  <span>Notices</span>
+                  {noticesCount > 0 && (
+                    <span className="ml-auto text-xs text-gray-500">
+                      ({noticesCount})
+                    </span>
+                  )}
+                </button>
+              )}
+              
+              <button
+                className="w-full text-left px-3 py-2 text-sm text-gray-700 hover:bg-gray-100 rounded-md flex items-center space-x-2"
+                onClick={() => {
+                  setMobileMenuOpen(false)
+                  // Navigate to profile based on user role
+                  if (user?.role === 'admin') {
+                    navigate('/admin-dashboard/profile')
+                  } else if (user?.role === 'teacher') {
+                    navigate('/teacher/profile')
+                  } else if (user?.role === 'student') {
+                    navigate('/student/profile')
+                  }
+                }}
+              >
+                <User className="h-4 w-4" />
+                <span>Profile</span>
+              </button>
+              <button
+                className="w-full text-left px-3 py-2 text-sm text-gray-700 hover:bg-gray-100 rounded-md flex items-center space-x-2"
+                onClick={() => setMobileMenuOpen(false)}
+              >
+                <Settings className="h-4 w-4" />
+                <span>Settings</span>
+              </button>
+              <button
+                onClick={handleLogout}
+                className="w-full text-left px-3 py-2 text-sm text-red-700 hover:bg-red-50 rounded-md flex items-center space-x-2"
+              >
+                <LogOut className="h-4 w-4" />
+                <span>Sign Out</span>
+              </button>
+            </div>
+          </div>
+        </>
+      </header>
+
+      {/* Navigation Tabs - Desktop */}
+      {navigationItems.length > 0 && (
+        <nav className="bg-white shadow-sm border-b border-gray-200 hidden lg:block">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div className="flex space-x-8 overflow-x-auto">
+              {navigationItems.map((item) => {
+                const Icon = item.icon
+                return (
+                  <button
+                    key={item.name}
+                    onClick={(e) => {
+                      e.preventDefault()
+                      e.stopPropagation()
+                      navigate(item.href)
+                    }}
+                    className={`flex items-center space-x-2 py-4 px-1 border-b-2 font-medium text-sm whitespace-nowrap transition-colors ${
+                      item.current
+                        ? 'border-blue-500 text-blue-600'
+                        : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                    }`}
+                    type="button"
+                  >
+                    <Icon className="h-5 w-5" />
+                    <span>{item.name}</span>
+                  </button>
+                )
+              })}
+            </div>
+          </div>
+        </nav>
+      )}
+
+      {/* Main Content */}
+      <main className="flex-1">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-6 lg:py-8">
+          {children}
+        </div>
+      </main>
+
+      {/* Footer */}
+      <footer className="bg-white border-t border-gray-200 py-3 sm:py-4">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex flex-col sm:flex-row justify-between items-center gap-3 sm:gap-4">
+            <div className="text-xs sm:text-sm text-gray-600 text-center sm:text-left">
+              © 2024 Science Point. All rights reserved.
+            </div>
+            <div className="flex flex-col sm:flex-row items-center gap-2 sm:gap-4 text-xs sm:text-sm">
+              <button
+                onClick={() => navigate('/developer')}
+                className="text-blue-600 hover:text-blue-800 transition-colors font-medium whitespace-nowrap"
+              >
+                👨‍💻 About Developer
+              </button>
+              <span className="text-gray-400 hidden sm:inline">|</span>
+              <span className="text-gray-600 text-center sm:text-left">
+                Made with ❤️ by Abdullah Al Noman
+              </span>
+            </div>
+          </div>
+        </div>
+      </footer>
+    </div>
+  )
+}
+
+export default Layout

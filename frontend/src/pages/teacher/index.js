@@ -1,0 +1,12 @@
+// Teacher Dashboard Components
+export { default as TeacherOverview } from './TeacherOverview'
+export { default as TeacherClasses } from './TeacherClasses'
+export { default as TeacherStudents } from './TeacherStudents'
+export { default as TeacherAttendance } from './TeacherAttendance'
+export { default as TeacherExams } from './TeacherExams'
+export { default as TeacherResults } from './TeacherResults'
+export { default as TeacherSchedule } from './TeacherSchedule'
+export { default as TeacherNotices } from './TeacherNotices'
+export { default as TeacherPerformance } from './TeacherPerformance'
+export { default as TeacherMaterials } from './TeacherMaterials'
+export { default as TeacherProfile } from './TeacherProfile'
