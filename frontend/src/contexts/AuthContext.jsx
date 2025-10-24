@@ -23,6 +23,29 @@ export const AuthProvider = ({ children }) => {
   const [showTokenWarning, setShowTokenWarning] = useState(false)
   const [tokenTimeRemaining, setTokenTimeRemaining] = useState(0)
 
+  // Handle logout when token expires
+  const handleLogout = useCallback(() => {
+    try {
+      const userName = user?.full_name || user?.username || 'User'
+      
+      // Clear all auth data
+      tokenManager.clearAuth()
+      
+      // Clear state
+      setUser(null)
+      setIsAuthenticated(false)
+      setShowTokenWarning(false)
+      
+      // Only show goodbye message if not due to expiration
+      if (!tokenManager.validateToken().isExpired) {
+        toast.success(`Goodbye, ${userName}! 👋`)
+      }
+    } catch (error) {
+      Logger.error('Logout error:', error)
+      toast.info('You have been logged out.')
+    }
+  }, [user])
+
   // Token monitoring and validation
   const checkTokenStatus = useCallback(() => {
     const tokenStatus = tokenManager.validateToken()
@@ -45,7 +68,7 @@ export const AuthProvider = ({ children }) => {
     }
 
     return true
-  }, [isAuthenticated, user])
+  }, [isAuthenticated, user, handleLogout])
 
   // Check authentication on app start
   useEffect(() => {
@@ -105,29 +128,6 @@ export const AuthProvider = ({ children }) => {
     window.addEventListener('authError', handleAuthError)
     return () => window.removeEventListener('authError', handleAuthError)
   }, [isAuthenticated, handleLogout])
-
-  // Handle logout when token expires
-  const handleLogout = useCallback(() => {
-    try {
-      const userName = user?.full_name || user?.username || 'User'
-      
-      // Clear all auth data
-      tokenManager.clearAuth()
-      
-      // Clear state
-      setUser(null)
-      setIsAuthenticated(false)
-      setShowTokenWarning(false)
-      
-      // Only show goodbye message if not due to expiration
-      if (!tokenManager.validateToken().isExpired) {
-        toast.success(`Goodbye, ${userName}! 👋`)
-      }
-    } catch (error) {
-      Logger.error('Logout error:', error)
-      toast.info('You have been logged out.')
-    }
-  }, [user])
 
   const login = async (credentials, rememberMe = false) => {
     try {

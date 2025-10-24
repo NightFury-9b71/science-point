@@ -1,6 +1,10 @@
 from sqlmodel import SQLModel, create_engine, Session
 import os
 from sqlalchemy import text
+from dotenv import load_dotenv
+
+# Load environment variables first
+load_dotenv()
 
 # Import models to ensure they're registered with SQLModel
 from models import *

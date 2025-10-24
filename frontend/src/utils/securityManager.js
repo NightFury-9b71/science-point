@@ -22,7 +22,17 @@ class SecurityManager {
   // Content Security Policy configuration
   getCSPDirectives() {
     const isProduction = config.isProduction
-    const apiBaseUrl = new URL(config.api.baseURL).origin
+    const isDevelopment = config.isDevelopment
+    const apiBaseUrl = config.api.baseURL
+
+    // Parse API URL to get origin, handle cases where it might not be a full URL
+    let apiOrigin
+    try {
+      apiOrigin = new URL(apiBaseUrl).origin
+    } catch {
+      // If API URL is not a valid URL, assume it's localhost
+      apiOrigin = apiBaseUrl.startsWith('http') ? apiBaseUrl : `http://${apiBaseUrl}`
+    }
 
     return {
       'default-src': ["'self'"],
@@ -48,7 +58,7 @@ class SecurityManager {
         "'self'",
         'data:',
         'blob:',
-        apiBaseUrl,
+        apiOrigin,
         'https://res.cloudinary.com', // Cloudinary image delivery
         'https://cloudinary.com'
         // CDN integration removed
@@ -56,11 +66,13 @@ class SecurityManager {
       ],
       'connect-src': [
         "'self'",
-        apiBaseUrl,
+        'null', // Allow null origin in development
+        apiOrigin,
         'https://api.cloudinary.com', // Cloudinary upload API
         'https://res.cloudinary.com', // Cloudinary resource API
         'https://*.cloudinary.com', // Any Cloudinary subdomain
         'https://cloudinary.com', // Base Cloudinary domain
+        ...(isDevelopment ? ['http://localhost:*', 'http://127.0.0.1:*'] : []), // Allow localhost in development
         // Sentry and analytics integration removed
         // ...(config.services.sentry.enabled ? ['https://sentry.io'] : []),
         // ...(config.services.analytics.enabled ? ['https://www.google-analytics.com'] : []),
@@ -136,24 +148,26 @@ class SecurityManager {
 
   // Apply security headers (for client-side enforcement)
   applyClientSecurityMeasures() {
-    if (!config.security.enableCSP) {
-      Logger.info('CSP disabled via configuration')
+    // Remove any existing CSP meta tags first
+    const existingCSPTags = document.querySelectorAll('meta[http-equiv="Content-Security-Policy"]')
+    existingCSPTags.forEach(tag => tag.remove())
+    
+    // Completely disable CSP in development mode
+    if (config.isDevelopment) {
+      Logger.info('CSP disabled in development mode - removed any existing CSP tags')
       return
     }
 
-    // Apply CSP based on environment
-    if (config.isProduction || config.security.enableCSP) {
-      // Create meta tag for CSP if not already present
-      if (!document.querySelector('meta[http-equiv="Content-Security-Policy"]')) {
-        const cspHeader = this.generateCSPHeader()
-        const meta = document.createElement('meta')
-        meta.httpEquiv = 'Content-Security-Policy'
-        meta.content = cspHeader
-        document.head.appendChild(meta)
-        Logger.info('CSP meta tag applied:', cspHeader)
-      }
+    // Apply CSP only if explicitly enabled in production
+    if (config.security.enableCSP) {
+      const cspHeader = this.generateCSPHeader()
+      const meta = document.createElement('meta')
+      meta.httpEquiv = 'Content-Security-Policy'
+      meta.content = cspHeader
+      document.head.appendChild(meta)
+      Logger.info('CSP meta tag applied:', cspHeader)
     } else {
-      Logger.info('CSP disabled in development mode')
+      Logger.info('CSP disabled via configuration')
     }
 
     // Add security-related attributes to forms

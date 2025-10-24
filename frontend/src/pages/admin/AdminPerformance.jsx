@@ -31,6 +31,18 @@ const AdminPerformance = () => {
 
   const isLoading = studentsLoading || resultsLoading || attendanceLoading || examsLoading
 
+  // Debug logs
+  useEffect(() => {
+    console.log('Performance Page Data:', {
+      studentsCount: students.length,
+      classesCount: classes.length,
+      subjectsCount: subjects.length,
+      examsCount: exams.length,
+      resultsCount: allExamResults.length,
+      attendanceCount: allAttendance.length
+    })
+  }, [students, classes, subjects, exams, allExamResults, allAttendance])
+
   // Calculate real performance data
   const performanceData = useMemo(() => {
     if (!students.length) return { classStats: {}, studentPerformance: [] }
@@ -150,39 +162,49 @@ const AdminPerformance = () => {
     try {
       return performanceData.studentPerformance
         .filter(item => {
-          const matchesSearch = !searchTerm || 
-            item.student.user?.full_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-            item.student.roll_number?.toLowerCase().includes(searchTerm.toLowerCase())
+          // Search filter - check multiple fields
+          const matchesSearch = !searchTerm || (
+            (item.student.user?.full_name || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+            (item.student.roll_number || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+            (item.student.user?.email || '').toLowerCase().includes(searchTerm.toLowerCase())
+          )
+          
+          // Class filter
           const matchesClass = !selectedClass || item.student.class_id === parseInt(selectedClass)
+          
           return matchesSearch && matchesClass
         })
         .sort((a, b) => {
           let valueA, valueB
           switch (sortBy) {
             case 'name':
-              valueA = a.student.user?.full_name || ''
-              valueB = b.student.user?.full_name || ''
+              valueA = (a.student.user?.full_name || '').toLowerCase()
+              valueB = (b.student.user?.full_name || '').toLowerCase()
               break
             case 'marks':
-              valueA = a.marksPerformance
-              valueB = b.marksPerformance
+              valueA = a.marksPerformance || 0
+              valueB = b.marksPerformance || 0
               break
             case 'attendance':
-              valueA = a.attendancePerformance
-              valueB = b.attendancePerformance
+              valueA = a.attendancePerformance || 0
+              valueB = b.attendancePerformance || 0
               break
             case 'overall':
             default:
-              valueA = a.overallPerformance
-              valueB = b.overallPerformance
+              valueA = a.overallPerformance || 0
+              valueB = b.overallPerformance || 0
           }
           
-          if (sortOrder === 'asc') {
-            return valueA > valueB ? 1 : -1
+          if (typeof valueA === 'string') {
+            return sortOrder === 'asc' ? valueA.localeCompare(valueB) : valueB.localeCompare(valueA)
           } else {
-            return valueA < valueB ? 1 : -1
+            return sortOrder === 'asc' ? valueA - valueB : valueB - valueA
           }
         })
+        .map((item, index) => ({
+          ...item,
+          rank: index + 1
+        }))
     } catch (error) {
       console.error('Error filtering performance data:', error)
       return []
@@ -200,13 +222,13 @@ const AdminPerformance = () => {
 
   // Bangladeshi GPA system
   const getPerformanceGrade = (score) => {
-    if (score >= 80) return { grade: 'A+', points: '5.00', class: 'text-green-600 bg-green-50' }
-    if (score >= 70) return { grade: 'A', points: '4.00', class: 'text-green-600 bg-green-50' }
-    if (score >= 60) return { grade: 'A-', points: '3.50', class: 'text-blue-600 bg-blue-50' }
-    if (score >= 50) return { grade: 'B', points: '3.00', class: 'text-blue-600 bg-blue-50' }
-    if (score >= 40) return { grade: 'C', points: '2.00', class: 'text-yellow-600 bg-yellow-50' }
-    if (score >= 33) return { grade: 'D', points: '1.00', class: 'text-orange-600 bg-orange-50' }
-    return { grade: 'F', points: '0.00', class: 'text-red-600 bg-red-50' }
+    if (score >= 80) return { grade: 'A+', points: 5.00, class: 'text-green-600 bg-green-50' }
+    if (score >= 70) return { grade: 'A', points: 4.00, class: 'text-green-600 bg-green-50' }
+    if (score >= 60) return { grade: 'A-', points: 3.50, class: 'text-blue-600 bg-blue-50' }
+    if (score >= 50) return { grade: 'B', points: 3.00, class: 'text-blue-600 bg-blue-50' }
+    if (score >= 40) return { grade: 'C', points: 2.00, class: 'text-yellow-600 bg-yellow-50' }
+    if (score >= 33) return { grade: 'D', points: 1.00, class: 'text-orange-600 bg-orange-50' }
+    return { grade: 'F', points: 0.00, class: 'text-red-600 bg-red-50' }
   }
 
   const handleViewDetails = (performance) => {
@@ -372,14 +394,20 @@ const AdminPerformance = () => {
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div className="relative">
               <label className="block text-sm font-medium text-gray-700 mb-1">Search Students</label>
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+              <Search className="absolute left-3 top-9 h-4 w-4 text-gray-400 pointer-events-none" />
               <Input
                 type="text"
-                placeholder="Search by name or roll number..."
+                placeholder="Search by name, roll number, or email..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 className="pl-10"
+                disabled={isLoading}
               />
+              {searchTerm && (
+                <div className="text-xs text-gray-500 mt-1">
+                  Found {filteredData.length} student{filteredData.length !== 1 ? 's' : ''}
+                </div>
+              )}
             </div>
             
             <div>
@@ -388,13 +416,18 @@ const AdminPerformance = () => {
                 value={selectedClass}
                 onChange={(e) => setSelectedClass(e.target.value)}
                 className="w-full"
+                disabled={isLoading}
               >
                 <option value="">All Classes</option>
-                {classes.map((cls) => (
-                  <option key={cls.id} value={cls.id}>
-                    {cls.name} (Grade {cls.grade})
-                  </option>
-                ))}
+                {classes && classes.length > 0 ? (
+                  classes.map((cls) => (
+                    <option key={cls.id} value={cls.id}>
+                      {cls.name} {cls.grade ? `(Grade ${cls.grade})` : ''}
+                    </option>
+                  ))
+                ) : (
+                  <option disabled>Loading classes...</option>
+                )}
               </Select>
             </div>
             
@@ -412,6 +445,22 @@ const AdminPerformance = () => {
               </Select>
             </div>
           </div>
+          
+          {/* Clear filters button */}
+          {(searchTerm || selectedClass) && (
+            <div className="flex justify-end mt-4">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => {
+                  setSearchTerm('')
+                  setSelectedClass('')
+                }}
+              >
+                Clear Filters
+              </Button>
+            </div>
+          )}
         </Card.Content>
       </Card>
 
@@ -562,9 +611,18 @@ const AdminPerformance = () => {
                         <p className="text-sm">
                           {students.length === 0 
                             ? "No students found in the system."
-                            : "No exam results or attendance data found for current filters."
+                            : searchTerm
+                              ? `No students match your search "${searchTerm}".`
+                              : selectedClass
+                                ? "No performance data found for selected class."
+                                : "No exam results or attendance data found."
                           }
                         </p>
+                        {!isLoading && (
+                          <div className="mt-4 text-xs text-gray-400">
+                            Data available: {students.length} students, {classes.length} classes, {exams.length} exams, {allExamResults.length} results
+                          </div>
+                        )}
                       </div>
                     </td>
                   </tr>
