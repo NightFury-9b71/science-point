@@ -50,6 +50,9 @@ export const useClasses = () => {
   })
 }
 
+// usePublicClasses is defined later in the file with the public hook signature,
+// so this earlier duplicate definition has been removed to avoid redeclaration.
+
 export const useSubjects = () => {
   return useQuery({
     queryKey: queryKeys.subjects,

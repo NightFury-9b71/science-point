@@ -7,9 +7,9 @@ import {
 import { toast } from 'sonner'
 import Card from '../../components/Card'
 import Button from '../../components/Button'
-import { Input, Select } from '../../components/Form'
+import { Input } from '../../components/Form'
 import { ViewModal } from '../../components/modals'
-import { useStudents, useSubjects, useClasses, useExamResults, useAttendance, useExams } from '../../services/queries'
+import { useStudents, useSubjects, usePublicClasses, useExamResults, useAttendance, useExams } from '../../services/queries'
 
 const AdminPerformance = () => {
   const navigate = useNavigate()
@@ -24,7 +24,7 @@ const AdminPerformance = () => {
   // Data queries
   const { data: students = [], isLoading: studentsLoading } = useStudents()
   const { data: subjects = [] } = useSubjects()
-  const { data: classes = [] } = useClasses()
+  const { data: classes = [], isLoading: classesLoading, error: classesError } = usePublicClasses()
   const { data: allExamResults = [], isLoading: resultsLoading } = useExamResults()
   const { data: allAttendance = [], isLoading: attendanceLoading } = useAttendance()
   const { data: exams = [], isLoading: examsLoading } = useExams()
@@ -256,6 +256,32 @@ const AdminPerformance = () => {
     }
 
     try {
+      // Calculate statistics for PDF from filtered data
+      const totalStudents = filteredData.length
+      
+      // Calculate average marks
+      const validMarks = filteredData.filter(item => item.marksPerformance > 0)
+      const averageClassMarks = validMarks.length > 0 
+        ? Math.round(validMarks.reduce((sum, item) => sum + item.marksPerformance, 0) / validMarks.length)
+        : 0
+      
+      // Calculate average attendance
+      const validAttendance = filteredData.filter(item => item.attendancePerformance > 0)
+      const averageClassAttendance = validAttendance.length > 0
+        ? Math.round(validAttendance.reduce((sum, item) => sum + item.attendancePerformance, 0) / validAttendance.length)
+        : 0
+      
+      // Count excellent performers (A+ grade)
+      const excellentPerformers = filteredData.filter(item => item.overallPerformance >= 85).length
+      
+      // Count good performers (A and A- grades)
+      const goodPerformers = filteredData.filter(item => 
+        item.overallPerformance >= 70 && item.overallPerformance < 85
+      ).length
+      
+      // Count students needing improvement (F grade)
+      const needsImprovement = filteredData.filter(item => item.overallPerformance < 50).length
+
       // Create HTML content for PDF
       const htmlContent = `
         <!DOCTYPE html>
@@ -270,9 +296,9 @@ const AdminPerformance = () => {
             table { width: 100%; border-collapse: collapse; margin-top: 20px; }
             th, td { border: 1px solid #d1d5db; padding: 8px; text-align: left; }
             th { background-color: #f3f4f6; font-weight: bold; }
-            .grade-A\\+ { background-color: #dcfce7; color: #166534; }
+            .grade-A-plus { background-color: #dcfce7; color: #166534; }
             .grade-A { background-color: #dcfce7; color: #166534; }
-            .grade-A\\- { background-color: #dbeafe; color: #1e40af; }
+            .grade-A-minus { background-color: #dbeafe; color: #1e40af; }
             .grade-B { background-color: #dbeafe; color: #1e40af; }
             .grade-C { background-color: #fef3c7; color: #d97706; }
             .grade-D { background-color: #fed7aa; color: #ea580c; }
@@ -285,7 +311,7 @@ const AdminPerformance = () => {
           <h1>সায়েন্স পয়েন্ট - Student Performance Report</h1>
           <div class="header-info">
             <p>Report Generated: ${new Date().toLocaleDateString('en-GB')}</p>
-            <p>Total Students: ${filteredData.length}</p>
+            <p>Total Students: ${totalStudents}</p>
           </div>
           
           <div class="summary">
@@ -315,6 +341,8 @@ const AdminPerformance = () => {
               ${filteredData.map((item) => {
                 const grade = getPerformanceGrade(item.overallPerformance)
                 const className = classes.find(cls => cls.id === item.student.class_id)?.name || 'N/A'
+                // Convert grade for CSS class names (A+ -> A-plus, A- -> A-minus)
+                const gradeClass = grade.grade.replace('+', '-plus').replace('-', '-minus')
                 return `
                   <tr>
                     <td class="text-center">${item.rank || 0}</td>
@@ -324,8 +352,8 @@ const AdminPerformance = () => {
                     <td class="text-center">${item.marksPerformance || 0}%</td>
                     <td class="text-center">${item.attendancePerformance || 0}%</td>
                     <td class="text-center">${item.overallPerformance || 0}%</td>
-                    <td class="text-center grade-${grade.grade}">${grade.grade}</td>
-                    <td class="text-center">${grade.points}</td>
+                    <td class="text-center grade-${gradeClass}">${grade.grade}</td>
+                    <td class="text-center">${Number(grade.points).toFixed(2)}</td>
                   </tr>
                 `
               }).join('')}
@@ -337,6 +365,11 @@ const AdminPerformance = () => {
 
       // Create a new window and print as PDF
       const printWindow = window.open('', '_blank', 'width=800,height=600')
+      if (!printWindow) {
+        toast.error('Popup blocked. Please allow popups and try again.')
+        return
+      }
+      
       printWindow.document.write(htmlContent)
       printWindow.document.close()
       
@@ -412,11 +445,11 @@ const AdminPerformance = () => {
             
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Filter by Class</label>
-              <Select
+              <select
                 value={selectedClass}
                 onChange={(e) => setSelectedClass(e.target.value)}
-                className="w-full"
-                disabled={isLoading}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                disabled={isLoading || classesLoading}
               >
                 <option value="">All Classes</option>
                 {classes && classes.length > 0 ? (
@@ -426,23 +459,26 @@ const AdminPerformance = () => {
                     </option>
                   ))
                 ) : (
-                  <option disabled>Loading classes...</option>
+                  <option disabled>
+                    {classesLoading ? 'Loading classes...' : classesError ? 'Error loading classes' : 'No classes found'}
+                  </option>
                 )}
-              </Select>
+              </select>
             </div>
             
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Time Period</label>
-              <Select
+              <select
                 value={selectedPeriod}
                 onChange={(e) => setSelectedPeriod(e.target.value)}
-                className="w-full"
+                className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                disabled={isLoading}
               >
                 <option value="all">All Time</option>
                 <option value="month">This Month</option>
                 <option value="quarter">This Quarter</option>
                 <option value="year">This Year</option>
-              </Select>
+              </select>
             </div>
           </div>
           
