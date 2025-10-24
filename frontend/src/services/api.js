@@ -128,7 +128,9 @@ export const adminAPI = {
     return api.get(`/admin/attendance?${queryParams}`)
   },
   markAttendance: (attendanceData) => api.post('/admin/attendance', attendanceData),
+  markBulkAttendance: (attendanceArray) => api.post('/admin/attendance/bulk', attendanceArray),
   updateAttendance: (attendanceId, attendanceData) => api.put(`/admin/attendance/${attendanceId}`, attendanceData),
+  updateBulkAttendance: (attendanceArray) => api.put('/admin/attendance/bulk', attendanceArray),
   
   // Exams
   getExams: () => api.get('/admin/exams'),
@@ -221,7 +223,13 @@ export const teacherAPI = {
   getMyClasses: (teacherId) => api.get(`/teacher/${teacherId}/classes`),
   getMyStudents: (teacherId) => api.get(`/teacher/${teacherId}/students`),
   getMySubjects: (teacherId) => api.get(`/teacher/${teacherId}/subjects`),
-  markAttendance: (attendanceData) => adminAPI.markAttendance(attendanceData),
+  markAttendance: (attendanceData) => {
+    // If it's an array, use bulk endpoint for efficiency
+    if (Array.isArray(attendanceData)) {
+      return adminAPI.markBulkAttendance(attendanceData)
+    }
+    return adminAPI.markAttendance(attendanceData)
+  },
   getClassAttendance: (classId) => adminAPI.getAttendance({ class_id: classId }),
   createExam: (examData) => adminAPI.createExam(examData),
   getMyExams: (teacherId) => api.get(`/teacher/${teacherId}/exams`),

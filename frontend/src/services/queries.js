@@ -412,18 +412,92 @@ export const useMarkAttendance = () => {
     mutationFn: async (attendanceDataArray) => {
       // Handle both single attendance record and bulk records
       if (Array.isArray(attendanceDataArray)) {
-        // Bulk submission - send multiple requests
-        const promises = attendanceDataArray.map(data => 
-          adminAPI.markAttendance(data)
-        )
-        return Promise.all(promises)
+        // Use the new bulk endpoint for efficiency
+        return teacherAPI.markAttendance(attendanceDataArray)
       } else {
         // Single submission
         return teacherAPI.markAttendance(attendanceDataArray)
       }
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: queryKeys.attendance })
+    onMutate: async (variables) => {
+      // Optimistic update - immediately update cache before request completes
+      if (Array.isArray(variables)) {
+        const classId = variables[0]?.class_id
+        const date = variables[0]?.date?.split('T')[0]
+        
+        if (classId && date) {
+          // Cancel any outgoing refetches
+          await queryClient.cancelQueries(['classAttendance', classId, date])
+          
+          // Snapshot the previous value
+          const previousAttendance = queryClient.getQueryData(['classAttendance', classId, date])
+          
+          // Optimistically update to the new value
+          queryClient.setQueryData(['classAttendance', classId, date], () => {
+            return variables.map((record, index) => ({
+              id: previousAttendance?.[index]?.id || Date.now() + index,
+              student_id: record.student_id,
+              class_id: record.class_id,
+              date: record.date,
+              status: record.status,
+              remarks: record.remarks || '',
+              is_present: record.status === 'present'
+            }))
+          })
+          
+          // Return a context object with the snapshotted value
+          return { previousAttendance, classId, date }
+        }
+      }
+    },
+    onError: (err, variables, context) => {
+      console.error('Attendance submission error:', err)
+      console.error('Error details:', {
+        message: err.message,
+        response: err.response?.data,
+        status: err.response?.status,
+        variables: variables
+      })
+      // If the mutation fails, use the context returned from onMutate to roll back
+      if (context?.previousAttendance) {
+        queryClient.setQueryData(
+          ['classAttendance', context.classId, context.date], 
+          context.previousAttendance
+        )
+      }
+    },
+    onSuccess: (data, variables) => {
+      console.log('Attendance submission successful:', data)
+      console.log('Variables:', variables)
+      // Update the cache with the actual server response
+      if (Array.isArray(variables)) {
+        const classId = variables[0]?.class_id
+        const date = variables[0]?.date?.split('T')[0]
+        
+        if (classId && date) {
+          // For bulk response, data.data contains the array of created records
+          const attendanceRecords = data?.data || data
+          
+          // Update with real server data
+          queryClient.setQueryData(['classAttendance', classId, date], () => {
+            return attendanceRecords.map((record) => ({
+              id: record.id,
+              student_id: record.student_id,
+              class_id: record.class_id,
+              date: record.date,
+              status: record.status,
+              remarks: record.remarks || '',
+              is_present: record.status === 'present'
+            }))
+          })
+        }
+      }
+      
+      // Invalidate broader attendance queries for consistency
+      queryClient.invalidateQueries({ 
+        queryKey: queryKeys.attendance,
+        refetchType: 'none'
+      })
     },
   })
 }
@@ -470,7 +544,16 @@ export const useRecordExamResult = () => {
   return useMutation({
     mutationFn: (resultData) => teacherAPI.recordExamResult(resultData),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: queryKeys.examResults })
+      // Invalidate all examResults queries, regardless of parameters
+      queryClient.invalidateQueries({ 
+        queryKey: queryKeys.examResults,
+        exact: false 
+      })
+      // Also invalidate student exam results since new results affect students
+      queryClient.invalidateQueries({ 
+        queryKey: ['studentExamResults'],
+        exact: false 
+      })
     },
   })
 }
@@ -624,7 +707,16 @@ export const useCreateResult = () => {
   return useMutation({
     mutationFn: (resultData) => adminAPI.createExamResult(resultData),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: queryKeys.examResults })
+      // Invalidate all examResults queries, regardless of parameters
+      queryClient.invalidateQueries({ 
+        queryKey: queryKeys.examResults,
+        exact: false 
+      })
+      // Also invalidate student exam results since new results affect students
+      queryClient.invalidateQueries({ 
+        queryKey: ['studentExamResults'],
+        exact: false 
+      })
     },
   })
 }
@@ -635,7 +727,16 @@ export const useUpdateResult = () => {
   return useMutation({
     mutationFn: ({ id, ...resultData }) => adminAPI.updateExamResult(id, resultData),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: queryKeys.examResults })
+      // Invalidate all examResults queries, regardless of parameters
+      queryClient.invalidateQueries({ 
+        queryKey: queryKeys.examResults,
+        exact: false 
+      })
+      // Also invalidate student exam results since updated results affect students
+      queryClient.invalidateQueries({ 
+        queryKey: ['studentExamResults'],
+        exact: false 
+      })
     },
   })
 }
@@ -671,6 +772,10 @@ export const useClassAttendance = (classId, date) => {
     queryKey: ['classAttendance', classId, date],
     queryFn: () => adminAPI.getAttendance({ class_id: classId, date }).then(res => res.data),
     enabled: !!classId && !!date,
+    staleTime: 1000 * 60 * 5, // Consider data fresh for 5 minutes
+    cacheTime: 1000 * 60 * 30, // Keep in cache for 30 minutes
+    refetchOnWindowFocus: false, // Don't refetch when window gains focus
+    placeholderData: (previousData) => previousData, // Keep previous data while refetching
   })
 }
 
@@ -682,6 +787,135 @@ export const useUpdateAttendance = () => {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: queryKeys.attendance })
       queryClient.invalidateQueries({ queryKey: ['classAttendance'] })
+    },
+  })
+}
+
+export const useBulkUpdateAttendance = () => {
+  const queryClient = useQueryClient()
+  
+  return useMutation({
+    mutationFn: async (attendanceUpdates) => {
+      console.log('Processing bulk attendance updates:', attendanceUpdates)
+      
+      // Use the actual bulk endpoint instead of sequential individual updates
+      try {
+        const result = await adminAPI.updateBulkAttendance(attendanceUpdates)
+        console.log('Bulk update successful:', result.data || result)
+        return result.data || result
+      } catch (error) {
+        console.error('Bulk update failed, falling back to individual updates:', error)
+        
+        // Fallback: Use individual updates sequentially if bulk fails
+        const results = []
+        const errors = []
+        
+        for (let i = 0; i < attendanceUpdates.length; i++) {
+          const update = attendanceUpdates[i]
+          try {
+            console.log(`Processing fallback update ${i + 1}/${attendanceUpdates.length}:`, update)
+            
+            const result = await adminAPI.updateAttendance(update.attendanceId, {
+              student_id: update.student_id,
+              class_id: update.class_id,
+              date: update.date,
+              status: update.status,
+              remarks: update.remarks || ''
+            })
+            
+            results.push(result.data || result)
+          } catch (error) {
+            console.error(`Error updating attendance ${i + 1}:`, error)
+            errors.push(`Student ${i + 1}: ${error.response?.data?.detail || error.message}`)
+          }
+        }
+        
+        if (errors.length > 0 && results.length === 0) {
+          // All failed
+          throw new Error(`All updates failed: ${errors.join('; ')}`)
+        } else if (errors.length > 0) {
+          // Partial success
+          console.warn(`Partial success: ${results.length} succeeded, ${errors.length} failed`, errors)
+        }
+        
+        return results
+      }
+    },
+    onMutate: async (variables) => {
+      // Optimistic update for bulk attendance updates
+      if (Array.isArray(variables) && variables.length > 0) {
+        const classId = variables[0]?.class_id
+        const date = variables[0]?.date?.split('T')[0]
+        
+        if (classId && date) {
+          // Cancel any outgoing refetches
+          await queryClient.cancelQueries(['classAttendance', classId, date])
+          
+          // Snapshot the previous value
+          const previousAttendance = queryClient.getQueryData(['classAttendance', classId, date])
+          
+          // Optimistically update to the new values
+          queryClient.setQueryData(['classAttendance', classId, date], (oldData) => {
+            if (!oldData) return oldData
+            
+            return oldData.map(record => {
+              const update = variables.find(upd => 
+                (upd.attendanceId === record.id || upd.id === record.id)
+              )
+              if (update) {
+                return {
+                  ...record,
+                  status: update.status || record.status,
+                  remarks: update.remarks || record.remarks,
+                  is_present: (update.status || record.status) === 'present'
+                }
+              }
+              return record
+            })
+          })
+          
+          return { previousAttendance, classId, date }
+        }
+      }
+    },
+    onError: (err, variables, context) => {
+      console.error('Bulk attendance update error:', err)
+      // Rollback optimistic update on error
+      if (context?.previousAttendance) {
+        queryClient.setQueryData(
+          ['classAttendance', context.classId, context.date], 
+          context.previousAttendance
+        )
+      }
+    },
+    onSuccess: (data, variables) => {
+      console.log('Bulk attendance update successful:', data)
+      
+      // Update cache with server response
+      if (Array.isArray(variables) && variables.length > 0) {
+        const classId = variables[0]?.class_id
+        const date = variables[0]?.date?.split('T')[0]
+        
+        if (classId && date && data) {
+          queryClient.setQueryData(['classAttendance', classId, date], (oldData) => {
+            if (!oldData) return oldData
+            
+            return oldData.map(record => {
+              const updatedRecord = data.find(upd => upd.id === record.id)
+              return updatedRecord ? {
+                ...updatedRecord,
+                is_present: updatedRecord.status === 'present'
+              } : record
+            })
+          })
+        }
+      }
+      
+      // Invalidate broader attendance queries for consistency
+      queryClient.invalidateQueries({ 
+        queryKey: queryKeys.attendance,
+        refetchType: 'none'
+      })
     },
   })
 }

@@ -34,7 +34,7 @@ const AdminTeachers = () => {
   const [sortBy, setSortBy] = useState('name')
   const [editForm, setEditForm] = useState(() => ({
     user: { full_name: '', phone: '' },
-    employee_id: '', salary: 200
+    employee_id: '', salary: 200, address: ''
   }))
 
   // Filter and sort teachers
@@ -260,7 +260,8 @@ const AdminTeachers = () => {
         phone: teacher.user?.phone || ''
       },
       employee_id: teacher.employee_id || '',
-      salary: teacher.salary || 200
+      salary: teacher.salary || 200,
+      address: teacher.address || ''
     })
     setShowEditModal(true)
   }
@@ -639,7 +640,7 @@ Please keep these credentials secure and share them with the teacher.`
         title="Add New Teacher"
         initialData={{
           user: { full_name: '', phone: '', password: '' },
-          employee_id: generateEmployeeId(), salary: 200
+          employee_id: generateEmployeeId(), salary: 200, address: ''
         }}
         submitText="Create Teacher"
         isLoading={createTeacher.isPending}
@@ -663,6 +664,13 @@ Please keep these credentials secure and share them with the teacher.`
             type: 'tel',
             required: true,
             placeholder: "Enter teacher's phone number"
+          },
+          {
+            name: 'address',
+            label: 'Address',
+            type: 'textarea',
+            required: false,
+            placeholder: "Enter teacher's address"
           },
           {
             name: 'employee_id',
@@ -741,6 +749,11 @@ Please keep these credentials secure and share them with the teacher.`
                 key: 'email', 
                 label: 'Email', 
                 value: selectedTeacher?.user?.email
+              },
+              { 
+                key: 'address', 
+                label: 'Address', 
+                value: selectedTeacher?.address || 'Not Provided'
               }
             ]
           },
@@ -826,6 +839,12 @@ Please keep these credentials secure and share them with the teacher.`
             label: 'Phone Number',
             type: 'tel',
             required: true
+          },
+          {
+            name: 'address',
+            label: 'Address',
+            type: 'textarea',
+            required: false
           },
           {
             name: 'employee_id',

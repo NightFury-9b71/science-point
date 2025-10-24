@@ -1000,9 +1000,10 @@ def mark_attendance(
     session: Session = Depends(get_session),
     current_user: User = Depends(require_teacher_or_admin)
 ):
-    # Check if attendance already exists for this student on this date
+    # Check if attendance already exists for this student, class and date combination
     statement = select(Attendance).where(
         Attendance.student_id == attendance.student_id,
+        Attendance.class_id == attendance.class_id,
         func.date(Attendance.date) == attendance.date.date()
     )
     existing = session.exec(statement).first()
@@ -1010,14 +1011,83 @@ def mark_attendance(
     if existing:
         raise HTTPException(
             status_code=400,
-            detail="Attendance already marked for this student today"
+            detail=f"Attendance already marked for this student in this class on {attendance.date.date()}"
         )
     
-    db_attendance = Attendance(**attendance.dict())
-    session.add(db_attendance)
-    session.commit()
-    session.refresh(db_attendance)
-    return db_attendance
+    try:
+        db_attendance = Attendance(**attendance.dict())
+        session.add(db_attendance)
+        session.commit()
+        session.refresh(db_attendance)
+        return db_attendance
+    except Exception as e:
+        session.rollback()
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to mark attendance: {str(e)}"
+        )
+
+@app.post("/admin/attendance/bulk", tags=["Admin - Attendance"], response_model=List[AttendanceRead])
+def mark_bulk_attendance(
+    attendance_list: List[AttendanceCreate], 
+    session: Session = Depends(get_session),
+    current_user: User = Depends(require_teacher_or_admin)
+):
+    """Mark attendance for multiple students at once"""
+    if not attendance_list:
+        raise HTTPException(status_code=400, detail="No attendance data provided")
+    
+    created_records = []
+    errors = []
+    
+    for i, attendance in enumerate(attendance_list):
+        try:
+            # Check if attendance already exists for this student, class and date combination
+            statement = select(Attendance).where(
+                Attendance.student_id == attendance.student_id,
+                Attendance.class_id == attendance.class_id,
+                func.date(Attendance.date) == attendance.date.date()
+            )
+            existing = session.exec(statement).first()
+            
+            if existing:
+                errors.append(f"Student {attendance.student_id}: Attendance already marked for this class on {attendance.date.date()}")
+                continue
+            
+            db_attendance = Attendance(**attendance.dict())
+            session.add(db_attendance)
+            session.flush()  # Flush but don't commit yet
+            created_records.append(db_attendance)
+            
+        except Exception as e:
+            errors.append(f"Student {attendance.student_id}: {str(e)}")
+    
+    if errors and not created_records:
+        # All records failed
+        session.rollback()
+        raise HTTPException(
+            status_code=400,
+            detail=f"Failed to mark attendance for all students: {'; '.join(errors)}"
+        )
+    
+    try:
+        session.commit()
+        # Refresh all created records
+        for record in created_records:
+            session.refresh(record)
+        
+        if errors:
+            # Some records failed, log the errors but return successful ones
+            print(f"Partial success - errors: {errors}")
+        
+        return created_records
+        
+    except Exception as e:
+        session.rollback()
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to commit attendance records: {str(e)}"
+        )
 
 @app.put("/admin/attendance/{attendance_id}", tags=["Admin - Attendance"], response_model=AttendanceRead)
 def update_attendance(
@@ -1040,6 +1110,105 @@ def update_attendance(
     session.commit()
     session.refresh(db_attendance)
     return db_attendance
+
+@app.put("/admin/attendance/bulk", tags=["Admin - Attendance"], response_model=List[AttendanceRead])
+def update_bulk_attendance(
+    attendance_updates: List[dict], 
+    session: Session = Depends(get_session),
+    current_user: User = Depends(require_teacher_or_admin)
+):
+    """Update attendance for multiple students at once"""
+    if not attendance_updates:
+        raise HTTPException(status_code=400, detail="No attendance data provided")
+    
+    print(f"Received bulk update request with {len(attendance_updates)} records")
+    print(f"Sample record: {attendance_updates[0] if attendance_updates else 'None'}")
+    
+    updated_records = []
+    errors = []
+    
+    for i, update_data in enumerate(attendance_updates):
+        try:
+            print(f"Processing record {i+1}: {update_data}")
+            
+            # Try different field names for attendance ID
+            attendance_id = (update_data.get('attendanceId') or 
+                           update_data.get('id') or 
+                           update_data.get('attendance_id'))
+            
+            if not attendance_id:
+                error_msg = f"Record {i+1}: Missing attendance ID. Available fields: {list(update_data.keys())}"
+                print(error_msg)
+                errors.append(error_msg)
+                continue
+                
+            # Get existing attendance record
+            db_attendance = session.get(Attendance, attendance_id)
+            if not db_attendance:
+                error_msg = f"Record {i+1}: Attendance record with ID {attendance_id} not found"
+                print(error_msg)
+                errors.append(error_msg)
+                continue
+            
+            # Update the attendance record with proper field mapping
+            updated_fields = []
+            
+            # Update status field - this is the most important field
+            if 'status' in update_data and update_data['status'] is not None:
+                old_status = db_attendance.status
+                db_attendance.status = update_data['status']
+                # Also update is_present for consistency
+                db_attendance.is_present = update_data['status'] == 'present'
+                updated_fields.append(f"status: {old_status} -> {update_data['status']}")
+                updated_fields.append(f"is_present: {not (update_data['status'] == 'present')} -> {update_data['status'] == 'present'}")
+            
+            # Update other fields if provided
+            for field, value in update_data.items():
+                if field in ['attendanceId', 'id', 'attendance_id', 'status']:
+                    continue  # Skip ID fields and status (already handled)
+                if hasattr(db_attendance, field) and value is not None:
+                    old_value = getattr(db_attendance, field)
+                    setattr(db_attendance, field, value)
+                    updated_fields.append(f"{field}: {old_value} -> {value}")
+            
+            print(f"Updated fields for record {attendance_id}: {updated_fields}")
+            
+            session.add(db_attendance)
+            session.flush()  # Flush but don't commit yet
+            updated_records.append(db_attendance)
+            
+        except Exception as e:
+            error_msg = f"Record {i+1}: {str(e)}"
+            print(f"Error processing record {i+1}: {e}")
+            errors.append(error_msg)
+    
+    if errors and not updated_records:
+        # All records failed
+        session.rollback()
+        error_detail = f"Failed to update attendance for all records. Errors: {'; '.join(errors)}"
+        print(error_detail)
+        raise HTTPException(status_code=400, detail=error_detail)
+    
+    try:
+        session.commit()
+        print(f"Successfully committed {len(updated_records)} attendance updates")
+        
+        # Refresh all updated records
+        for record in updated_records:
+            session.refresh(record)
+        
+        if errors:
+            # Some records failed, log the errors but return successful ones
+            print(f"Partial success - {len(updated_records)} succeeded, {len(errors)} failed")
+            print(f"Errors: {errors}")
+        
+        return updated_records
+        
+    except Exception as e:
+        session.rollback()
+        error_detail = f"Failed to commit attendance updates: {str(e)}"
+        print(error_detail)
+        raise HTTPException(status_code=500, detail=error_detail)
 
 @app.get("/admin/attendance", tags=["Admin - Attendance"], response_model=List[AttendanceRead])
 def get_attendance(
