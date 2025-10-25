@@ -35,7 +35,7 @@ const DeveloperPage = () => {
       description: 'Full-stack web application for managing coaching centers with role-based authentication, scheduling, and student management.',
       tech: ['React.js', 'FastAPI', 'SQLModel', 'JWT Auth'],
       github: 'https://github.com/NightFury-9b71/science-point',
-      live: 'https://science-point.vercel.app'
+      live: 'https://science-point.onrender.com'
     },
     {
       name: 'Personal Portfolio Website',
@@ -49,6 +49,7 @@ const DeveloperPage = () => {
       description: 'Full-stack web application for book lovers to exchange, share, and discover books. Features user authentication, book listings, and exchange management.',
       tech: ['Python', 'JavaScript', 'FastAPI', 'React.js'],
       github: 'https://github.com/NightFury-9b71/Boi-Adda'
+      live: 'https://boi-adda.onrender.com'
     },
     {
       name: 'JUST Inventory Management System',
