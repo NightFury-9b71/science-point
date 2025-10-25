@@ -33,25 +33,38 @@ const DeveloperPage = () => {
     {
       name: 'Science Point - Coaching Center Management',
       description: 'Full-stack web application for managing coaching centers with role-based authentication, scheduling, and student management.',
-      tech: ['React.js', 'FastAPI', 'SQLModel', 'JWT Auth']
+      tech: ['React.js', 'FastAPI', 'SQLModel', 'JWT Auth'],
+      github: 'https://github.com/NightFury-9b71/science-point',
+      live: 'https://science-point.vercel.app'
     },
     {
-      name: 'Student Information System',
-      description: 'Comprehensive system for tracking student progress, attendance, and academic performance.',
-      tech: ['Python', 'React', 'PostgreSQL']
+      name: 'Personal Portfolio Website',
+      description: 'Modern, responsive portfolio website showcasing projects, achievements, certifications, and club activities. Built with React and designed following SOLID principles.',
+      tech: ['React.js', 'Vite', 'Tailwind CSS', 'JavaScript'],
+      github: 'https://github.com/NightFury-9b71/portfolio',
+      live: 'https://nomanstine.vercel.app'
     },
     {
-      name: 'Class Scheduling System',
-      description: 'Intelligent scheduling system with conflict detection and teacher-student management.',
-      tech: ['FastAPI', 'SQLAlchemy', 'React']
+      name: 'Boi-Adda - Book Exchange Platform',
+      description: 'Full-stack web application for book lovers to exchange, share, and discover books. Features user authentication, book listings, and exchange management.',
+      tech: ['Python', 'JavaScript', 'FastAPI', 'React.js'],
+      github: 'https://github.com/NightFury-9b71/Boi-Adda'
+    },
+    {
+      name: 'JUST Inventory Management System',
+      description: 'University inventory management system for Jashore University of Science and Technology. Monorepo with Spring Boot backend and Next.js frontend.',
+      tech: ['Java', 'Spring Boot', 'Next.js', 'TypeScript'],
+      github: 'https://github.com/NightFury-9b71/Inventory'
     }
   ]
 
   const achievements = [
-    'Full-Stack Developer specializing in Education Technology',
-    'Expert in Modern Web Development Technologies',
-    'Database Design and API Development Specialist',
-    'UI/UX Design and User Experience Enthusiast'
+    'Computer Science Student at Jashore University of Science and Technology (JUST)',
+    'Active participant in competitive programming and hackathons',
+    'Full-Stack Developer with expertise in React, Python, and modern web technologies',
+    'Experience in building educational technology solutions and management systems',
+    'Contributor to open-source projects and collaborative development',
+    'Skilled in both frontend (React/Next.js) and backend (FastAPI/Spring Boot) development'
   ]
 
   return (
@@ -79,11 +92,8 @@ const DeveloperPage = () => {
               {/* Profile Image */}
               <div className="relative">
                 <div className="w-32 h-32 bg-white rounded-full flex items-center justify-center shadow-lg">
-                  {/* Placeholder avatar - you can replace this with actual image */}
-                  <div className="w-28 h-28 bg-gradient-to-br from-blue-400 to-indigo-500 rounded-full flex items-center justify-center text-white text-3xl font-bold">
-                    <img src="noman.png" alt="Profile" className="rounded-full" />
-                    {/* <img src="nomanstine.jpg" alt="Profile" className="rounded-full" /> */}
-                  </div>
+                  {/* Profile Image */}
+                  <img src="/me.jpg" alt="Abdullah Al Noman" className="w-28 h-28 rounded-full object-cover" />
                 </div>
                 <div className="absolute -bottom-2 -right-2 bg-green-500 w-8 h-8 rounded-full flex items-center justify-center">
                   <Code className="h-4 w-4 text-white" />
@@ -129,17 +139,18 @@ const DeveloperPage = () => {
             </Card.Header>
             <Card.Content className="space-y-4">
               <p className="text-gray-700 leading-relaxed">
-                I'm Abdullah Al Noman, a passionate full-stack developer currently pursuing my studies in Computer Science. 
-                I specialize in building modern web applications with a focus on education technology and management systems.
+                I'm Abdullah Al Noman, a Computer Science student at Jashore University of Science and Technology (JUST) 
+                with a passion for full-stack development. I specialize in building modern web applications with a focus 
+                on education technology and management systems.
               </p>
               <p className="text-gray-700 leading-relaxed">
-                With expertise in React.js, Python, and FastAPI, I create scalable and user-friendly applications that solve 
-                real-world problems. I'm particularly interested in developing systems that improve educational processes and 
-                enhance learning experiences.
+                With expertise in React.js, Python, FastAPI, and Spring Boot, I create scalable and user-friendly 
+                applications that solve real-world problems. I'm particularly interested in developing systems that 
+                improve educational processes and enhance learning experiences.
               </p>
               <p className="text-gray-700 leading-relaxed">
-                When I'm not coding, I enjoy learning new technologies, contributing to open-source projects, and exploring 
-                innovative solutions in the field of educational technology.
+                When I'm not coding, I enjoy participating in competitive programming, contributing to open-source 
+                projects, and exploring innovative solutions in the field of educational technology.
               </p>
             </Card.Content>
           </Card>
@@ -179,6 +190,15 @@ const DeveloperPage = () => {
               </div>              <div className="border-t pt-4 space-y-3">
                 <h4 className="font-medium text-gray-900">Social & Professional</h4>
                 <div className="space-y-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => window.open('/resume.pdf', '_blank')}
+                    className="w-full flex items-center gap-2 justify-start"
+                  >
+                    <Award className="h-4 w-4" />
+                    Download Resume (PDF)
+                  </Button>
                   <a 
                     href="https://github.com/NightFury-9b71" 
                     target="_blank" 
@@ -201,10 +221,12 @@ const DeveloperPage = () => {
                   </a>
                   <a 
                     href="https://nomanstine.vercel.app" 
+                    target="_blank" 
+                    rel="noopener noreferrer"
                     className="flex items-center gap-3 text-gray-700 hover:text-gray-900 transition-colors"
                   >
                     <Globe className="h-4 w-4" />
-                    <span className="text-sm">Contact Portfolio</span>
+                    <span className="text-sm">Portfolio Website</span>
                     <ExternalLink className="h-3 w-3" />
                   </a>
                 </div>
@@ -212,28 +234,6 @@ const DeveloperPage = () => {
             </Card.Content>
           </Card>
         </div>
-
-        {/* Skills Section */}
-        <Card>
-          <Card.Header>
-            <Card.Title className="flex items-center gap-2">
-              <Code className="h-5 w-5" />
-              Technical Skills
-            </Card.Title>
-          </Card.Header>
-          <Card.Content>
-            <div className="flex flex-wrap gap-2">
-              {skills.map((skill, index) => (
-                <span
-                  key={index}
-                  className="px-3 py-1 bg-blue-100 text-blue-800 rounded-full text-sm font-medium hover:bg-blue-200 transition-colors"
-                >
-                  {skill}
-                </span>
-              ))}
-            </div>
-          </Card.Content>
-        </Card>
 
         {/* Projects Section */}
         <Card>
@@ -248,7 +248,7 @@ const DeveloperPage = () => {
               <div key={index} className="border-l-4 border-blue-500 bg-blue-50 p-4 rounded-r-lg">
                 <h3 className="font-semibold text-gray-900 mb-2">{project.name}</h3>
                 <p className="text-gray-700 text-sm mb-3">{project.description}</p>
-                <div className="flex flex-wrap gap-2">
+                <div className="flex flex-wrap gap-2 mb-3">
                   {project.tech.map((tech, techIndex) => (
                     <span
                       key={techIndex}
@@ -257,6 +257,30 @@ const DeveloperPage = () => {
                       {tech}
                     </span>
                   ))}
+                </div>
+                <div className="flex gap-2">
+                  {project.github && (
+                    <a
+                      href={project.github}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center gap-1 text-xs text-gray-600 hover:text-blue-600 transition-colors"
+                    >
+                      <Github className="h-3 w-3" />
+                      GitHub
+                    </a>
+                  )}
+                  {project.live && (
+                    <a
+                      href={project.live}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center gap-1 text-xs text-gray-600 hover:text-green-600 transition-colors"
+                    >
+                      <ExternalLink className="h-3 w-3" />
+                      Live Demo
+                    </a>
+                  )}
                 </div>
               </div>
             ))}
