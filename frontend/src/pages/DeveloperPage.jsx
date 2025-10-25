@@ -48,7 +48,7 @@ const DeveloperPage = () => {
       name: 'Boi-Adda - Book Exchange Platform',
       description: 'Full-stack web application for book lovers to exchange, share, and discover books. Features user authentication, book listings, and exchange management.',
       tech: ['Python', 'JavaScript', 'FastAPI', 'React.js'],
-      github: 'https://github.com/NightFury-9b71/Boi-Adda'
+      github: 'https://github.com/NightFury-9b71/Boi-Adda',
       live: 'https://boi-adda.onrender.com'
     },
     {
